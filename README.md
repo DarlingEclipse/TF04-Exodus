@@ -1,4 +1,6 @@
-# TF2004-File-Editor
+# TF2004-Exodus
+
+NOTE: Below information is outdated. Will be brought up to date soon.
 
 Current version: 0.6.6
 
