@@ -3,7 +3,7 @@
 
 #include <QRandomGenerator>
 #include "Headers/Databases/Database.h"
-#include "Headers/Databases/DataHandler.h"
+#include "Headers/ISOManager/ModHandler.h"
 
 class ProgWindow;
 class DatabaseFile;
@@ -15,7 +15,6 @@ public:
     ProgWindow* parent;
     //std::vector<std::shared_ptr<DatabaseFile>> databaseLevels;
     //std::vector<Level> levelList;
-    std::vector<RandomizerMod> modList;
     //std::vector<FileReplacement> replacementList;
     QRandomGenerator placemaster;
     QLineEdit* editSeed;
@@ -45,8 +44,8 @@ public:
     //also set a < operator for minicon based on their enumID
     //will probably want to subtract 3 when reading and add 3 when writing these
 
-    std::vector<PickupLocation> availableLocations;
-    std::vector<PickupLocation> placedLocations;
+    std::vector<exPickupLocation> availableLocations;
+    std::vector<exPickupLocation> placedLocations;
 
     void reset();
 
@@ -57,11 +56,11 @@ public:
 
     void randomize();
     void randomFileReplacements();
-    void removeLocation(PickupLocation locationToRemove);
+    void removeLocation(exPickupLocation locationToRemove);
     void placeAll();
     void placeMinicon(int miniconToPlace, int placementID);
     void placeDatacon(int dataconToPlace, int placementID);
-    void placeDatacon(Pickup dataconToPlace, PickupLocation location);
+    void placeDatacon(Pickup* dataconToPlace, exPickupLocation location);
     void setOverallDifficulty(int difficulty);
     void setSlipstreamDifficulty(int difficulty);
     void setHighjumpDifficulty(int difficulty);
@@ -75,13 +74,11 @@ public:
     void exportSettings();
     void fixBunkerLinks(int level);
     void setSeed(QString value);
-    void applyModifications();
-    void loadMods();
 
     float randomFloat(float minimum, float maximum);
 
     int writeSpoilers();
-    void spoilMinicon(PickupLocation placement, QTextStream& stream);
+    void spoilMinicon(exPickupLocation placement, QTextStream& stream);
     void spoilMinicon(int miniconID, QTextStream& stream);
 
     int editDatabases();

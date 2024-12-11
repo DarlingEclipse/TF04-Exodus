@@ -582,7 +582,7 @@ int MeshVBIN::outputDataDAE(){
     stream << "  <asset>" << Qt::endl;
     stream << "    <contributor>" << Qt::endl;
     stream << "      <author>PrincessTrevor</author>" << Qt::endl;
-    stream << "      <authoring_tool>TF2004 File Converter v" << QString::number(parent->version) << "</authoring_tool>" << Qt::endl;
+    stream << "      <authoring_tool>Exodus v" << QString::number(parent->version) << "</authoring_tool>" << Qt::endl;
     stream << "    </contributor>" << Qt::endl;
     stream << "    <created>" << QDateTime::currentDateTime().toString("yyyy-MM-dd") + "T" + QDateTime::currentDateTime().toString("hh:mm:ss") << "</created>" << Qt::endl;
     stream << "    <modified>" << QDateTime::currentDateTime().toString("yyyy-MM-dd") + "T" + QDateTime::currentDateTime().toString("hh:mm:ss") << "</modified>" << Qt::endl;

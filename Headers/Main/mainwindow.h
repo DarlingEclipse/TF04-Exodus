@@ -33,7 +33,8 @@
 #include "Headers/Models/Mesh.h"
 #include "BinChanger.h"
 #include "CustomQT.h"
-#include "IsoBuilder.h"
+#include "Headers/ISOManager/IsoBuilder.h"
+#include "Headers/ISOManager/ModHandler.h"
 #include "Headers/Models/LevelGeo.h"
 #include "Headers/Databases/Database.h"
 #include "Headers/Databases/DataHandler.h"
@@ -98,6 +99,7 @@ public:
     DistanceCalculator* warpgateCalculator;
     Randomizer* randomizer;
     IsoBuilder* isoBuilder;
+    ModHandler* modHandler;
     DataHandler* dataHandler;
     SettingsWindow *setW;
     std::vector<std::shared_ptr<TFFile>> loadedFiles;
@@ -160,6 +162,7 @@ public:
 
     void resizeEvent(QResizeEvent* event);
     void openWarpgateCalculator();
+    void openModHandler();
     void openRandomizer();
     void updateBackground();
     void updateCenter();

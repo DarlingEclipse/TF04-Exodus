@@ -10,7 +10,7 @@
 class ProgWindow;
 
 class WarpgateFile : public DatabaseFile{
-    std::vector<Warpgate> warpgateList;
+    std::vector<exWarpgate> warpgateList;
 
     void isolateWarpgates();
 };
@@ -18,7 +18,7 @@ class WarpgateFile : public DatabaseFile{
 class DistanceCalculator{
 public:
     DistanceCalculator(ProgWindow *parentPass);
-    std::vector<Warpgate> warpgateList;
+    std::vector<exWarpgate> warpgateList;
     ProgWindow *parent;
 
     QLineEdit *inputXValue;

@@ -64,6 +64,7 @@ ProgWindow::ProgWindow(QWidget *parent)
 
     QAction *actionUnpackISO = menuBuild->addAction("Unpack ISO");
     QAction *actionUnzipZips = menuBuild->addAction("Unpack special ZIPs");
+    QAction *actionModInterface = menuBuild->addAction("Mods and Replacements");
     QAction *actionZipBuildISO = menuBuild->addAction("Zip and Build ISO");
     QAction *actionBuildISO = menuBuild->addAction("Build ISO");
     QAction *actionPackRandom = menuBuild->addAction("Build Randomizer ISO");
@@ -119,6 +120,8 @@ ProgWindow::ProgWindow(QWidget *parent)
     dataHandler = new DataHandler();
     dataHandler->parent = this;
 
+    modHandler = nullptr;
+
     connect(actionSaveModel, &QAction::triggered, this, [this] {saveFile("Model");});
     connect(actionBulkSaveModel, &QAction::triggered, this, [this] {bulkSave("Model");});
     //connect(actionSaveDAE, &QAction::triggered, this, [this] {saveFile("VBIN");});
@@ -159,9 +162,10 @@ ProgWindow::ProgWindow(QWidget *parent)
 
     connect(actionUnpackISO, &QAction::triggered, this, [this] {isoBuilder->unpackISO();});
     connect(actionUnzipZips, &QAction::triggered, this, [this] {isoBuilder->unzipSpecial();});
+    connect(actionModInterface, &QAction::triggered, this, &ProgWindow::openModHandler);
     connect(actionZipBuildISO, &QAction::triggered, this, [this] {isoBuilder->rezipTFA_sevenZip(false);});
     connect(actionBuildISO, &QAction::triggered, this, [this] {isoBuilder->repackISO(false);});
-    connect(actionPackRandom, &QAction::triggered, this, [this] {isoBuilder->packRandomizer();});
+    connect(actionPackRandom, &QAction::triggered, this, [this] {isoBuilder->packModded("Rebuild");});
 
     connect(actionClearFiles, &QAction::triggered, this, &ProgWindow::clearFiles);
     connect(actionClearLog, &QAction::triggered, this, &ProgWindow::clearLog);
@@ -203,6 +207,7 @@ void ProgWindow::updateLoadingBar(int currentValue, int maxValue){
         loadingBar->hide();
         loadingBar = nullptr;
     }
+    forceProcessEvents();
 }
 
 void ProgWindow::updateLoadingBar(){
@@ -215,6 +220,7 @@ void ProgWindow::updateLoadingBar(){
         loadingBar->hide();
         loadingBar = nullptr;
     }
+    forceProcessEvents();
 }
 
 void ProgWindow::updateLoadingBar(int currentValue){
@@ -227,6 +233,7 @@ void ProgWindow::updateLoadingBar(int currentValue){
         loadingBar->hide();
         loadingBar = nullptr;
     }
+    forceProcessEvents();
 }
 
 void ProgWindow::saveFile(QString fromType, QString givenPath){
@@ -351,7 +358,7 @@ std::shared_ptr<TFFile> ProgWindow::matchFile(QString fileNameFull){
         return loadedFiles[loadedFileNames.indexOf(fileNameFull.toUpper())];
     } else {
         qDebug() << Q_FUNC_INFO << "loaded file names:" << loadedFileNames;
-        log("File " + fileNameFull + " was not found.");
+        //log("File " + fileNameFull + " was not found.");
     }
     /*for(int i = 0; i < loadedFiles.size(); i++){
         qDebug() << Q_FUNC_INFO << "loaded file" << loadedFiles[i]->fullFileName().toUpper() << "vs" << fileNameFull.toUpper();
@@ -386,6 +393,12 @@ void ProgWindow::openWarpgateCalculator(){
     clearWindow();
     databaseList.clear();
     warpgateCalculator = new DistanceCalculator(this);
+}
+
+void ProgWindow::openModHandler(){
+    clearWindow();
+    modHandler = new ModHandler(this);
+    modHandler->updateCenter();
 }
 
 void ProgWindow::openRandomizer(){
@@ -452,7 +465,7 @@ SettingsWindow::SettingsWindow(ProgWindow *sentParent){
 
     parent = sentParent;
     savedChanges = true;
-    setWindowTitle("VBIN Converter Settings");
+    setWindowTitle("Exodus Settings");
     sendUpdate = new QPushButton("Save Settings", this);
     sendUpdate -> setGeometry(QRect(QPoint(25,25), QSize(200,25)));
 

@@ -18,16 +18,18 @@ public:
     QString imgBurnPath;
     QString inputISOPath;
     QString outputISOPath;
-    QString randomizerInput = "";
-    QString randomizerOutput = "";
+    QString moddedInput = "";
+    QString moddedOutput = "";
+    bool buildingRandomizer;
 
-    void setCopyPath(QString folderName = "FC2004Output");
+    void setCopyPath(QString folderName = "Exodus2004Output");
     int unpackISO(); //calls TF04 ISO Manager to unpack and attempt to unzip TFA etc
     int unzipSpecial(); //calls 7zip to unzip TFA if the ISO Manager was unable to
     int rezipTFA_isoManager(bool removeFiles); //calls TF04 ISO Manager to repack TFA etc
     int rezipTFA_sevenZip(bool removeFiles); //calls 7zip to repack TFA etc
     int repackISO(bool removeFiles); //calls imgburn to rebuild a new ISO
-    int packRandomizer(); //combines randomized files with an existing vanilla unpack, then packs that into an ISO
+    int packModded(QString outputFolder); //combines randomized files with an existing vanilla unpack, then packs that into an ISO
+    void copyFiles(QString folderName);
     int getFileCount(QDir dirToCount);
 
     void handleOutputCode(QString output);

@@ -20,6 +20,7 @@ std::shared_ptr<taData> dictItem::getAttribute(QString attributeName){
 }
 
 int dictItem::setAttribute(QString itemName, QString value){
+    qDebug() << Q_FUNC_INFO << "Setting attribute" << itemName << "to value" << value;
     for(int i = 0; i < attributes.size(); i++){
         if(attributes[i]->name == itemName){
             attributes[i]->setValue(value);
@@ -27,6 +28,7 @@ int dictItem::setAttribute(QString itemName, QString value){
             return 0;
         }
     }
+    qDebug() << Q_FUNC_INFO << "Could not find attribute to set.";
     return 1; //value not found
 }
 

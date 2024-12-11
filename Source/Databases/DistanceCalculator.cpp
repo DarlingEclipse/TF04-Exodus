@@ -51,7 +51,7 @@ DistanceCalculator::DistanceCalculator(ProgWindow *parentPass){
 }
 
 void DistanceCalculator::calculateWarpgateDistance(){
-    Warpgate closestGate = Warpgate();
+    exWarpgate closestGate = exWarpgate();
     float totalDifference = 0;
     float lowestDistance = 99999;
     float xDistance = inputXValue->text().toFloat();
@@ -84,45 +84,45 @@ void DistanceCalculator::calculateWarpgateDistance(){
     }
 }
 
-std::vector<Warpgate*> Warpgate::createAmazonWarpgates(){
-    std::vector<Warpgate*> warpgates;
+std::vector<exWarpgate*> exWarpgate::createAmazonWarpgates(){
+    std::vector<exWarpgate*> warpgates;
 
-    Warpgate* warpgate1 = new Warpgate;
+    exWarpgate* warpgate1 = new exWarpgate;
     warpgate1->name = "Amazon Basin";
     warpgate1->x_position = 962.6;
     warpgate1->y_position = -1749.8;
     warpgate1->z_position = -3.5;
     warpgates.push_back(warpgate1);
 
-    Warpgate* warpgate2 = new Warpgate;
+    exWarpgate* warpgate2 = new exWarpgate;
     warpgate2->name = "Stone Bridge";
     warpgate2->x_position = 149.6;
     warpgate2->y_position = -1624.4;
     warpgate2->z_position = -5.4;
     warpgates.push_back(warpgate2);
 
-    Warpgate* warpgate3 = new Warpgate;
+    exWarpgate* warpgate3 = new exWarpgate;
     warpgate3->name = "Ruined Temple";
     warpgate3->x_position = -529.1;
     warpgate3->y_position = -1593.4;
     warpgate3->z_position = -65.8;
     warpgates.push_back(warpgate3);
 
-    Warpgate* warpgate4 = new Warpgate;
+    exWarpgate* warpgate4 = new exWarpgate;
     warpgate4->name = "Waterfall";
     warpgate4->x_position = -95.6;
     warpgate4->y_position = -751.8;
     warpgate4->z_position = 104.9;
     warpgates.push_back(warpgate4);
 
-    Warpgate* warpgate5 = new Warpgate;
+    exWarpgate* warpgate5 = new exWarpgate;
     warpgate5->name = "Deep Ravine";
     warpgate5->x_position = 748.2;
     warpgate5->y_position = -112.7;
     warpgate5->z_position = 133.9;
     warpgates.push_back(warpgate5);
 
-    Warpgate* warpgate6 = new Warpgate;
+    exWarpgate* warpgate6 = new exWarpgate;
     warpgate6->name = "Mountain Ruins";
     warpgate6->x_position = 1034.2;
     warpgate6->y_position = 287.6;

@@ -30,44 +30,38 @@ Pickup::Pickup(dictItem copyItem){
         if(copyItem.attributes[i]->name == "PickupToSpawn"){
             this->pickupToSpawn = copyItem.attributes[i]->display();
             this->enumID = copyItem.attributes[i]->intValue();
-            if(enumID > 3){
-                this->isMinicon = true;
-            } else {
-                this->isMinicon = false;
-            }
         }
-        if(copyItem.attributes[i]->name == "ProductionArt" && !this->isMinicon){
+        if(copyItem.attributes[i]->name == "ProductionArt" && !this->isMinicon()){
             this->pickupToSpawn = copyItem.attributes[i]->display();
             this->dataID = copyItem.attributes[i]->intValue();
         }
     }
-    //qDebug() << Q_FUNC_INFO << "adding pickup" << copyItem.instanceIndex << "name" << copyItem.name << "|" << pickupToSpawn << "has enumID" << enumID << "is minicon?" << isMinicon;
+    qDebug() << Q_FUNC_INFO << "adding pickup" << copyItem.instanceIndex << "name" << copyItem.name << "|" << pickupToSpawn << "has enumID" << enumID << "is minicon?" << isMinicon();
     placed = false;
 }
 
 Pickup::Pickup(){
     dataID = 99;
-    isMinicon = false;
     isWeapon = false;
     setAttribute("Position", "0, 0, 0");
 }
 
 
-Minicon::Minicon(Pickup copyItem){
+exMinicon::exMinicon(Pickup copyItem){
     this->name = copyItem.name;
     this->pickupToSpawn = copyItem.pickupToSpawn;
     this->attributes = copyItem.attributes;
     hasVanillaPlacement = false;
 }
 
-void Minicon::setCreature(Pickup copyItem){
+void exMinicon::setCreature(Pickup copyItem){
     this->enumID = copyItem.enumID;
     this->instanceIndex = copyItem.instanceIndex;
     this->isWeapon = copyItem.isWeapon;
     placed = false;
 }
 
-Minicon::Minicon(){
+exMinicon::exMinicon(){
     instanceIndex = 0;
     isWeapon = false;
     pickupToSpawn = "Default Shockpunch";
@@ -75,7 +69,7 @@ Minicon::Minicon(){
     setAttribute("Position", "0, 0, 0");
 }
 
-Minicon* DataHandler::getMinicon(int searchID){
+exMinicon* DataHandler::getMinicon(int searchID){
     if(searchID == 3){
         qDebug() << Q_FUNC_INFO << "Searching for a datacon instead of minicon. This shouldn't happen.";
         return nullptr;
@@ -89,7 +83,7 @@ Minicon* DataHandler::getMinicon(int searchID){
     return nullptr;
 }
 
-Minicon* DataHandler::getMinicon(QString searchName){
+exMinicon* DataHandler::getMinicon(QString searchName){
     for(int i = 0; i < miniconList.size(); i++){
         if(miniconList[i].pickupToSpawn == searchName){
             return &miniconList[i];
@@ -118,7 +112,7 @@ void DataHandler::resetLevels(){
     }
 }
 
-Warpgate::Warpgate(dictItem copyItem){
+exWarpgate::exWarpgate(dictItem copyItem){
     this->instanceIndex = copyItem.instanceIndex;
     this->position = copyItem.position;
     this->x_position = copyItem.position.x();
@@ -132,118 +126,15 @@ Warpgate::Warpgate(dictItem copyItem){
     }
 }
 
-Warpgate::Warpgate(){
+exWarpgate::exWarpgate(){
     this->x_position = 0;
     this->y_position = 0;
     this->z_position = 0;
 }
 
-void DataHandler::loadFileReplacements(){
-    QString modPath = QCoreApplication::applicationDirPath() + "/Replacements/";
-    QDir modFolder(modPath);
-    QDirIterator modIterator(modFolder.absolutePath());
-    qDebug() << Q_FUNC_INFO << "next file info:" << modIterator.nextFileInfo().fileName() << "from path" << modFolder.absolutePath();
-    bool headerFinished = false;
-    TextProperty modProperty;
-    QStringList propertyOptions = {"File Version", "Name", "Description", "Rarity", "File Count", "File Name", "Destination Path"};
-    int modVersion = 0;
-    int replacementCount = 0;
-
-    while (modIterator.hasNext()){
-        QFile currentModFile = modIterator.next();
-        qDebug() << Q_FUNC_INFO << "Current file" << currentModFile.fileName();
-        if (currentModFile.open(QIODevice::ReadOnly)){
-            qDebug() << Q_FUNC_INFO << "Reading file";
-            FileReplacement moddedFiles;
-            FileData modBuffer;
-            modBuffer.dataBytes = currentModFile.readAll();
-            modBuffer.input = true;
-            headerFinished = false;
-            QString targetLevel;
-            while(!headerFinished){
-                modProperty = modBuffer.readProperty();
-                qDebug() << Q_FUNC_INFO << "test property type:" << modProperty.name << "with value:" << modProperty.readValue;
-                switch(propertyOptions.indexOf(modProperty.name)){
-                case 0: //File Version
-                    modVersion = modProperty.readValue.toInt();
-                    break;
-                case 1: //Name
-                    moddedFiles.name = modProperty.readValue;
-                    break;
-                case 2: //Description
-                    //for human use only, for now. tooltips later.
-                    moddedFiles.description = modProperty.readValue;
-                    break;
-                case 3: //Rarity
-                    //Only used for Randomizer
-                    //the value x from 1/x that generates the chance of this file swap
-                    //ex. a rarity of 4 has a 1/4 or 25% chance of swapping
-                    moddedFiles.rarity = modProperty.readValue.toInt();
-                    break;
-                case 4: //File count
-                    replacementCount = modProperty.readValue.toInt();
-                    headerFinished = true;
-                    break;
-                default:
-                    qDebug() << Q_FUNC_INFO << "Unknown property" << modProperty.name << "with value" << modProperty.readValue << "found at" << modBuffer.currentPosition;
-                }
-            }
-            for(int i = 0; i < replacementCount*2; i++){ //verify this line with the SELF version
-                modProperty = modBuffer.readProperty();
-                switch(propertyOptions.indexOf(modProperty.name)){
-                case 5: //File Name
-                    moddedFiles.fileNames.push_back(modProperty.readValue);
-                    break;
-                case 6: //Destination path
-                    moddedFiles.fileDestinations.push_back(modProperty.readValue);
-                    break;
-                default:
-                    qDebug() << Q_FUNC_INFO << "Unknown property" << modProperty.name << "with value" << modProperty.readValue << "found at" << modBuffer.currentPosition;
-                }
-            }
-            replacementList.push_back(moddedFiles);
-        }
-    }
-}
-
-void DataHandler::replaceFile(QString fileName, QString destinationPath){
-    QString modFileDirectory = QDir::currentPath();
-    bool didItWork = false;
-    qDebug() << Q_FUNC_INFO << "current path:" << modFileDirectory;
-    QString fileInputDirectory = modFileDirectory + "/ASSETS/" + fileName;
-    QFile fileReplacement(fileInputDirectory);
-    qDebug() << Q_FUNC_INFO << "checking if replacement image exists:" << fileReplacement.exists();
-
-    QString fileOutputDirectory = parent->isoBuilder->copyOutputPath + destinationPath;
-
-    qDebug() << Q_FUNC_INFO << "creating directory" << fileOutputDirectory;
-    QDir createFile(fileOutputDirectory);
-    if(!createFile.exists()){
-        createFile.mkpath(".");
-    }
-    fileOutputDirectory += "/" + fileName;
-    QFile original(fileOutputDirectory);
-    qDebug() << Q_FUNC_INFO << "checking if original file exists:" << original.exists() << "path" << fileOutputDirectory;
-    if(original.exists()){
-        original.remove();
-    }
-    if(fileReplacement.exists()){
-        didItWork = QFile::copy(fileInputDirectory, fileOutputDirectory);
-        qDebug() << Q_FUNC_INFO << "did it work?" << didItWork;
-    } else {
-        parent->log("File " + fileName + " could not be replaced.");
-    }
-}
-
-void DataHandler::replaceFile(FileReplacement fileToReplace){
-    for(int i = 0; i < fileToReplace.fileNames.size(); i++){
-        replaceFile(fileToReplace.fileNames[i], fileToReplace.fileDestinations[i]);
-    }
-}
-
 void DataHandler::loadLevels(){
     for(int i = 0; i < 9; i++){
-        Level nextLevel;
+        taEpisode nextLevel;
         nextLevel.miniconCount = 0;
         nextLevel.dataconCount = 0;
         switch(i){
@@ -293,7 +184,7 @@ void DataHandler::loadLevels(){
     }
 
     int totalRemoved = 0;
-    std::vector<PickupLocation> tempLocations;
+    std::vector<exPickupLocation> tempLocations;
     for(int i = 0; i < levelList.size(); i++){
         std::vector<dictItem> filePickupsBase = levelList[i].levelFile->sendInstances("PickupPlaced");
         //std::vector<PickupLocation> filePickups = convertInstances<PickupLocation>(filePickupsBase);
@@ -302,20 +193,22 @@ void DataHandler::loadLevels(){
         totalRemoved += levelList[i].removedInstances;
         for(int pickup = 0; pickup < filePickupsBase.size(); pickup++){
             tempLocations.push_back(filePickupsBase[pickup]);
-            tempLocations[tempLocations.size()-1].level = i;
+            tempLocations[tempLocations.size()-1].gameID[0] = i;
+            tempLocations[tempLocations.size()-1].gameID[1] = filePickupsBase[pickup].instanceIndex;
+            tempLocations[tempLocations.size()-1].position = filePickupsBase[pickup].searchAttributes<QVector3D>("Position");
             pickupList.push_back(filePickupsBase[pickup]);
         }
     }
 
     int id = 0;
 
-    foreach(PickupLocation currentLocation, tempLocations){
+    foreach(exPickupLocation currentLocation, tempLocations){
         currentLocation.uniqueID = id;
         //addedLocation.setAttribute("PickupToSpawn", "0");
 
         //to be placed inside the switch:
         currentLocation.locationName = "Unnamed Location";
-        switch(currentLocation.level){
+        switch(currentLocation.gameID[0]){
         case 0: //Amazon 1
             currentLocation.slipstreamDifficulty = 0;
             currentLocation.highjumpDifficulty = 0;
@@ -790,7 +683,7 @@ void DataHandler::loadLevels(){
         default:
             currentLocation.slipstreamDifficulty = 6;
             currentLocation.highjumpDifficulty = 6;
-            qDebug() << Q_FUNC_INFO << "no defined positions for level" << currentLocation.level;
+            qDebug() << Q_FUNC_INFO << "no defined positions for level" << currentLocation.gameID[0];
         }
         loadedLocations.push_back(currentLocation);
         id++;
@@ -799,7 +692,7 @@ void DataHandler::loadLevels(){
 
     id = 0;
     bool positionIsDuplicate = false;
-    std::vector<PickupLocation>::iterator currentLocation;
+    std::vector<exPickupLocation>::iterator currentLocation;
     for(currentLocation = loadedLocations.begin(); currentLocation != loadedLocations.end(); id++){
         positionIsDuplicate = duplicateLocation(*currentLocation);
         if (positionIsDuplicate){
@@ -811,11 +704,38 @@ void DataHandler::loadLevels(){
 
     qDebug() << Q_FUNC_INFO << "Total loaded locations:" << loadedLocations.size();
     for(int i = 0; i < loadedLocations.size(); i++){
-        QVector3D debugPosition = loadedLocations[i].searchAttributes<QVector3D>("Position");
+        QVector3D debugPosition = loadedLocations[i].position;
         qDebug() << Q_FUNC_INFO << i << " " << loadedLocations[i].uniqueID << "  " << loadedLocations[i].linkedLocationID << "    "
-                 << loadedLocations[i].level << "    " << loadedLocations[i].locationName << "    " << debugPosition.x()
+                 << loadedLocations[i].gameID[0] << "    " << loadedLocations[i].locationName << "    " << debugPosition.x()
                  << "   " << debugPosition.y() << "  " << debugPosition.z();
     }
+}
+
+dictItem DataHandler::createExodusPickupLocation(exPickupLocation location){
+    taEpisode targetLevel = levelList[location.gameID[0]];
+    dictItem convertedData;
+    convertedData.name = "PickupPlaced";
+    convertedData.attributes = targetLevel.levelFile->generateAttributes("PickupPlaced");
+    qDebug() << Q_FUNC_INFO << "new item has" << convertedData.attributes.size() << "attributes";
+
+    convertedData.setAttribute("Position", QString::number(location.position.x()) + ", " + QString::number(location.position.y()) + ", " + QString::number(location.position.z()));
+
+    convertedData.setAttribute("PickupToSpawn", QString::number(location.assignedPickup()->enumID));
+
+    if(!location.assignedPickup()->isMinicon()){
+        qDebug() << Q_FUNC_INFO << "Datacon - setting production art value to" << location.assignedPickup()->dataID << "from" << location.assignedPickup()->name;
+        convertedData.setAttribute("ProductionArt", QString::number(location.assignedPickup()->dataID));
+    }
+
+    if(location.spawnEvent != ""){
+        convertedData.setAttribute("SpawnEvent", location.spawnEvent);
+    }
+
+    for(int i = 0; i < convertedData.attributes.size(); i++){
+        qDebug() << Q_FUNC_INFO << "attribute" << i << "name" << convertedData.attributes[i]->name << "value" << convertedData.attributes[i]->display();
+    }
+
+    return convertedData;
 }
 
 void DataHandler::loadMinicons(){
@@ -871,9 +791,11 @@ void DataHandler::loadMinicons(){
             qDebug() << Q_FUNC_INFO << "minicon" << miniconList[i].pickupToSpawn << "is loaded?" << miniconIsLoaded << "should get enumID" << currentPickup.enumID;
             if(!miniconIsLoaded && currentPickup.enumID != 3){
                 //if it's a minicon we don't already have, add it to the minicon list
-                qDebug() << Q_FUNC_INFO << "Doing initial minicon load";
+                qDebug() << Q_FUNC_INFO << "Doing initial minicon load for" << currentPickup.enumID;
+                qDebug() << Q_FUNC_INFO << "Does weapon list contain?" << weaponList.contains(currentPickup.enumID) ;
                 if(weaponList.contains(currentPickup.enumID)){
-                    miniconList[i].isWeapon = true;
+                    qDebug() << Q_FUNC_INFO << "setting to weapon";
+                    currentPickup.isWeapon = true;
                 }
                 miniconList[i].hasVanillaPlacement = true;
                 miniconList[i].setCreature(currentPickup);
@@ -897,7 +819,7 @@ void DataHandler::loadMinicons(){
     qDebug() << Q_FUNC_INFO << "Total loaded minicons:" << miniconList.size();
     for(int i = 0; i < miniconList.size(); i++){
         qDebug() << Q_FUNC_INFO << i << " " << miniconList[i].enumID << "  " << miniconList[i].pickupToSpawn << "    "
-                 << miniconList[i].dataID;
+                 << miniconList[i].dataID << " is weapon:" << miniconList[i].isWeapon;
     }
 
 
@@ -921,7 +843,7 @@ void DataHandler::loadAutobots(){
 void DataHandler::loadDatacons(){
     foreach(Pickup currentPickup, pickupList){
         bool dataconIsLoaded = false;
-        if(currentPickup.isMinicon){
+        if(currentPickup.isMinicon()){
             continue;
         }
         qDebug() << Q_FUNC_INFO << "pickup properties for:" << currentPickup.pickupToSpawn << "enumID" << currentPickup.enumID << "dataID" << currentPickup.dataID;
@@ -998,10 +920,10 @@ void DataHandler::loadCustomLocations(){
                 }
             }
             for(int i = 0; i <currentLocations.locationCount; i++){
-                PickupLocation customLocation = PickupLocation();
-                customLocation.level = targetLevel;
+                exPickupLocation customLocation = exPickupLocation();
+                customLocation.gameID[0] = targetLevel;
                 //double-check that the below doesn't need to find the specific database for the target level
-                customLocation.attributes = levelList[0].levelFile->generateAttributes("PickupPlaced");
+                //customLocation.attributes = levelList[0].levelFile->generateAttributes("PickupPlaced");
                 bool readingLocation = true;
                 while(readingLocation){
                     modProperty = modBuffer.readProperty();
@@ -1011,10 +933,10 @@ void DataHandler::loadCustomLocations(){
                                 qDebug() << Q_FUNC_INFO << "comparing level" << levelList[i].levelName << "to" << modProperty.readValue;
                                 if(levelList[i].levelName == modProperty.readValue){
                                     qDebug() << Q_FUNC_INFO << "comparing level: match";
-                                    customLocation.level = i;
+                                    customLocation.gameID[0] = i;
                                 }
                             }
-                            if(customLocation.level == -1){
+                            if(customLocation.gameID[0] == -1){
                                 qDebug() << Q_FUNC_INFO << "Invalid level:" << modProperty.readValue;
                             }
                             break;
@@ -1027,7 +949,8 @@ void DataHandler::loadCustomLocations(){
                             QStringList locationSplit = modProperty.readValue.split(", ");
                             if(locationSplit.size() < 3){
                                 qDebug() << Q_FUNC_INFO << "Invalid location:" << modProperty.readValue;
-                                customLocation.setAttribute("Position", "0, 0, 0");
+                                customLocation.position = QVector3D();
+                                //customLocation.setAttribute("Position", "0, 0, 0");
                             } else {
                                 QString tempx = locationSplit[0];
                                 float x = tempx.toFloat();
@@ -1035,7 +958,8 @@ void DataHandler::loadCustomLocations(){
                                 float y = tempy.toFloat();
                                 QString tempz = locationSplit[2];
                                 float z = tempz.toFloat();
-                                customLocation.setAttribute("Position", QString::number(x) + ", " + QString::number(y) + ", " + QString::number(z));
+                                customLocation.position = QVector3D(x, y, z);
+                                //customLocation.setAttribute("Position", QString::number(x) + ", " + QString::number(y) + ", " + QString::number(z));
                             }
                             break;
                         }
@@ -1059,7 +983,7 @@ void DataHandler::loadCustomLocations(){
                             qDebug() << Q_FUNC_INFO << "Unknown property" << modProperty.name << "with value" << modProperty.readValue << "found at" << modBuffer.currentPosition;
                     }
                 }
-                qDebug() << Q_FUNC_INFO << "Adding location" << customLocation.name << "for level" << customLocation.level << "at coordinages" << customLocation.searchAttributes<QVector3D>("Position");
+                qDebug() << Q_FUNC_INFO << "Adding location" << customLocation.locationName << "for level" << customLocation.gameID[0] << "at coordinates" << customLocation.position;
                 currentLocations.locationList.push_back(customLocation);
             }
             customLocationList.push_back(currentLocations);
@@ -1070,16 +994,16 @@ void DataHandler::loadCustomLocations(){
 
 
 
-bool DataHandler::duplicateLocation(PickupLocation testLocation){
+bool DataHandler::duplicateLocation(exPickupLocation testLocation){
     QVector3D loadedPosition;
-    QVector3D testPosition = testLocation.searchAttributes<QVector3D>("Position");
+    QVector3D testPosition = testLocation.position;
     int locationCount = 0;
     for(int i = 0; i < loadedLocations.size(); i++){
-        loadedPosition = loadedLocations[i].searchAttributes<QVector3D>("Position");
+        loadedPosition = loadedLocations[i].position;
         if((testPosition.x() < loadedPosition.x()+5 && testPosition.x() > loadedPosition.x() - 5)
                 && (testPosition.y() < loadedPosition.y()+5 && testPosition.y() > loadedPosition.y() - 5)
                 && (testPosition.z() < loadedPosition.z()+5 && testPosition.z() > loadedPosition.z() - 5)
-                && (testLocation.level == loadedLocations[i].level)){
+                && (testLocation.gameID[0] == loadedLocations[i].gameID[0])){
             locationCount++;
         }
         if(locationCount > 1){
@@ -1111,47 +1035,61 @@ bool DataHandler::dataconLoaded(int checkID){
     return false;
 }
 
-void PickupLocation::assignMinicon(int miniconID){
+void exPickupLocation::assignPickup(Pickup* pickupToAssign){
+    pickup = pickupToAssign;
+}
+
+Pickup* exPickupLocation::assignedPickup(){
+    return pickup;
+}
+
+/*void exPickupLocation::assignMinicon(int miniconID){
     qDebug() << Q_FUNC_INFO << "Assigning minicon" << miniconID << "to position" << uniqueID;
-    setAttribute("PickupToSpawn", QString::number(miniconID));
-    qDebug() << Q_FUNC_INFO << "checking placement" << searchAttributes<int>("PickupToSpawn") << "vs" << miniconID;
-    qDebug() << Q_FUNC_INFO << "done assigning minicon";
+    pickupID = miniconID;
+    //setAttribute("PickupToSpawn", QString::number(miniconID));
+    //qDebug() << Q_FUNC_INFO << "checking placement" << searchAttributes<int>("PickupToSpawn") << "vs" << miniconID;
+    //qDebug() << Q_FUNC_INFO << "done assigning minicon";
 }
 
-void PickupLocation::assignDatacon(int dataID){
+void exPickupLocation::assignDatacon(int dataID){
     qDebug() << Q_FUNC_INFO << "Assigning datacon" << dataID << "to position" << uniqueID;
-    setAttribute("PickupToSpawn", QString::number(3));
-    setAttribute("ProductionArt", QString::number(dataID));
-    qDebug() << Q_FUNC_INFO << "done assigning datacon";
+    pickupID = 3;
+    dataconID = dataID;
+    //setAttribute("PickupToSpawn", QString::number(3));
+    //setAttribute("ProductionArt", QString::number(dataID));
+    //qDebug() << Q_FUNC_INFO << "done assigning datacon";
 }
 
-int PickupLocation::assignedMinicon(){
-    int miniconID = 0;
-    miniconID = searchAttributes<int>("PickupToSpawn");
+int exPickupLocation::assignedMinicon(){
+    //int miniconID = 0;
+    //miniconID = searchAttributes<int>("PickupToSpawn");
     //qDebug() << Q_FUNC_INFO << "Position" << uniqueID << "currently has pickup ID" << miniconID;
-    return miniconID;
-}
+    //return miniconID;
+    return pickupID;
+}*/
 
-PickupLocation::PickupLocation(dictItem fromItem){
-    QVector3D location = fromItem.searchAttributes<QVector3D>("Position");
-    setAttribute("Position", QString::number(location.x()) + ", " + QString::number(location.y()) + ", " + QString::number(location.z()));
+exPickupLocation::exPickupLocation(dictItem fromItem){
+    //QVector3D location = fromItem.searchAttributes<QVector3D>("Position");
+    //setAttribute("Position", QString::number(location.x()) + ", " + QString::number(location.y()) + ", " + QString::number(location.z()));
+    position = fromItem.searchAttributes<QVector3D>("Position");
     originalDatabaseInstance = fromItem.instanceIndex;
-    attributes = fromItem.attributes;
+    //attributes = fromItem.attributes;
     //assignMinicon(0);
     spoiled = false;
-    this->name = fromItem.name;
+    this->locationName = fromItem.name;
     bunkerID = 0;
     instanceIndex = 0;
     linkedLocationID = 999;
     this->spawnEvent = fromItem.searchAttributes<QString>("SpawnEvent");
-    setAttributeDefault("GenerationDifficulty");
-    setAttributeDefault("ProductionArt");
+    //setAttributeDefault("GenerationDifficulty");
+    //setAttributeDefault("ProductionArt");
 }
 
-PickupLocation::PickupLocation(){
-    setAttribute("Position", "0, 0, 0");
+exPickupLocation::exPickupLocation(){
+    //setAttribute("Position", "0, 0, 0");
+    position = QVector3D();
     originalDatabaseInstance = 0;
-    assignMinicon(0);
+    assignPickup(nullptr);
     bunkerID = 0;
     instanceIndex = 0;
     linkedLocationID = 999;

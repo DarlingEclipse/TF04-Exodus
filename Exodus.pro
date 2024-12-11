@@ -12,7 +12,8 @@ SOURCES += \
     Source/Databases/DataHandler.cpp \
     Source/Databases/DatabaseModel.cpp \
     Source/Databases/DistanceCalculator.cpp \
-    Source/Main/IsoBuilder.cpp \
+    Source/ISOManager/IsoBuilder.cpp \
+    Source/ISOManager/ModHandler.cpp \
     Source/Models/Antioch2.cpp \
     Source/Main/BinChanger.cpp \
     Source/Databases/Database.cpp \
@@ -30,8 +31,9 @@ SOURCES += \
 HEADERS += \
     Headers/Databases/DataHandler.h \
     Headers/Databases/DistanceCalculator.h \
+    Headers/ISOManager/IsoBuilder.h \
+    Headers/ISOManager/ModHandler.h \
     Headers/Main/CustomQT.h \
-    Headers/Main/IsoBuilder.h \
     Headers/Models/Antioch2.h \
     Headers/Main/BinChanger.h \
     Headers/Databases/Database.h \
@@ -53,10 +55,10 @@ else: unix:!android: target.path = /opt/$${TARGET}/bin
 !isEmpty(target.path): INSTALLS += target
 
 RC_FILE += \
-    TF04Converter_Version.rc
+    Exodus_Version.rc
 
 DISTFILES += \
-    TF04Converter_Version.rc
+    Exodus_Version.rc
 
 INCLUDEPATH += \
     $$PWD/WinSparkle-0.8.0/include
