@@ -47,26 +47,26 @@ Pickup::Pickup(){
 }
 
 
-exMinicon::exMinicon(Pickup copyItem){
-    this->name = copyItem.name;
+exMinicon::exMinicon(exPickup copyItem){
+    //this->name = copyItem.name;
     this->pickupToSpawn = copyItem.pickupToSpawn;
-    this->attributes = copyItem.attributes;
+    //this->attributes = copyItem.attributes;
     hasVanillaPlacement = false;
 }
 
-void exMinicon::setCreature(Pickup copyItem){
+void exMinicon::setCreature(exPickup copyItem){
     this->enumID = copyItem.enumID;
-    this->instanceIndex = copyItem.instanceIndex;
-    this->isWeapon = copyItem.isWeapon;
+    //this->instanceIndex = copyItem.instanceIndex;
+    //this->isWeapon = copyItem.isWeapon;
     placed = false;
 }
 
 exMinicon::exMinicon(){
-    instanceIndex = 0;
+    //instanceIndex = 0;
     isWeapon = false;
     pickupToSpawn = "Default Shockpunch";
     enumID = 27;
-    setAttribute("Position", "0, 0, 0");
+    //setAttribute("Position", "0, 0, 0");
 }
 
 exMinicon* DataHandler::getMinicon(int searchID){
@@ -132,6 +132,15 @@ exWarpgate::exWarpgate(){
     this->z_position = 0;
 }
 
+/*taMinicon::taMinicon(){
+    activationType = static_cast<enum ActivationType>(1); //I don't like this, but that would be how we get them from the databases
+    activationType = ActivationType::AlwaysOn; //same as above
+}*/
+
+taPickupPlaced::taPickupPlaced(dictItem fromItem){
+
+}
+
 void DataHandler::loadLevels(){
     for(int i = 0; i < 9; i++){
         taEpisode nextLevel;
@@ -177,7 +186,7 @@ void DataHandler::loadLevels(){
         }
         for(int j = 0; j < parent->databaseList.size(); j++){
             if(parent->databaseList[j]->fileName.contains(nextLevel.outputName)){
-                nextLevel.levelFile = parent->databaseList[j];
+                nextLevel.fromFile = parent->databaseList[j];
             }
         }
         levelList.push_back(nextLevel);
@@ -186,16 +195,19 @@ void DataHandler::loadLevels(){
     int totalRemoved = 0;
     std::vector<exPickupLocation> tempLocations;
     for(int i = 0; i < levelList.size(); i++){
-        std::vector<dictItem> filePickupsBase = levelList[i].levelFile->sendInstances("PickupPlaced");
+        std::vector<taPickupPlaced> filePickupsBase;
+        /*conversion function for taPickupPlaced still needs to be defined. Also, this could probably go directly to exPickupLocation and simplify this whole loop*/
+        filePickupsBase = convertInstances<taPickupPlaced>(levelList[i].fromFile->sendInstances("PickupPlaced"));
         //std::vector<PickupLocation> filePickups = convertInstances<PickupLocation>(filePickupsBase);
-        levelList[i].maxInstances = levelList[i].levelFile->maxInstances;
+        levelList[i].maxInstances = levelList[i].fromFile->maxInstances;
         levelList[i].removedInstances = filePickupsBase.size()-2; //to account for glide and highjump placements
         totalRemoved += levelList[i].removedInstances;
         for(int pickup = 0; pickup < filePickupsBase.size(); pickup++){
             tempLocations.push_back(filePickupsBase[pickup]);
             tempLocations[tempLocations.size()-1].gameID[0] = i;
             tempLocations[tempLocations.size()-1].gameID[1] = filePickupsBase[pickup].instanceIndex;
-            tempLocations[tempLocations.size()-1].position = filePickupsBase[pickup].searchAttributes<QVector3D>("Position");
+            //tempLocations[tempLocations.size()-1].position = filePickupsBase[pickup].searchAttributes<QVector3D>("Position");
+            tempLocations[tempLocations.size()-1].position = filePickupsBase[pickup].position;
             pickupList.push_back(filePickupsBase[pickup]);
         }
     }
@@ -715,7 +727,7 @@ dictItem DataHandler::createExodusPickupLocation(exPickupLocation location){
     taEpisode targetLevel = levelList[location.gameID[0]];
     dictItem convertedData;
     convertedData.name = "PickupPlaced";
-    convertedData.attributes = targetLevel.levelFile->generateAttributes("PickupPlaced");
+    convertedData.attributes = targetLevel.fromFile->generateAttributes("PickupPlaced");
     qDebug() << Q_FUNC_INFO << "new item has" << convertedData.attributes.size() << "attributes";
 
     convertedData.setAttribute("Position", QString::number(location.position.x()) + ", " + QString::number(location.position.y()) + ", " + QString::number(location.position.z()));
@@ -753,7 +765,7 @@ void DataHandler::loadMinicons(){
     for(int type = 0; type < miniconTypes.size(); type++){
         metagameMinicons = metagameFile->sendInstances(miniconTypes[type]);
         for(int i = 0; i < metagameMinicons.size(); i++){
-            miniconList.push_back(Pickup(metagameMinicons[i]));
+            miniconList.push_back(exPickup(metagameMinicons[i]));
             /*QString currentName = metagameMinicons[i].searchAttributes<QString>("Name");
             Minicon *currentMinicon = getMinicon(currentName);
             if(currentMinicon != nullptr){
@@ -770,7 +782,7 @@ void DataHandler::loadMinicons(){
     }
 
     for(int i = 0; i < levelList.size(); i++){
-        std::vector<dictItem> filePickupsBase = levelList[i].levelFile->sendInstances("PickupPlaced");
+        std::vector<taPickupPlaced> filePickupsBase = convertInstances<taPickupPlaced>(levelList[i].fromFile->sendInstances("PickupPlaced"));
         for(int pickup = 0; pickup < filePickupsBase.size(); pickup++){
             //qDebug() << Q_FUNC_INFO << "pickup" << pickup << "has instance ID" << filePickupsBase[pickup].instanceIndex << "and name" << filePickupsBase[pickup].name;
             pickupList.push_back(filePickupsBase[pickup]);
@@ -778,7 +790,7 @@ void DataHandler::loadMinicons(){
     }
 
     for(int i = 0; i < miniconList.size(); i++){
-        foreach(Pickup currentPickup, pickupList){
+        foreach(exPickup currentPickup, pickupList){
             bool miniconIsLoaded = false;
             //qDebug() << Q_FUNC_INFO << "comparing minicon" << currentMinicon.pickupToSpawn << "to pickup" << currentPickup.pickupToSpawn;
             if(miniconList[i].pickupToSpawn != currentPickup.pickupToSpawn){
@@ -795,7 +807,7 @@ void DataHandler::loadMinicons(){
                 qDebug() << Q_FUNC_INFO << "Does weapon list contain?" << weaponList.contains(currentPickup.enumID) ;
                 if(weaponList.contains(currentPickup.enumID)){
                     qDebug() << Q_FUNC_INFO << "setting to weapon";
-                    currentPickup.isWeapon = true;
+                    miniconList[i].isWeapon = true;
                 }
                 miniconList[i].hasVanillaPlacement = true;
                 miniconList[i].setCreature(currentPickup);
@@ -841,7 +853,7 @@ void DataHandler::loadAutobots(){
 }
 
 void DataHandler::loadDatacons(){
-    foreach(Pickup currentPickup, pickupList){
+    foreach(exPickup currentPickup, pickupList){
         bool dataconIsLoaded = false;
         if(currentPickup.isMinicon()){
             continue;
@@ -890,7 +902,7 @@ void DataHandler::loadCustomLocations(){
             FileData modBuffer;
             modBuffer.dataBytes = currentModFile.readAll();
             modBuffer.input = true;
-            CustomLocations currentLocations;
+            exCustomLocation currentLocations;
             headerFinished = false;
             int targetLevel = -1;
             int locationValue = 0;
@@ -1035,11 +1047,11 @@ bool DataHandler::dataconLoaded(int checkID){
     return false;
 }
 
-void exPickupLocation::assignPickup(Pickup* pickupToAssign){
+void exPickupLocation::assignPickup(exPickup* pickupToAssign){
     pickup = pickupToAssign;
 }
 
-Pickup* exPickupLocation::assignedPickup(){
+exPickup* exPickupLocation::assignedPickup(){
     return pickup;
 }
 
@@ -1068,21 +1080,25 @@ int exPickupLocation::assignedMinicon(){
     return pickupID;
 }*/
 
-exPickupLocation::exPickupLocation(dictItem fromItem){
+exPickupLocation::exPickupLocation(taPickupPlaced fromItem){
     //QVector3D location = fromItem.searchAttributes<QVector3D>("Position");
     //setAttribute("Position", QString::number(location.x()) + ", " + QString::number(location.y()) + ", " + QString::number(location.z()));
-    position = fromItem.searchAttributes<QVector3D>("Position");
+    //position = fromItem.searchAttributes<QVector3D>("Position");
+    position = fromItem.position;
     originalDatabaseInstance = fromItem.instanceIndex;
     //attributes = fromItem.attributes;
     //assignMinicon(0);
     spoiled = false;
-    this->locationName = fromItem.name;
     bunkerID = 0;
     instanceIndex = 0;
     linkedLocationID = 999;
-    this->spawnEvent = fromItem.searchAttributes<QString>("SpawnEvent");
+    //this->spawnEvent = fromItem.searchAttributes<QString>("SpawnEvent");
+    spawnEvent = fromItem.spawnEvent;
     //setAttributeDefault("GenerationDifficulty");
     //setAttributeDefault("ProductionArt");
+
+    //this will be defined from the database, along with some of the other values here
+    //this->locationName = fromItem.name;
 }
 
 exPickupLocation::exPickupLocation(){
