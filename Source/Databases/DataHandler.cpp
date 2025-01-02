@@ -735,7 +735,7 @@ dictItem DataHandler::createExodusPickupLocation(exPickupLocation location){
     convertedData.setAttribute("PickupToSpawn", QString::number(location.assignedPickup()->enumID));
 
     if(!location.assignedPickup()->isMinicon()){
-        qDebug() << Q_FUNC_INFO << "Datacon - setting production art value to" << location.assignedPickup()->dataID << "from" << location.assignedPickup()->name;
+        qDebug() << Q_FUNC_INFO << "Datacon - setting production art value to" << location.assignedPickup()->dataID << "from" << location.assignedPickup()->pickupToSpawn;
         convertedData.setAttribute("ProductionArt", QString::number(location.assignedPickup()->dataID));
     }
 
