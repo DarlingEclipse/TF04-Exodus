@@ -500,7 +500,7 @@ void Randomizer::placeStarterWeapon(){
     std::vector<exMinicon> starterMinicons;
     qDebug() << Q_FUNC_INFO << "Placing starter weapon. total minicon options:" << parent->dataHandler->miniconList.size();
     for(int i = 0; i < parent->dataHandler->miniconList.size(); i++){
-        qDebug() << Q_FUNC_INFO << "checking if minicon" << i << parent->dataHandler->miniconList[i].name << "is a weapon";
+        qDebug() << Q_FUNC_INFO << "checking if minicon" << i << parent->dataHandler->miniconList[i].pickupToSpawn << "is a weapon";
         if(parent->dataHandler->miniconList[i].isWeapon){
             qDebug() << Q_FUNC_INFO << "it is, adding to list";
             starterMinicons.push_back(parent->dataHandler->miniconList[i]);
@@ -614,7 +614,7 @@ void Randomizer::placeDatacon(int dataconToPlace, int placementID){
     //copy the location to the placed list
     //then remove that location and datacon from the working lists
     qDebug() << Q_FUNC_INFO << "Placing datacon" << dataconToPlace << "at" << placementID;
-    Pickup* chosenDatacon = nullptr;
+    exPickup* chosenDatacon = nullptr;
     for(int i = 0; i < parent->dataHandler->dataconList.size(); i++){
         if(parent->dataHandler->dataconList[i].dataID == dataconToPlace){
             chosenDatacon = &parent->dataHandler->dataconList[i];
@@ -744,7 +744,7 @@ void Randomizer::removeLocation(exPickupLocation locationToRemove){
     qDebug() << Q_FUNC_INFO << "available location count after removal:" << availableLocations.size();
 }
 
-void Randomizer::placeDatacon(Pickup* dataconToPlace, exPickupLocation location){
+void Randomizer::placeDatacon(exPickup* dataconToPlace, exPickupLocation location){
     qDebug() << Q_FUNC_INFO << "placing datacon at location ID" << location.uniqueID << "with linked location" << location.linkedLocationID;
     qDebug() << Q_FUNC_INFO << "current placed pickups" << placedLocations.size() << "currently availlable locations" << availableLocations.size();
     int linkedLocation = location.linkedLocationID;
@@ -889,8 +889,8 @@ int Randomizer::editDatabases(){
         check bunkers to make sure that script isn't sad without a datacon
     */
     for(int i = 0; i<parent->dataHandler->levelList.size(); i++){
-        qDebug() << Q_FUNC_INFO << "removing all pickups from" << parent->dataHandler->levelList[i].levelFile->fileName;
-        parent->dataHandler->levelList[i].levelFile->removeAll("PickupPlaced");
+        qDebug() << Q_FUNC_INFO << "removing all pickups from" << parent->dataHandler->levelList[i].fromFile->fileName;
+        parent->dataHandler->levelList[i].fromFile->removeAll("PickupPlaced");
     }
     QString modFileDirectory = QDir::currentPath();
     QString slipstreamInPath = modFileDirectory + "/ASSETS/INTROGLIDING.CS";
@@ -916,8 +916,8 @@ int Randomizer::editDatabases(){
             }
             //since the placedLocations list should be sorted by level
             //this just saves on a couple hundred loops
-            parent->dataHandler->levelList[level].levelFile->outputPath = levelPath + "/CREATURE.TDB";
-            parent->dataHandler->levelList[level].levelFile->save("TDB");
+            parent->dataHandler->levelList[level].fromFile->outputPath = levelPath + "/CREATURE.TDB";
+            parent->dataHandler->levelList[level].fromFile->save("TDB");
 
             //I am purposefully leaving the slipstream fix out of pacific island
             //if you get that far without it, you don't get the cutscene or the option to equip. You clearly don't need it anyway.
@@ -944,8 +944,8 @@ int Randomizer::editDatabases(){
         placedLocations[i].locationName = "PickupPlaced";
         /*In converting to the new logic, this will be the line with the biggest impact*/
         qDebug() << Q_FUNC_INFO << "checking level list size:" << parent->dataHandler->levelList.size();
-        qDebug() << Q_FUNC_INFO << "does level have a file?:" << parent->dataHandler->levelList[level].levelFile->fileName;
-        parent->dataHandler->levelList[level].levelFile->addInstance(parent->dataHandler->createExodusPickupLocation(placedLocations[i]));
+        qDebug() << Q_FUNC_INFO << "does level have a file?:" << parent->dataHandler->levelList[level].fromFile->fileName;
+        parent->dataHandler->levelList[level].fromFile->addInstance(parent->dataHandler->createExodusPickupLocation(placedLocations[i]));
         //placedLocations[i].instanceIndex = parent->dataHandler->levelList[level].levelFile->addInstance(placedLocations[i]);
         placedLocations[i].locationName = tempNameStorage;
         qDebug() << Q_FUNC_INFO << "placed location instance index is" << placedLocations[i].instanceIndex;
@@ -963,8 +963,8 @@ int Randomizer::editDatabases(){
     }
     //since the placedLocations list should be sorted by level
     //this just saves on a couple hundred loops
-    parent->dataHandler->levelList[level].levelFile->outputPath = levelPath + "/CREATURE.TDB";
-    parent->dataHandler->levelList[level].levelFile->save("TDB");
+    parent->dataHandler->levelList[level].fromFile->outputPath = levelPath + "/CREATURE.TDB";
+    parent->dataHandler->levelList[level].fromFile->save("TDB");
     level++;
 
 
@@ -1009,7 +1009,7 @@ int Randomizer::editDatabases(){
 }
 
 void Randomizer::fixBunkerLinks(int level){
-    std::shared_ptr<DatabaseFile> pacificFile = parent->dataHandler->levelList[level].levelFile;
+    std::shared_ptr<DatabaseFile> pacificFile = parent->dataHandler->levelList[level].fromFile;
     std::vector<int> usedBunkers;
     qDebug() << Q_FUNC_INFO << "bunker file level name:" << pacificFile->fullFileName();
     for(int i = 0; i < placedLocations.size(); i++){

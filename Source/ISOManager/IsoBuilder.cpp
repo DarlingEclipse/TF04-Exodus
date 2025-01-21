@@ -711,6 +711,9 @@ void IsoBuilder::copyFiles(QString folderName){
 }
 
 int IsoBuilder::packModded(QString outputFolder){
+    if(parent->modHandler == nullptr){
+        parent->modHandler = new ModHandler(parent);
+    }
     if(outputFolder == "Randomizer"){
         buildingRandomizer = true;
     }

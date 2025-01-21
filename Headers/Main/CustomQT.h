@@ -2,6 +2,8 @@
 #define CUSTOMQT_H
 
 #include <QLabel>
+#include <QSlider>
+#include <QGroupBox>
 
 class CustomLabel : public QLabel {
 public:
@@ -33,6 +35,11 @@ public:
         objectLabel->show();
         return objectLabel;
     };
+};
+
+class SettingSlider : public QGroupBox {
+public:
+    SettingSlider(QString labelText, int levels = 5);
 };
 
 #endif // CUSTOMQT_H
