@@ -970,3 +970,13 @@ void CustomPopup::addBlankItem(){
     blankValue->setFlags(blankValue->flags() | Qt::ItemIsEditable);
     listOption->addItem(blankValue);
 }
+
+SettingSlider::SettingSlider(QString labelText, int levels){
+    QSlider* slider  = new QSlider(Qt::Horizontal, this);
+    QLabel* label = new QLabel(labelText, this);
+    slider->setTickPosition(QSlider::TicksBelow);
+    slider->setTickInterval(1);
+    slider->setMaximum(levels);
+    label->setGeometry(QRect(QPoint(0,0), QSize(150,30)));
+    slider->setGeometry(QRect(QPoint(0,30), QSize(150,30)));
+}
