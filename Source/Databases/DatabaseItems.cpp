@@ -1047,10 +1047,17 @@ std::shared_ptr<taData> dictItem::editAttributeValue(QString itemType, std::shar
             dialogGetValue->boxList[i]->setValidator(validator);
         }
     } else if(itemType == "Enum"){
-        dialogGetValue = ProgWindow::makeSpecificPopup(isDialogOpen, {"combobox"}, {"Value options"});
+        dialogGetValue = ProgWindow::makeSpecificPopup(isDialogOpen, {"button","combobox"}, {"Add option", "Value options"});
         for(int i = 0; i < itemToEdit->options().size(); i++){
             dialogGetValue->comboOption->addItem(itemToEdit->options()[i]);
         }
+        CustomPopup::connect(dialogGetValue->buttonOption, &QPushButton::released, [&itemToEdit, &dialogGetValue](){
+            editEnumDefinition(itemToEdit);
+            dialogGetValue->comboOption->clear();
+            for(int i = 0; i < itemToEdit->options().size(); i++){
+                dialogGetValue->comboOption->addItem(itemToEdit->options()[i]);
+            }
+        });
     } else if(listWindows.contains(itemType)){
         //Array values will be unsupported on the initial update.
         //need to look into the different options and see which one will be easiest for these
@@ -1152,9 +1159,9 @@ std::shared_ptr<taData> dictItem::editAttributeValue(QString itemType, std::shar
     } else if(itemType == "Color"){
         //there is a color select dialog - implement this at some point
         QString finalValue;
-        finalValue = dialogGetValue->boxList[0]->text() + " ";
-        finalValue += dialogGetValue->boxList[1]->text() + " ";
-        finalValue += dialogGetValue->boxList[2]->text() + " ";
+        finalValue = dialogGetValue->boxList[0]->text() + ",";
+        finalValue += dialogGetValue->boxList[1]->text() + ",";
+        finalValue += dialogGetValue->boxList[2]->text() + ",";
         finalValue += dialogGetValue->boxList[3]->text();
         itemToEdit->setValue(finalValue);
     } else {
@@ -1248,7 +1255,8 @@ int dictItem::addAttribute(QString itemType){
     available data types, then a second popup that's defined by the type chosen*/
 
     //Those are all the ones we should need for now. The rest can be added later.
-    QStringList valueTypes = {"Cancel", "Enum", "Float", "Point", "String", "Bool"};
+    QStringList valueTypes = {"Cancel", "Enum", "Float", "Point", "String", "Bool", "Integer", "Link", "Quaternion", "Flag"
+                              , "StringArray", "IntegerArray", "FloatArray", "LinkArray", "Color"};
 
     bool isDialogOpen = true;
 
