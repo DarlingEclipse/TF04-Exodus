@@ -74,18 +74,6 @@ private:
     bool savedChanges;
 };
 
-class CustomPopup : public QDialog{
-public:
-    QCheckBox* checkOption;
-    QComboBox* comboOption;
-    QLineEdit* lineOption;
-    QTextEdit* multiOption;
-    QListWidget* listOption;
-    std::vector<QLineEdit*> boxList;
-
-    void addBlankItem();
-};
-
 class ProgWindow : public QMainWindow
 {
     Q_OBJECT

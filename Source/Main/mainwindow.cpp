@@ -907,7 +907,7 @@ CustomPopup* ProgWindow::makeSpecificPopup(bool &finished, QStringList addons, Q
 
     int currentLabel = 0;
     for(int i = 0; i < addons.size(); i++){
-        if(addons[i] != "checkbox" && addons[i] != "boxset"){
+        if(addons[i] != "checkbox" && addons[i] != "boxset" && addons[i] != "button"){
             QLabel* currentItemLabel = new QLabel(labels[currentLabel], dialogWindow);
             currentItemLabel->setGeometry(QRect(QPoint(marginSize, nextItemVertical), QSize(250,30)));
             nextItemVertical += 30;
@@ -917,6 +917,12 @@ CustomPopup* ProgWindow::makeSpecificPopup(bool &finished, QStringList addons, Q
             dialogWindow->checkOption = new QCheckBox(dialogWindow);
             dialogWindow->checkOption->setGeometry(QRect(QPoint(marginSize, nextItemVertical), QSize(250,30)));
             dialogWindow->checkOption->show();
+        }
+        if(addons[i] == "button"){
+            dialogWindow->buttonOption = new QPushButton(labels[currentLabel], dialogWindow);
+            dialogWindow->buttonOption->setGeometry(QRect(QPoint(marginSize, nextItemVertical), QSize(250,30)));
+            dialogWindow->buttonOption->show();
+            currentLabel++;
         }
         if(addons[i] == "combobox"){
             dialogWindow->comboOption = new QComboBox(dialogWindow);

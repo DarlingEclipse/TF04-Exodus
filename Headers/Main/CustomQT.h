@@ -1,9 +1,17 @@
 #ifndef CUSTOMQT_H
 #define CUSTOMQT_H
 
+#include <qcombobox>
+#include <qlistwidget>
+#include <qtextedit>
 #include <QLabel>
+
+#include <QDialog>
+#include <QCheckBox>
+
 #include <QSlider>
 #include <QGroupBox>
+
 
 class CustomLabel : public QLabel {
 public:
@@ -35,6 +43,19 @@ public:
         objectLabel->show();
         return objectLabel;
     };
+};
+
+class CustomPopup : public QDialog{
+public:
+    QCheckBox* checkOption;
+    QComboBox* comboOption;
+    QLineEdit* lineOption;
+    QTextEdit* multiOption;
+    QListWidget* listOption;
+    std::vector<QLineEdit*> boxList;
+    QPushButton* buttonOption;
+
+    void addBlankItem();
 };
 
 class SettingSlider : public QGroupBox {
