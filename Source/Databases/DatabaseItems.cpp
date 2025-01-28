@@ -1338,6 +1338,8 @@ int dictItem::addAttribute(QString itemType){
 
     genericData->type = itemType;
     genericData->name = dialogCreateAttribute->lineOption->text();
+    genericData->inherited = false;
+    genericData->active = false;
 
     qDebug() << Q_FUNC_INFO << "data value set to:" << genericData->display();
 

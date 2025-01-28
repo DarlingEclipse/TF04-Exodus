@@ -178,6 +178,7 @@ int DatabaseFile::addInstance(dictItem itemToAdd){
     }
 
     //need to find the first available instance ID and apply it to the item being added instead of this
+    qDebug() << Q_FUNC_INFO << "count of instances:" << instances.size();
     tempItem.instanceIndex = instances[instances.size()-1].instanceIndex + 1;
 //    int previousIndex = 0;
 //    for(int i = 0; i < instances.size(); i++){
@@ -1088,6 +1089,8 @@ int DatabaseFile::readInstances(){
 
         sectionIndex++;
     }
+    maxInstances = instances.size();
+    qDebug() << Q_FUNC_INFO << "file" << fileName << "has instance count" << instances.size();
     return 0;
 }
 
@@ -1315,9 +1318,9 @@ void DefinitionFile::writeText(){
                 //startPoint = dictionary[typeIndexTMD].attributes.size();
                 //qDebug() << Q_FUNC_INFO << "type index" << typeIndexTMD << "start point" << startPoint;
             }
-            //qDebug() << Q_FUNC_INFO << "class" << dictionary[i].name << "has" << dictionary[i].attributes.size() << "items";
+            qDebug() << Q_FUNC_INFO << "class" << dictionary[i].name << "has" << dictionary[i].attributes.size() << "items";
             for(int j = startPoint; j < dictionary[i].attributes.size(); j++){
-                //qDebug() << Q_FUNC_INFO << "item" << j << dictionary[i].attributes[j]->name << "has inherited class?" << dictionary[i].attributes[j]->inherited;
+                qDebug() << Q_FUNC_INFO << "item" << j << dictionary[i].attributes[j]->name << "has inherited class?" << dictionary[i].attributes[j]->inherited;
                 if(!dictionary[i].attributes[j]->inherited){
                     tmdOut.write("\r\n		");
                     tmdOut.write(dictionary[i].attributes[j]->type.toUtf8());
@@ -1672,22 +1675,26 @@ dictItem* DictionaryFile::getDictionaryItem(QString itemName){
     return nullptr;
 }
 
-dictItem* DatabaseFile::getInstance(QString itemName){
+int DatabaseFile::getInstance(QString itemName){
     for(int i = 0; i < instances.size(); i++){
         if(instances[i].name == itemName){
-            return &instances[i];
+            return i;
         }
     }
-    return nullptr;
+    return -1;
 }
 
-dictItem* DatabaseFile::getInstance(int instanceID){
+int DatabaseFile::getInstance(int instanceID){
+    qDebug() << Q_FUNC_INFO << "Checking for instance ID" << instanceID << "from" << instances.size() << "instances";
     for(int i = 0; i < instances.size(); i++){
+        qDebug() << Q_FUNC_INFO << "instance" << i << "has index" << instances[i].instanceIndex;
         if(instances[i].instanceIndex == instanceID){
-            return &instances[i];
+            qDebug() << Q_FUNC_INFO << "returning instance" << instances[i].name;
+            return i;
         }
     }
-    return nullptr;
+    qDebug() << Q_FUNC_INFO << "returning nullptr";
+    return -1;
 }
 
 void DefinitionFile::editRow(QModelIndex selected){
@@ -1705,9 +1712,11 @@ void DefinitionFile::editRow(QModelIndex selected){
         /*User selected a class header. Prompt to add a new attribute to that class.*/
         for(int i = 0; i < dictionary.size(); i++){
             if(dictionary[i].name == firstColumn){
+                qDebug() << Q_FUNC_INFO << "item" << dictionary[i].name << "has" << dictionary[i].attributes.size() << "attriutes before adding";
                 while(!dictionary[i].addAttribute()){
 
                 }
+                qDebug() << Q_FUNC_INFO << "item" << dictionary[i].name << "has" << dictionary[i].attributes.size() << "attriutes after adding";
             }
         }
     } else if(secondColumn != ""){
@@ -1819,14 +1828,15 @@ void DatabaseFile::copyOrDeleteInstance(int instanceID){
 }
 
 void DatabaseFile::copyInstance(int instanceID){
-    dictItem* instanceToCopy = getInstance(instanceID);
+    qDebug() << Q_FUNC_INFO << "Getting instance ID" << instanceID;
+    int indexToCopy = getInstance(instanceID);
     maxInstances++;
     int nextInstanceID = instances.size();
     instances.resize(instances.size()+1);
-    instances[nextInstanceID].instanceIndex = nextInstanceID;
-    instances[nextInstanceID].name = instanceToCopy->name;
-    for(int i = 0; i < instanceToCopy->attributes.size(); i++){
-        instances[nextInstanceID].attributes.push_back(instanceToCopy->attributes[i]->clone());
+    instances[nextInstanceID].instanceIndex = maxInstances;
+    instances[nextInstanceID].name = instances[indexToCopy].name;
+    for(int i = 0; i < instances[indexToCopy].attributes.size(); i++){
+        instances[nextInstanceID].attributes.push_back(instances[indexToCopy].attributes[i]->clone());
     }
 }
 
@@ -1846,10 +1856,9 @@ void DatabaseFile::editAttributeValue(int selectedInstanceID, QString instanceNa
         qDebug() << Q_FUNC_INFO << "Process cancelled.";
         return;
     }
-    dictItem* instanceItem;
-    instanceItem = getInstance(selectedInstanceID);
+    int indexToEdit = getInstance(selectedInstanceID);
     std::shared_ptr<taData> instanceData;
-    instanceData = instanceItem->getAttribute(attributeName);
+    instanceData = instances[indexToEdit].getAttribute(attributeName);
     if(dialogGetDefault->checkOption->isChecked()){
         std::shared_ptr<taData> defaultData;
         defaultData = getDictionaryItem(instanceName)->getAttribute(attributeName);

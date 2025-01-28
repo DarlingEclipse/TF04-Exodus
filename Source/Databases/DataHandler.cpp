@@ -204,6 +204,7 @@ void DataHandler::loadLevels(){
 
     foreach(exPickupLocation currentLocation, tempLocations){
         currentLocation.uniqueID = id;
+        currentLocation.originalDatabaseInstance = tempLocations[id].gameID[1];
         //addedLocation.setAttribute("PickupToSpawn", "0");
 
         //to be placed inside the switch:
@@ -705,7 +706,7 @@ void DataHandler::loadLevels(){
     qDebug() << Q_FUNC_INFO << "Total loaded locations:" << loadedLocations.size();
     for(int i = 0; i < loadedLocations.size(); i++){
         QVector3D debugPosition = loadedLocations[i].position;
-        qDebug() << Q_FUNC_INFO << i << " " << loadedLocations[i].uniqueID << "  " << loadedLocations[i].linkedLocationID << "    "
+        qDebug() << Q_FUNC_INFO << i << "   " << loadedLocations[i].originalDatabaseInstance << "  " << loadedLocations[i].uniqueID << "   " << loadedLocations[i].linkedLocationID << "    "
                  << loadedLocations[i].gameID[0] << "    " << loadedLocations[i].locationName << "    " << debugPosition.x()
                  << "   " << debugPosition.y() << "  " << debugPosition.z();
     }
