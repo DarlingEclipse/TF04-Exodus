@@ -303,6 +303,7 @@ bool exEpisode::addLocation(exPickupLocation locationToAdd){
 void DataHandler::loadLevels(){
     exodusData.loadedLevels = convertInstances<exEpisode>(exodusData.dataFile->sendInstances("exEpisode"));
 
+
     std::vector<exPickupLocation> loadedLocations = convertInstances<exPickupLocation>(exodusData.dataFile->sendInstances("exPickupLocation"));
 
     for(int i = 0; i < exodusData.customLocationList.size(); i++){
@@ -320,6 +321,7 @@ void DataHandler::loadLevels(){
     }
 
     qDebug() << Q_FUNC_INFO << "Total loaded locations:" << loadedLocations.size();
+
     for(int i = 0; i < exodusData.loadedLevels.size(); i++){
         for(int j = 0; j < exodusData.loadedLevels[i].spawnLocations.size(); j++){
             QVector3D debugPosition = exodusData.loadedLevels[i].spawnLocations[j].position;

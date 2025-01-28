@@ -463,8 +463,8 @@ public:
     void addFileDictionaryAttributes(QString chosenClass);
     void addNewInstance();
     void editAttributeValue(int selectedInstanceID, QString instanceName, QString attributeName);
-    dictItem* getInstance(QString itemName);
-    dictItem* getInstance(int instanceID);
+    int getInstance(QString itemName);
+    int getInstance(int instanceID);
     void copyOrDeleteInstance(int instanceID);
     void copyInstance(int instanceID);
 
