@@ -42,7 +42,7 @@ int dictItem::setAttributeDefault(QString itemName){
     return 1; //value not found
 }
 
-std::variant<QString, QVector3D, QQuaternion, int, float> taData::value(){
+std::variant<QString, QVector3D, QQuaternion, int, float, bool> taData::value(){
     if(type == "String"){
         return stringValue();
     } else if (type == "Point"){
@@ -53,6 +53,8 @@ std::variant<QString, QVector3D, QQuaternion, int, float> taData::value(){
         return intValue();
     } else if (type == "Float"){
         return floatValue();
+    } else if (type == "Bool"){
+        return boolValue();
     }
     return -1;
 }
@@ -189,6 +191,10 @@ int taData::intValue(){
 
 float taData::floatValue(){
     //qDebug() << Q_FUNC_INFO << "Item of this data type does not have a valid multi-option value";
+    return 0;
+}
+
+bool taData::boolValue(){
     return 0;
 }
 

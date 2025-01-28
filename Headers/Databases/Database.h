@@ -65,13 +65,14 @@ public:
 
     virtual taDataEnum* cloneEnum();
 
-    std::variant<QString, QVector3D, QQuaternion, int, float> value();
+    std::variant<QString, QVector3D, QQuaternion, int, float, bool> value();
 
     virtual QString stringValue();
     virtual QVector3D vectorValue();
     virtual QQuaternion quatValue();
     virtual int intValue();
     virtual float floatValue();
+    virtual bool boolValue(); //converting from int doesn't cut it, aparently
 
     virtual int size(){
         return 0;
@@ -90,6 +91,7 @@ public:
     int size(){
         return 4 + (sizeof(valueType) * values.size());
     };
+
 };
 
 template <class valueType>
@@ -185,6 +187,10 @@ public:
     std::shared_ptr<taData> clone();
     void setValue(QString changedValue);
     //void write();
+
+    bool boolValue(){
+        return this->value;
+    };
 };
 
 template <class valueType>
