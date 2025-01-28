@@ -24,7 +24,7 @@ public:
     static std::vector<exWarpgate*> createAmazonWarpgates();
 };
 
-class taCreatureWarpgate : taDatabaseInstance{
+class taCreatureWarpgate : public taDatabaseInstance{
 public:
     bool alternativeGate;
     bool destructibleGate;
@@ -73,43 +73,42 @@ public:
     }
 };
 
+enum class GameModes{None, BossMode, ExploreMode}; //None, probably not used
+enum class GenerationDifficulty{Always, CadetAndVeteranOnly, CommanderOnly}; //Always
+enum class GenerationGameBuildType{Any, FullGame, Demo}; //Any
+enum class GenerationSpawnType{Narrative, Always, LevelDone}; //Always
+enum class PickupToSpawn{LIST}; //not typing all that. default Health_Small
+enum class ProductArt{LIST}; //really not typing all that. default None
 class taPickupPlaced : public taDatabaseInstance{
 public:
     int datacon_HealthPickupCount_Large; //0
     int datacon_HealthPickupCount_Small; //2
-    enum class gameModes{None, BossMode, ExploreMode}; //None, probably not used
+    GameModes gameModes;
     bool generate; //true
-    enum class generationDifficulty{Always, CadetAndVeteranOnly, CommanderOnly}; //Always
-    enum class generationGameBuildType{Any, FullGame, Demo}; //Any
-    enum class generationSpawnType{Narrative, Always, LevelDone}; //Always
+    GenerationDifficulty generationDifficulty;
+    GenerationGameBuildType generationGameBuildType;
+    GenerationSpawnType generationSpawnType;
     int linkedDropship; //null
     QQuaternion orientation; //1 0 0 0
-    enum class pickupToSpawn{LIST}; //not typing all that. default Health_Small
+    PickupToSpawn pickupToSpawn;
     QVector3D position; //0 0 0
-    enum class productArt{LIST}; //really not typing all that. default None
+    ProductArt productArt;
     QString spawnEvent; //""
     QString synchronizeEvent; //""
 
     taPickupPlaced(dictItem fromItem);
 };
 
+enum class BossType{None, Starscream, Cyclonus, Megatron, TidalWave, Unicron};
+enum class Episode{Amazon_1, Antarctica, Amazon_2, AircraftCarrier, Greenland, Spaceship, EasterIsland, Cybertron};
 class taEpisode : public taDatabaseInstance{
 public:
-    /*Existing members before rework*/
-    //std::shared_ptr<DatabaseFile> levelFile;
-    QString levelName;
-    QString outputName;
-    //int miniconCount;
-    //int dataconCount;
-    int maxInstances;
-    int removedInstances;
-
     /*all members from metagame.tmd*/
     QString alternativeDirectoryName;
-    enum class bossType{None, Starscream, Cyclonus, Megatron, TidalWave, Unicron};
+    BossType bossType;
     int dataconCount;
     QString directoryName;
-    enum class episode{Amazon_1, Antarctica, Amazon_2, AircraftCarrier, Greenland, Spaceship, EasterIsland, Cybertron};
+    Episode episode;
     bool hasAlternativeDirectory;
     int miniconCount;
     int miniconUnlockCountExtreme;
@@ -122,7 +121,7 @@ public:
 
 class exPickup {
 public:
-    int enumID;
+    int pickupID; //connects to taPickupPlaced
     int dataID;
     QString pickupToSpawn; //for debugging and spoiler files
 
@@ -130,10 +129,11 @@ public:
     bool placed;
 
     exPickup(taPickupPlaced copyItem);
+    exPickup(dictItem copyItem);
     exPickup();
 
     const bool isMinicon(){
-        if(enumID > 3){
+        if(pickupID > 3){
             return true;
         }
         return false;
@@ -142,7 +142,7 @@ public:
 
     bool operator < (const exPickup& compPickup) const
     {
-        return (enumID < compPickup.enumID);
+        return (pickupID < compPickup.pickupID);
     }
 
     bool operator == (const exPickup& compPickup) const
@@ -150,7 +150,7 @@ public:
         if(dataID != 99){
             return (dataID == compPickup.dataID);
         } else {
-            return (enumID == compPickup.enumID);
+            return (pickupID == compPickup.pickupID);
         }
     }
 };
@@ -159,6 +159,7 @@ class exMinicon : public exPickup{
     /*Contains data useful for Exodus that is not defined in the METAGAME files. */
 public:
     /*From Exodus database files*/
+    int miniconID; //connects to taMinicon
     int rating;
     bool isWeapon;
     bool isExplosive;
@@ -170,32 +171,45 @@ public:
 
 
     void setCreature(exPickup copyItem);
-    exMinicon(exPickup copyItem);
+    exMinicon(dictItem copyItem);
     exMinicon();
 };
 
+enum class World{Amazon, Antarctica, DeepAmazon, MidAtlantic, MidAtlanticEmpty, Alaska, Spaceship, PacificIsland, Invalid};
 class exPickupLocation{
 public:
-    std::array<int, 2> gameID; //level #, instance index
+    World level;
+    int gameID; //instance index
+    QString levelName;
     int uniqueID; //randomizer ID
 
     /*The difficulties are determined by how hard it is to get to that location from the start of the level*/
     int slipstreamDifficulty;
     int highjumpDifficulty;
+    bool requiresExplosive;
+    /*Alternative requirements: list of minicons that must all be available if this location has a key minicon
+    for example, revive, shield, and missiles for warship skip
+    or highgear/fullspeed for the spire
+    not sure about this one but it would solve the problem of complex requirements*/
+    std::vector<int> alternativeRequirements;
     QString locationName;
     QString spawnEvent;
-    int originalDatabaseInstance;
+    int inputDatabaseInstance;
+    int outputDatabaseInstance;
     bool spoiled;
     int bunkerID;
-    int instanceIndex;
-    int linkedLocationID;
     QVector3D position;
+    /*Generation difficulty: If the LocationChallenge is outside this range, then the location will not be added to the available
+    location pool*/
+    int minimumGenerationDifficulty;
+    int maximumGenerationDifficulty;
     exPickup* pickup;
 
-    std::vector<exPickupLocation*> linkedLocations; //if a minicon is placed at one of these, it's placed at both of them
-    //only used for starship (vanilla Aftershock) and mid-atlantic, since it has separate database files
+    std::vector<int> linkedLocationIDs; //if a minicon is placed at one of these, it's placed at both of them
+    //so far only used for starship (vanilla Aftershock) and mid-atlantic, since it has separate database files
 
     exPickupLocation();
+    exPickupLocation(dictItem copyItem);
     exPickupLocation(taPickupPlaced fromItem);
     exPickup* assignedPickup();
     void assignPickup(exPickup* pickupToPlace);
@@ -204,24 +218,64 @@ public:
     //using std::sort instead of making a whole function for it
     bool operator < (const exPickupLocation& compLocation) const
     {
-        return (gameID[0] < compLocation.gameID[0]);
+        return (level < compLocation.level);
     }
 };
 
+class exEpisode{
+    /*Can link to taEpisode using outputFileName and comparing to directoryName and alternativeDirectoryName*/
+public:
+    //from database file
+    QString logName;
+    QString outputFileName;
+    int requirements;
+    /*whether the level needs highjump or slipstream to beat normally
+     * Handling requirements this way because integerarrays won't work for a while
+     * 0 = no requirements
+     * 1 = slipstream
+     * 2 = highjump
+     * 3 = both*/
+    std::vector<exPickupLocation> spawnLocations;
+
+    //populated at runtime
+    int assignedMinicons; //max 13 of any specific minicon without mods
+    int assignedDatacons; //max 13 without mods
+    std::shared_ptr<DatabaseFile> levelFile;
+
+    bool addLocation(exPickupLocation locationToAdd);
+    exEpisode(dictItem copyItem);
+    exEpisode();
+};
+
+enum class ActivationType{HoldDown, AlwaysOn, PressInstant, ReleaseInstant, PressAndRelease, ChargeRelease, ChargeReleasePartial, Toggle, ToggleDrain, HoldDownDrain};
+enum class CrosshairIndex{None, AssaultBlaster, Lockon, Slingshot, Claymore, Tractor, Firefight, Hailstorm, Landslide, Smackdown, Watchdog, Lookout, Sparkjump, Skirmish, Airburst, Sandstorm, Twister, Discord, Corona, Aftershock, Aurora, Failsafe, Jumpstart, Endgame, UltimatePrimary, UltimateSecondary};
+enum class Icon{Armor, Beam, Blaster, Exotic, Lobbed, Melee, Missile, Movement, Repair, Shield, Stealth, Vision, None};
+enum class MiniconNames{LIST}; //same comment as above
+enum class RecoilType{None, Small, Large};
+enum class RestrictToButton{Default, L2, R2, L1, R1};
+enum class Slot{PrimaryWeapon, SecondaryWeapon, Movement, Ability};
+enum class Team{Green, Blue, Red, Purple, Gold, None};
+enum class UI_DamagePri{NA, UseFloat, UseFloatX2, UseFloatX4, Variable, AutobotMeleexFloat, plusFloat, FloatPerSec};
+enum class UI_DamageSec{NA, UseFloat, UseFloatx4, Variable, Special, FloatPerSec};
+enum class UI_Defence{NA, Float, AllBeamAndBlaster, AllBeamAndMelee, AllMissileAndMelee};
+enum class UI_Duration{NA, Constant, FloatBoosts, FloatSec, Float, Instant};
+enum class UI_Range{NA, UseRangeFloat, Melee, LineOfSight, PlusPercent, Drop};
+enum class UI_Recharge{NA, FloatPtsPerSec, FloatSec, FloatSecOrHQ, HQ};
+enum class UI_Rounds{NA, UseInt, Variable};
 class taMinicon : public taDatabaseInstance{
     /*From METAGAME.TMD*/
 public:
-    enum ActivationType{HoldDown, AlwaysOn, PressInstant, ReleaseInstant, PressAndRelease, ChargeRelease, ChargeReleasePartial, Toggle, ToggleDrain, HoldDownDrain} activationType;
+    ActivationType activationType;
     float chargeDrainRate_Commander;
     float chargeDrainRate_Veteran;
     float chargeDrainTime;
     float coolDownTime;
     float coolDownTimeDepleted;
-    enum class CrosshairIndex{None, AssaultBlaster, Lockon, Slingshot, Claymore, Tractor, Firefight, Hailstorm, Landslide, Smackdown, Watchdog, Lookout, Sparkjump, Skirmish, Airburst, Sandstorm, Twister, Discord, Corona, Aftershock, Aurora, Failsafe, Jumpstart, Endgame, UltimatePrimary, UltimateSecondary};
+    CrosshairIndex crosshairIndex;
     QString description;
     bool equipInHQ;
-    enum class Icon{Armor, Beam, Blaster, Exotic, Lobbed, Melee, Missile, Movement, Repair, Shield, Stealth, Vision, None};
-    enum class Minicon{LIST}; //same as above
+    Icon icon;
+    MiniconNames minicon;
     float minimumChargeToUse;
     float minimumChargeToUsePerShot;
     QString name;
@@ -229,8 +283,8 @@ public:
     int paletteIndex;
     int powerCost;
     float rechargeTime;
-    enum class RecoilType{None, Small, Large};
-    enum class RestrictToButton{Default, L2, R2, L1, R1};
+    RecoilType recoilType;
+    RestrictToButton restrictToButton;
     int segments;
     float sidekickChargeDrainTime;
     float sidekickCoolDownTime;
@@ -238,21 +292,24 @@ public:
     float sidekickMinimumChargeToUse;
     float sidekickRechargeTime;
     int sidekickSegments;
-    enum class Slot{PrimaryWeapon, SecondaryWeapon, Movement, Ability};
-    enum class Team{Green, Blue, Red, Purple, Gold, None};
+    Slot slot;
+    Team team;
     QString toneLibrary;
-    enum class UI_DamagePri{NA, UseFloat, UseFloatX2, UseFloatX4, Variable, AutobotMeleexFloat, plusFloat, FloatPerSec};
+    UI_DamagePri uiDamagePri;
     float UI_DamagePriFloat;
-    enum class UI_DamageSec{NA, UseFloat, UseFloatx4, Variable, Special, FloatPerSec};
+    UI_DamageSec uiDamageSec;
     float UI_DamageSecFloat;
-    enum class UI_Defence{NA, Float, AllBeamAndBlaster, AllBeamAndMelee, AllMissileAndMelee};
-    enum class UI_Duration{NA, Constant, FloatBoosts, FloatSec, Float, Instant};
+    UI_Defence uiDefence;
+    UI_Duration uiDuration;
     float UI_DurationFloat;
-    enum class UI_Range{NA, UseRangeFloat, Melee, LineOfSight, PlusPercent, Drop};
+    UI_Range uiRange;
     float UI_RangeDist;
-    enum class UI_Recharge{NA, FloatPtsPerSec, FloatSec, FloatSecOrHQ, HQ};
-    enum class UI_Rounds{NA, UseInt, Variable};
+    UI_Recharge UI_Recharge;
+    UI_Rounds uiRounds;
     int UI_RoundsInt;
+
+    taMinicon();
+    taMinicon(dictItem copyItem);
 };
 
 class taMiniconArmor : public taMinicon {
@@ -278,6 +335,29 @@ public:
     std::vector<exPickupLocation> locationList;
 };
 
+class ExodusData{
+  /*Container for all Exodus-specific classes from databases*/
+ public:
+    std::shared_ptr<DatabaseFile> dataFile;
+
+    std::vector<exPickup> pickupList;
+    std::vector<exMinicon> miniconList;
+    std::vector<exPickup> dataconList;
+    std::vector<exCustomLocation> customLocationList;
+    std::vector<exEpisode> loadedLevels;
+};
+
+class GameData{
+  /*Container for all information used in game database files*/
+public:
+    std::shared_ptr<DatabaseFile> metagameFile;
+
+    std::vector<taPickupPlaced> pickupList;
+    std::vector<dictItem> autobotList;
+    std::vector<taEpisode> levelList;
+    std::vector<taMinicon> miniconList;
+};
+
 class DataHandler{
 public:
     inline const static QList<int> weaponList {4, 5, 6, 7, 8, 9, 10, 11, 12, 14, 15, 18, 19, 20, 21, 22, 23, 24, 25, 27, 30, 36, 41, 46, 51};
@@ -285,23 +365,13 @@ public:
 
     ProgWindow* parent;
 
-/*each of these lists should be moved to their respective users - datahandler should just populate the lists
-Maybe something can hold game object data from the databases - or have one for game data, one for exodus data?
-then the datahandler is just some functions to convert that data from generic dictItems to their specific types
-if we do separate them in this way, maybe the game classes can take on the "ta" prefix and exodus data can have "ex"
-
-*/
     //std::vector<dictItem> itemList;
-    std::vector<exPickup> pickupList;
-    std::vector<exMinicon> miniconList;
-    std::vector<exPickup> dataconList;
-    std::vector<dictItem> autobotList;
-    std::vector<exPickupLocation> loadedLocations;
-    std::vector<exCustomLocation> customLocationList;
-    std::vector<taEpisode> levelList;
+
+    ExodusData exodusData;
+    GameData gameData;
 
     template <class instanceType>
-    std::vector<instanceType> convertInstances(std::vector<dictItem> itemList){
+    std::vector<instanceType> convertInstances(const std::vector<dictItem> itemList){
         std::vector<instanceType> convertedList;
         for(int i = 0; i < itemList.size(); i++){
             instanceType nextInstance = instanceType(itemList[i]);
@@ -314,7 +384,8 @@ if we do separate them in this way, maybe the game classes can take on the "ta" 
     void createExodusLocationDatabase();
 
 
-    dictItem createExodusPickupLocation(exPickupLocation location);
+    dictItem createGamePickupPlaced(exPickupLocation location);
+    dictItem createMetagameMinicon(taMinicon minicon);
     void loadMinicons();
     void loadDatacons();
     void loadLevels();
@@ -323,8 +394,18 @@ if we do separate them in this way, maybe the game classes can take on the "ta" 
     bool dataconLoaded(int checkID);
     void loadCustomLocations();
     //void addCustomLocation(int locationID, int level, QVector3D location);
-    exMinicon* getMinicon(int searchID);
-    exMinicon* getMinicon(QString searchName);
+
+    //compare taMinicon MiniconList to exMinicon enumID
+    exMinicon* getExodusMinicon(int searchID);
+    taMinicon* getGameMinicon(int searchID);
+
+    //compare taMinicon name to exMinicon pickupToSpawn
+    exMinicon* getExodusMinicon(QString searchName);
+    taMinicon* getGameMinicon(QString searchName);
+
+    exEpisode* getExodusEpisode(QString levelToGet);
+    taEpisode* getGameEpisode(QString levelToGet);
+
     bool duplicateLocation(exPickupLocation testLocation);
 
     void resetMinicons();
