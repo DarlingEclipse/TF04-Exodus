@@ -5,8 +5,13 @@
 #include <qlistwidget>
 #include <qtextedit>
 #include <QLabel>
+
 #include <QDialog>
 #include <QCheckBox>
+
+#include <QSlider>
+#include <QGroupBox>
+
 
 class CustomLabel : public QLabel {
 public:
@@ -51,6 +56,11 @@ public:
     QPushButton* buttonOption;
 
     void addBlankItem();
+};
+
+class SettingSlider : public QGroupBox {
+public:
+    SettingSlider(QString labelText, int levels = 5);
 };
 
 #endif // CUSTOMQT_H

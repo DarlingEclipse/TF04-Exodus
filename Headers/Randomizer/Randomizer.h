@@ -60,7 +60,7 @@ public:
     void placeAll();
     void placeMinicon(int miniconToPlace, int placementID);
     void placeDatacon(int dataconToPlace, int placementID);
-    void placeDatacon(Pickup* dataconToPlace, exPickupLocation location);
+    void placeDatacon(exPickup* dataconToPlace, exPickupLocation location);
     void setOverallDifficulty(int difficulty);
     void setSlipstreamDifficulty(int difficulty);
     void setHighjumpDifficulty(int difficulty);
