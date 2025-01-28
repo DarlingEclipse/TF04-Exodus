@@ -971,9 +971,10 @@ void CustomPopup::addBlankItem(){
     listOption->addItem(blankValue);
 }
 
-SettingSlider::SettingSlider(QString labelText, int levels){
-    QSlider* slider  = new QSlider(Qt::Horizontal, this);
-    QLabel* label = new QLabel(labelText, this);
+SettingSlider::SettingSlider(QString labelText, QWidget* parent, int levels){
+    this->setParent(parent);
+    slider  = new QSlider(Qt::Horizontal, this);
+    label = new QLabel(labelText, this);
     slider->setTickPosition(QSlider::TicksBelow);
     slider->setTickInterval(1);
     slider->setMaximum(levels);
