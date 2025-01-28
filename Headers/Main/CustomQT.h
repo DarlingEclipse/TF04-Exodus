@@ -60,7 +60,9 @@ public:
 
 class SettingSlider : public QGroupBox {
 public:
-    SettingSlider(QString labelText, int levels = 5);
+    QSlider* slider;
+    QLabel* label;
+    SettingSlider(QString labelText, QWidget* parent = nullptr, int levels = 5);
 };
 
 #endif // CUSTOMQT_H
