@@ -19,13 +19,17 @@ public:
     QRandomGenerator placemaster;
     QLineEdit* editSeed;
     QLineEdit* editSettings;
-    QString settingsValue;
     quint32 seed;
     bool enableCustomLocations;
     struct randomizerSettings {
         bool generateDatacons = false;
         bool autoBuild = false;
-        int overallDifficulty = 0;
+        /*Change overall to PorgressionBalancing and LocationChallenge
+        ProgressionBalancing will be used for the location difficulty calculation
+        LocationChallenge will be used to determine which locations are available in the pool*/
+        //int overallDifficulty = 0;
+        int progressionBalancing = 0;
+        int locationChallenge = 0;
         int slipstreamDifficulty = 0;
         int highjumpDifficulty = 0;
         bool randomizeTeams = false;
@@ -33,6 +37,7 @@ public:
         bool randomizePower = false;
         bool balancedPower = false;
         bool randomizeAutobotStats = false;
+        bool randomizeLevelOrder = false;
     } randSettings;
 
     //https://stackoverflow.com/questions/1604588/how-do-you-remove-elements-from-a-stdvector-while-iterating
@@ -53,6 +58,7 @@ public:
     void randomizeTeamColors();
     void randomizePowers();
     void randomizeAutobotStats();
+    void randomizeLevels();
 
     void randomize();
     void randomFileReplacements();
@@ -61,9 +67,6 @@ public:
     void placeMinicon(int miniconToPlace, int placementID);
     void placeDatacon(int dataconToPlace, int placementID);
     void placeDatacon(exPickup* dataconToPlace, exPickupLocation location);
-    void setOverallDifficulty(int difficulty);
-    void setSlipstreamDifficulty(int difficulty);
-    void setHighjumpDifficulty(int difficulty);
     void placeSlipstreamRequirement(int miniconID, int placementID);
     void placeRangefinder();
     void placeShepherd();
