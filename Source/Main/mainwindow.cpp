@@ -354,11 +354,18 @@ void ProgWindow::bulkSave(QString category){
 }
 
 void ProgWindow::loadRequiredFile(QString startingPath, QString fileName, QString fileType){
-    qDebug() << Q_FUNC_INFO << "dependant path was:" << fileName;
+    qDebug() << Q_FUNC_INFO << "dependant file is:" << fileName << "with starting path" << startingPath;
     static QRegularExpression pathRemover = QRegularExpression("../");
     int directoriesToAscend = fileName.count(pathRemover)+1;
     fileName = fileName.remove(pathRemover);
-    std::shared_ptr<TFFile> testLoaded = matchFile(fileName + "." + fileType);
+    if(!fileName.contains("."+fileType)){
+        fileName += "."+fileType;
+    }
+
+    long storedPosition = fileData.currentPosition;
+    QString storedPath = startingPath;
+
+    std::shared_ptr<TFFile> testLoaded = matchFile(fileName);
     if(testLoaded == nullptr){
         QDir dir(startingPath);
         qDebug() << Q_FUNC_INFO << "Dir before ascending:" << dir.absolutePath();
@@ -394,6 +401,8 @@ void ProgWindow::loadRequiredFile(QString startingPath, QString fileName, QStrin
         openFile(fileType);
         testLoaded = matchFile(fileName);
     }
+    fileData.readFile(storedPath);
+    fileData.currentPosition = storedPosition;
 }
 
 std::shared_ptr<TFFile> ProgWindow::matchFile(QString fileNameFull){
