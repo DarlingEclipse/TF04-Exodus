@@ -720,8 +720,10 @@ void VBIN::outputDataDAE(){
     std::shared_ptr<TFFile> testLoaded;
     std::vector<std::shared_ptr<TFFile>> loadedInstances;
     for(int i = 0; i < instanceNameList.size(); i++){
+        /*This should probably be moved to the loading side of things*/
+        parent->loadRequiredFile(inputPath, instanceNameList[i], "VBIN");
         testLoaded = parent->matchFile(instanceNameList[i] + ".VBIN");
-        if(testLoaded == nullptr){
+        /*if(testLoaded == nullptr){
             //putting this separate from the while - don't want to run this check multiple times if it won't do anything
             QFileInfo dir(inputPath);
             QString instancePath = dir.absolutePath() + "/" + instanceNameList[i] + ".VBIN";
@@ -736,7 +738,7 @@ void VBIN::outputDataDAE(){
             parent->messageError("Please load a file " + instanceNameList[i]+".VBIN");
             parent->openFile("VBIN");
             testLoaded = parent->matchFile(instanceNameList[i] + ".VBIN");
-        }
+        }*/
         testLoaded->outputPath = outputPath;
         loadedInstances.push_back(testLoaded);
     }
