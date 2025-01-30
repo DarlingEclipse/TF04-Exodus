@@ -69,6 +69,7 @@ void DictionaryFile::load(QString fromType){
         binary = false;
         failedRead = readText();
     } else {
+        qDebug() << Q_FUNC_INFO << "Unexpected file extension received. file extension:" << fromType;
         failedRead = 1;
     }
     if(failedRead){
@@ -684,13 +685,9 @@ int DictionaryFile::readBinary(){
 int DictionaryFile::readIncludedFiles(QString fullRead){
     //read Definition file name, verify that we're using the right Definitons
     static QRegularExpression quoteRemover = QRegularExpression("[\[\"\\]]");
-    static QRegularExpression pathRemover = QRegularExpression("../");
     int failed = 1;
-    QString nameList; //for the error message
 
-    inheritedFileName = fullRead.remove(quoteRemover);
-
-    fullRead = fullRead.remove(quoteRemover).remove(pathRemover);
+    fullRead = fullRead.remove(quoteRemover);
     //qDebug() << Q_FUNC_INFO << fullRead << "included file" << inheritedFileName;
     if(fullRead == ""){
         //qDebug() << Q_FUNC_INFO << "No files included. We can continue.";
@@ -704,7 +701,12 @@ int DictionaryFile::readIncludedFiles(QString fullRead){
         return failed;
     }
 
-    inheritedFile = std::static_pointer_cast<DefinitionFile>(parent->matchFile(fullRead));
+    QString extension = fullRead.right(3).toUpper();
+    parent->loadRequiredFile(inputPath, fullRead, extension);
+
+    static QRegularExpression pathRemover = QRegularExpression("../");
+    inheritedFileName = fullRead.remove(pathRemover);
+    inheritedFile = std::static_pointer_cast<DefinitionFile>(parent->matchFile(inheritedFileName));
 
     if(inheritedFile != nullptr){
         //qDebug() << Q_FUNC_INFO << "The Database file includes the loaded Definition file. We can continue.";
@@ -713,7 +715,7 @@ int DictionaryFile::readIncludedFiles(QString fullRead){
 
     if(failed){
         parent->messageError("The file does not include a loaded TMD/BMD file. Please verify that the correct files are loaded."
-                             "Currently loaded TMD/BMD files:" + nameList + " | TDB/BDB file includes:" + inheritedFileName);
+                             "TDB/BDB file includes:" + fullRead);
     }
     return failed;
 
