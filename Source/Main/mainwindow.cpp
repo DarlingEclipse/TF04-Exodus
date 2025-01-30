@@ -353,6 +353,49 @@ void ProgWindow::bulkSave(QString category){
 
 }
 
+void ProgWindow::loadRequiredFile(QString startingPath, QString fileName, QString fileType){
+    qDebug() << Q_FUNC_INFO << "dependant path was:" << fileName;
+    static QRegularExpression pathRemover = QRegularExpression("../");
+    int directoriesToAscend = fileName.count(pathRemover)+1;
+    fileName = fileName.remove(pathRemover);
+    std::shared_ptr<TFFile> testLoaded = matchFile(fileName + "." + fileType);
+    if(testLoaded == nullptr){
+        QDir dir(startingPath);
+        qDebug() << Q_FUNC_INFO << "Dir before ascending:" << dir.absolutePath();
+        for(int i = 0; i < directoriesToAscend; i++){
+            dir.cdUp();
+        }
+        qDebug() << Q_FUNC_INFO << "Dir after ascending:" << dir.absolutePath();
+            //then check if file exists at that path
+            //then also check in TFA2 (or TFA)
+        QString inheritPath = dir.absolutePath() + "/" + fileName;
+        qDebug() << Q_FUNC_INFO << "Checking path" << inheritPath;
+        bool isFileInDirectory = QFileInfo::exists(inheritPath);
+        qDebug() << Q_FUNC_INFO << "file directory original is" << inheritPath << "and file exists?" << isFileInDirectory;
+        if(!isFileInDirectory){
+            qDebug() << Q_FUNC_INFO << "file not at expected directory, checking the other TFA";
+            if(inheritPath.contains("TFA2")){
+                qDebug() << Q_FUNC_INFO << "originally TFA2, changing to TFA";
+                inheritPath.replace("TFA2", "TFA");
+            } else {
+                qDebug() << Q_FUNC_INFO << "originally TFA, changing to TFA2";
+                inheritPath.replace("TFA", "TFA2");
+            }
+        }
+        isFileInDirectory = QFileInfo::exists(inheritPath);
+        qDebug() << Q_FUNC_INFO << "file directory after check is" << inheritPath << "and file exists?" << isFileInDirectory;
+        if(isFileInDirectory){
+            openFile(fileType, inheritPath);
+        }
+        testLoaded = matchFile(fileName);
+    }
+    while(testLoaded == nullptr){
+        messageError("Please load file " + fileName);
+        openFile(fileType);
+        testLoaded = matchFile(fileName);
+    }
+}
+
 std::shared_ptr<TFFile> ProgWindow::matchFile(QString fileNameFull){
     if(loadedFileNames.contains(fileNameFull.toUpper())){
         return loadedFiles[loadedFileNames.indexOf(fileNameFull.toUpper())];

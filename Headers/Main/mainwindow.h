@@ -162,6 +162,7 @@ public:
     void updateLoadingBar(int currentValue); //sets progress to currentvalue
 
     void bulkOpen(QString fileType);
+    void loadRequiredFile(QString startingPath, QString fileName, QString fileType);
     template <typename theFile>
     void loadBulkFile(theFile fileToOpen);
 

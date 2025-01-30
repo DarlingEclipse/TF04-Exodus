@@ -5,7 +5,7 @@ template <typename theFile>
 void ProgWindow::loadFile(theFile fileToOpen, QString givenPath){
     clearWindow();
     std::shared_ptr<TFFile> checkFile;
-    qDebug() << Q_FUNC_INFO << "running this function";
+    qDebug() << Q_FUNC_INFO << "running this function for file" << givenPath;
     fileData.input = true;
     fileToOpen->fileData = &fileData;
     fileToOpen->parent = this;
@@ -19,6 +19,7 @@ void ProgWindow::loadFile(theFile fileToOpen, QString givenPath){
     } else {
         fileIn = givenPath;
     }
+    qDebug() << Q_FUNC_INFO << "filein:" << fileIn;
     if(!fileIn.isNull()){
         fileMode = fileToOpen->fileExtension;
         fileToOpen->inputPath = fileIn;
@@ -28,7 +29,7 @@ void ProgWindow::loadFile(theFile fileToOpen, QString givenPath){
         inputFile.open(QIODevice::ReadOnly);
         QFileInfo fileInfo(inputFile);
         fileToOpen->fileName = fileInfo.fileName().left(fileInfo.fileName().indexOf("."));
-        fileToOpen->fileExtension = fileInfo.fileName().right(fileInfo.fileName().length() - (fileInfo.fileName().indexOf(".")+1));
+        fileToOpen->fileExtension = fileInfo.fileName().right(fileInfo.fileName().length() - (fileInfo.fileName().indexOf(".")+1)).toUpper();
         checkFile = matchFile(fileToOpen->fullFileName());
         while(checkFile != nullptr){
             fileToOpen->duplicateFileCount = checkFile->duplicateFileCount + 1;
@@ -121,7 +122,7 @@ void ProgWindow::bulkOpen(QString fileType){
 }
 
 void ProgWindow::openFile(QString fileType, QString givenPath){
-    qDebug() << Q_FUNC_INFO << "running this function";
+    qDebug() << Q_FUNC_INFO << "running this function for file" << givenPath;
     if(fileType == "VBIN" or fileType == "STL" or fileType == "DAE" or fileType == "GRAPH.VBIN"){
         std::shared_ptr<VBIN> vbinFile(new VBIN);
         vbinFile->fileExtension = fileType;
