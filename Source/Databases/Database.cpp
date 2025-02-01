@@ -120,6 +120,7 @@ void DefinitionFile::createDBTree(){
     //append items to matching dictrow
     /*These need to be split up if we want them to be uneditable*/
     QStringList columnHeaders = {"Type","Value","Value List","Comment"};
+    dataTree->setModel(dataModel);
     headerItem = new QStandardItem(fileName);
     headerItem->setEditable(false);
     dictRow.push_back(headerItem);
@@ -137,6 +138,9 @@ void DefinitionFile::createDBTree(){
         classRow = new QStandardItem(dictionary[i].name);
         classRow->setEditable(false);
         dictRow.first()->appendRow(classRow);
+        if(dictionary[i].expanded){
+            dataTree->expand(classRow->index());
+        }
         for(int j = 0; j<dictionary[i].attributes.size();j++){
             //qDebug() << Q_FUNC_INFO << "creating detail row from" << dictionary[i].attributes[j]->name;
             /*These need to be split up if we want them to be uneditable*/
@@ -149,9 +153,11 @@ void DefinitionFile::createDBTree(){
         }
     }
 
-    dataTree->setModel(dataModel);
+
     //dataTree->expandAll();
     dataTree->expand(dataTree->model()->index(0, 0));
+    QTreeView::connect(dataTree, &QTreeView::expanded, parent, [this](QModelIndex index){setItemExpansion(index, true);});
+    QTreeView::connect(dataTree, &QTreeView::collapsed, parent, [this](QModelIndex index){setItemExpansion(index, false);});
     dataTree->show();
     dataTree->resizeColumnToContents(0);
     QAbstractButton::connect(dataTree, &QAbstractItemView::doubleClicked, parent, [this](QModelIndex selected){editRow(selected);});
@@ -298,7 +304,8 @@ void DatabaseFile::createDBTree(){
     QList<QStandardItem *> dictHeader;
     QStandardItem *headerItem;
     QList<QStandardItem *> instanceHeader;
-    QList<QStandardItem *> dictRow;
+    QStandardItem *dictRow;
+    QStandardItem *instanceRowBase;
     QList<QStandardItem *> instanceRow;
     QList<QStandardItem *> details;
     QStandardItemModel model2;
@@ -307,6 +314,8 @@ void DatabaseFile::createDBTree(){
     //item->appendRow(dictRow);
 
     //append items to matching dictrow
+
+    dataTree->setModel(dataModel);
 
     QStringList dictionaryHeaders = {"File Dictionary","Type","Value","Value List","Default"};
     for(int i = 0; i < dictionaryHeaders.size(); i++){
@@ -317,10 +326,13 @@ void DatabaseFile::createDBTree(){
     item->appendRow(dictHeader);
 
     for (int i = 0; i < dictionary.size();i++) {
-        dictRow = {new QStandardItem(dictionary[i].name)};
+        dictRow = new QStandardItem(dictionary[i].name);
         dictHeader.first()->appendRow(dictRow);
+        if(dictionary[i].expanded){
+            dataTree->expand(dictRow->index());
+        }
         for(int j = 0; j<dictionary[i].attributes.size();j++){
-            dictRow.first()->appendRow(createFileDictionaryRow(dictionary[i].attributes[j]));
+            dictRow->appendRow(createFileDictionaryRow(dictionary[i].attributes[j]));
         }
     }
 
@@ -333,16 +345,21 @@ void DatabaseFile::createDBTree(){
     item->appendRow(instanceHeader);
 
     for (int i = 0; i < instances.size();i++) {
-        instanceRow = {new QStandardItem(instances[i].name), new QStandardItem(QString::number(instances[i].instanceIndex))};
+        instanceRowBase = new QStandardItem(instances[i].name);
+        instanceRow = {instanceRowBase, new QStandardItem(QString::number(instances[i].instanceIndex))};
         instanceHeader.first()->appendRow(instanceRow);
+        if(instances[i].expanded){
+            dataTree->expand(instanceRowBase->index());
+        }
         for(int j = 0; j<instances[i].attributes.size();j++){
-            instanceRow.first()->appendRow(createInstanceRow(instances[i].attributes[j]));
+            instanceRowBase->appendRow(createInstanceRow(instances[i].attributes[j]));
         }
     }
 
-    dataTree->setModel(dataModel);
     //dataTree->setSortingEnabled(true);
     //dataTree->expandAll();
+    QTreeView::connect(dataTree, &QTreeView::expanded, parent, [this](QModelIndex index){setItemExpansion(index, true);});
+    QTreeView::connect(dataTree, &QTreeView::collapsed, parent, [this](QModelIndex index){setItemExpansion(index, false);});
     dataTree->expand(dataTree->model()->index(1, 0));
     dataTree->expand(dataTree->model()->index(0, 0));
     dataTree->show();
@@ -1154,6 +1171,7 @@ int DictionaryFile::readText(){
     while (fileData->currentPosition != -1 and fileData->currentPosition < fileData->dataBytes.size()){
         //majorSections.push_back(majorSignature.type);
 
+        qDebug() << Q_FUNC_INFO << "Checking current signature" << majorSignature.type << "at" << fileData->currentPosition;
         if(majorSignature.type == "IncludedFiles"){
             QString includePath = "";
             //if there are no included files, then this section will contain a line with a single tab character (0x09)
@@ -1166,14 +1184,15 @@ int DictionaryFile::readText(){
             }
             fileData->skipLine();
             fileData->skipLine(); //skip 2 lines at the end of IncludedFiles - there's an extra space between this and dictionary/filedictionary sections
-            //qDebug() << Q_FUNC_INFO << "finished reading included files at" << fileData->currentPosition;
+            qDebug() << Q_FUNC_INFO << "finished reading included files at" << fileData->currentPosition;
 
         }
 
         if(majorSignature.type == "Dictionary"){
-            //qDebug() << Q_FUNC_INFO << "Reading a dictionary section";
+            qDebug() << Q_FUNC_INFO << "Reading a dictionary section - TMD files only.";
             failed = readDictionary();
             if(failed){
+                qDebug() << Q_FUNC_INFO << "File name:" << fileName << "and type" << fileExtension;
                 parent->messageError("There was an error while reading the Dictionary section.");
                 return 1;
             }
@@ -1181,7 +1200,7 @@ int DictionaryFile::readText(){
         }
 
         if(majorSignature.type == "FileDictionary"){
-            //qDebug() << Q_FUNC_INFO << "Reading a filedictionary section";
+            qDebug() << Q_FUNC_INFO << "Reading a filedictionary section - TDB files only.";
             failed = readFileDictionary();
             if(failed){
                 parent->messageError("There was an error while reading the FileDictionary section.");
@@ -1192,7 +1211,7 @@ int DictionaryFile::readText(){
         }
 
         if(majorSignature.type == "Instances"){
-            //qDebug() << Q_FUNC_INFO << "Reading an Instances section";
+            qDebug() << Q_FUNC_INFO << "Reading an Instances section - TDB files only.";
             failed = readInstances();
             if(failed){
                 parent->messageError("There was an error while reading the Instance section.");
@@ -1754,6 +1773,59 @@ void DefinitionFile::editRow(QModelIndex selected){
     //change this to just update the selected row - updating center minimizes all
     updateCenter();
 
+}
+
+void DefinitionFile::setItemExpansion(QModelIndex expanded, bool state){
+    QString firstColumn = expanded.siblingAtColumn(0).data().toString();
+    QString secondColumn = expanded.siblingAtColumn(1).data().toString();
+    QString parentName = expanded.parent().data().toString();
+    qDebug() << Q_FUNC_INFO << "expansion column 0:" << firstColumn << "column 1" << secondColumn << "parent name" << parentName;
+    //if parentName == "", user expanded the file header. Do nothing
+    //if parentName == file name, user expanded a class.
+    //if parentName == a class (or secondColumn != ""), user somehow expanded an attribute. also do nothing
+    if(parentName == ""){
+        /*User expanded the file header row.*/
+        return;
+    } else if(parentName == fileName){
+        /*User expanded a class. */
+        for(int i = 0; i < dictionary.size(); i++){
+            if(dictionary[i].name == firstColumn){
+                qDebug() << Q_FUNC_INFO << "item" << dictionary[i].name << "has been expanded.";
+                dictionary[i].expanded = state;
+            }
+        }
+    }
+}
+
+void DatabaseFile::setItemExpansion(QModelIndex expanded, bool state){
+    QString firstColumn = expanded.siblingAtColumn(0).data().toString();
+    QString secondColumn = expanded.siblingAtColumn(1).data().toString();
+    QString parentName = expanded.parent().data().toString();
+    qDebug() << Q_FUNC_INFO << "expansion column 0:" << firstColumn << "column 1" << secondColumn << "parent name" << parentName;
+    /*if parentName == "" and firstColumn == "File Dictionary",
+    */
+
+    if(parentName == "" and firstColumn == "File Dictionary"){
+        //user expanded the file dictionary.
+        return;
+    } else if(parentName == "" and firstColumn == "Instances"){
+        //user expanded the instance list.
+        return;
+    } else if(parentName == "File Dictionary"){
+        //user expanded a class.
+        for(int i = 0; i < dictionary.size(); i++){
+            if(dictionary[i].name == firstColumn){
+                dictionary[i].expanded = state;
+            }
+        }
+    } else if(parentName == "Instances"){
+        //user expanded an instance of an item.
+        for(int i = 0; i < instances.size(); i++){
+            if(instances[i].instanceIndex == secondColumn.toInt()){
+                instances[i].expanded = state;
+            }
+        }
+    }
 }
 
 void DatabaseFile::editRow(QModelIndex selected){

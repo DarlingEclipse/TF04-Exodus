@@ -321,6 +321,7 @@ public:
     int inheritedDictionaryIndex;
     //std::vector<dictItem> itemList;
     std::vector<std::shared_ptr<taData>> attributes;
+    bool expanded = false;
 
     template <typename ValueType>
     ValueType searchAttributes(QString itemName){
@@ -412,6 +413,7 @@ public:
     int readDictionary(SectionHeader signature); //binary version
     void createDBTree();
     void editTreeItem(QModelIndex item, int itemIndex);
+    void setItemExpansion(QModelIndex item, bool state);
 
     int createClass();
     void editRow(QModelIndex selected);
@@ -453,6 +455,7 @@ public:
     QList<QStandardItem *> createInstanceRow(std::shared_ptr<taData> dataRow);
     void filterInstances();
     void editTreeItem(QModelIndex item, int itemIndex);
+    void setItemExpansion(QModelIndex item, bool state);
     int addInstance(dictItem itemToAdd);
     //int addInstance(Pickup itemToAdd);
     void removeAll(QString itemType);
