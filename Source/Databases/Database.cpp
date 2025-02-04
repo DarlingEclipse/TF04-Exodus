@@ -86,18 +86,34 @@ void DictionaryFile::load(QString fromType){
 
 void DefinitionFile::updateCenter(){
     qDebug() << Q_FUNC_INFO << "updating center view for file" << fileName << "." << fileExtension;
+    parent->setUpdatesEnabled(false);
+    parent->clearWindow();
     createDBTree();
+    parent->setUpdatesEnabled(true);
 }
 
 void DatabaseFile::updateCenter(){
     qDebug() << Q_FUNC_INFO << "updating center view for file" << fileName << "." << fileExtension;
+    parent->setUpdatesEnabled(false);
+    bool treeExisted = false;
+    int selectedInstance = 0;
+    if(dataModel != nullptr){
+        selectedInstance = getSelectedInstance(dataTree->selectionModel()->currentIndex());
+        treeExisted = true;
+        dataModel->clear();
+    }
+    parent->clearWindow();
     createDBTree();
 
+    if(treeExisted){
+        dataTree->setCurrentIndex(getInstanceToSelect(selectedInstance));
+    }
     QPushButton* ButtonFilterTree = new QPushButton("Filter Instances", parent->centralContainer);
     ButtonFilterTree->setGeometry(QRect(QPoint(50,370), QSize(150,30)));
     QAbstractButton::connect(ButtonFilterTree, &QPushButton::released, parent, [this]{filterInstances();});
     ButtonFilterTree->show();
     parent->currentModeWidgets.push_back(ButtonFilterTree);
+    parent->setUpdatesEnabled(true);
 
 }
 
@@ -294,6 +310,7 @@ QList<QStandardItem *> DatabaseFile::createInstanceRow(std::shared_ptr<taData> d
 void DatabaseFile::createDBTree(){
 
     dataTree = new QTreeView(parent->centralContainer);
+    parent->currentModeWidgets.push_back(dataTree);
     dataModel = new QStandardItemModel;
 
     QHeaderView *headers = dataTree->header();
@@ -365,7 +382,6 @@ void DatabaseFile::createDBTree(){
     dataTree->show();
     dataTree->resizeColumnToContents(0);
     QAbstractButton::connect(dataTree, &QAbstractItemView::doubleClicked, parent, [this](QModelIndex selected){editRow(selected);});
-    parent->currentModeWidgets.push_back(dataTree);
 }
 
 void DatabaseFile::removeTreeInstance(QModelIndex item){
@@ -1706,9 +1722,9 @@ int DatabaseFile::getInstance(QString itemName){
 }
 
 int DatabaseFile::getInstance(int instanceID){
-    qDebug() << Q_FUNC_INFO << "Checking for instance ID" << instanceID << "from" << instances.size() << "instances";
+    //qDebug() << Q_FUNC_INFO << "Checking for instance ID" << instanceID << "from" << instances.size() << "instances";
     for(int i = 0; i < instances.size(); i++){
-        qDebug() << Q_FUNC_INFO << "instance" << i << "has index" << instances[i].instanceIndex;
+        //qDebug() << Q_FUNC_INFO << "instance" << i << "has index" << instances[i].instanceIndex;
         if(instances[i].instanceIndex == instanceID){
             qDebug() << Q_FUNC_INFO << "returning instance" << instances[i].name;
             return i;
@@ -1795,6 +1811,49 @@ void DefinitionFile::setItemExpansion(QModelIndex expanded, bool state){
             }
         }
     }
+}
+
+int DatabaseFile::getSelectedInstance(QModelIndex item){
+    /*As of writing: called whenever the tree is refreshed to get the currently selected InstanceIndex
+     that way the same instance can be selected again*/
+    QString firstColumn = item.siblingAtColumn(0).data().toString();
+    QString secondColumn = item.siblingAtColumn(1).data().toString();
+    QString parentName = item.parent().data().toString();
+    qDebug() << Q_FUNC_INFO << "expansion column 0:" << firstColumn << "column 1" << secondColumn << "parent name" << parentName;
+    /*if parentName == "" and firstColumn == "File Dictionary",
+    */
+
+    if(parentName == "" and firstColumn == "File Dictionary"){
+        //user selected the file dictionary.
+        return 0;
+    } else if(parentName == "" and firstColumn == "Instances"){
+        //user selected the instance list.
+        return 0;
+    } else if(parentName == "File Dictionary"){
+        //user selected a class.
+        return 0;
+    } else if(parentName == "Instances"){
+        //user selected an instance of an item.
+        return secondColumn.toInt();
+    } else if(parentName != ""){
+        //only option left is that user selected an attribute
+        return item.parent().siblingAtColumn(1).data().toInt();
+    }
+    return 0;
+}
+
+QModelIndex DatabaseFile::getInstanceToSelect(int instance){
+    for(int i = 0; i < dataModel->rowCount(); i++){
+        if(dataModel->index(i, 0).data() == "Instances"){
+            for(int j = 0; j < dataModel->item(i)->rowCount(); j++){
+                if(dataModel->item(i)->child(j, 1)->index().data().toInt() == instance){
+                    return dataModel->item(i)->child(j, 0)->index();
+                }
+            }
+        }
+    }
+
+    return QModelIndex();
 }
 
 void DatabaseFile::setItemExpansion(QModelIndex expanded, bool state){
@@ -1917,30 +1976,39 @@ void DatabaseFile::copyInstance(int instanceID){
 void DatabaseFile::editAttributeValue(int selectedInstanceID, QString instanceName, QString attributeName){
     /*Should do two popups - one asks if the value will as for default/change, the other edits the value if change is chosen*/
     bool isDialogOpen = true;
-    CustomPopup* dialogGetDefault = ProgWindow::makeSpecificPopup(isDialogOpen, {"checkbox"}, {""});
-    dialogGetDefault->setWindowTitle("Set to Default?");
-    dialogGetDefault->checkOption->setText("Check to set value to default.");
-    dialogGetDefault->open();
-    while(isDialogOpen){
-        ProgWindow::forceProcessEvents();
-    }
-    int resultDialog = dialogGetDefault->result();
-
-    if(resultDialog == 0){
-        qDebug() << Q_FUNC_INFO << "Process cancelled.";
-        return;
-    }
-    int indexToEdit = getInstance(selectedInstanceID);
     std::shared_ptr<taData> instanceData;
+    int indexToEdit = getInstance(selectedInstanceID);
     instanceData = instances[indexToEdit].getAttribute(attributeName);
-    if(dialogGetDefault->checkOption->isChecked()){
-        std::shared_ptr<taData> defaultData;
-        defaultData = getDictionaryItem(instanceName)->getAttribute(attributeName);
+    bool userSetDefault = false;
+    if(!instanceData->isDefault){
+        CustomPopup* dialogGetDefault = ProgWindow::makeSpecificPopup(isDialogOpen, {"checkbox"}, {""});
+        dialogGetDefault->setWindowTitle("Set to Default?");
+        dialogGetDefault->checkOption->setText("Check to set value to default.");
+        dialogGetDefault->open();
+        while(isDialogOpen){
+            ProgWindow::forceProcessEvents();
+        }
+        int resultDialog = dialogGetDefault->result();
+
+        if(resultDialog == 0){
+            qDebug() << Q_FUNC_INFO << "Process cancelled.";
+            return;
+        }
+        userSetDefault = dialogGetDefault->checkOption->isChecked();
+    }
+
+    std::shared_ptr<taData> defaultData;
+    defaultData = getDictionaryItem(instanceName)->getAttribute(attributeName);
+    if(userSetDefault){
         instanceData->setValue(defaultData->display());
         instanceData->isDefault = true;
     } else {
         instanceData = dictItem::editAttributeValue(instanceData->type, instanceData);
-        instanceData->isDefault = false;
+        if(defaultData->display() != instanceData->display()){
+            instanceData->isDefault = false;
+        } else {
+            instanceData->isDefault = true;
+        }
     }
 }
 

@@ -361,8 +361,8 @@ public:
 
     std::shared_ptr<DefinitionFile> inheritedFile;
     QString inheritedFileName;
-    QTreeView *dataTree;
-    QStandardItemModel *dataModel;
+    QTreeView *dataTree = nullptr;
+    QStandardItemModel *dataModel = nullptr;
     int versionNumber;
     std::vector<dictItem> dictionary;
 
@@ -456,6 +456,8 @@ public:
     void filterInstances();
     void editTreeItem(QModelIndex item, int itemIndex);
     void setItemExpansion(QModelIndex item, bool state);
+    int getSelectedInstance(QModelIndex item); //can probably be used to cut some code from the others
+    QModelIndex getInstanceToSelect(int item);
     int addInstance(dictItem itemToAdd);
     //int addInstance(Pickup itemToAdd);
     void removeAll(QString itemType);
