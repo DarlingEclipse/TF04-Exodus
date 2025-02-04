@@ -1,4 +1,5 @@
 #include "Headers/Main/mainwindow.h"
+#include <QTimer>
 
 /*template <typename ValueType>
 ValueType dictItem::searchAttributes(QString itemName){
@@ -353,7 +354,7 @@ void taDataString<valueType>::read(){
         this->value = this->file->fileData->readHex(length);
     } else {
         QString tempRead2 = this->file->fileData->textWord();
-        if(tempRead2.count('"') < 2){
+        while(tempRead2.count('"') < 2){
             //qDebug() <<Q_FUNC_INFO << "string only contains one quote. this means there's a space in the string. Read again.";
             tempRead2 += " " + this->file->fileData->textWord();
         }
@@ -1020,11 +1021,13 @@ std::shared_ptr<taData> dictItem::editAttributeValue(QString itemType, std::shar
         dialogGetValue->checkOption->setText("Set value to true?");
     } else if(itemType == "String"){
         dialogGetValue = ProgWindow::makeSpecificPopup(isDialogOpen, {"lineedit"}, {"Value:"});
+        QTimer::singleShot(0, dialogGetValue, [dialogGetValue]{dialogGetValue->lineOption->setFocus();});
     } else if(itemType == "Float"){
         dialogGetValue = ProgWindow::makeSpecificPopup(isDialogOpen, {"lineedit"}, {"Value:"});
         /*Need to find the actual maximum and minimum*/
         QValidator *validator = new QDoubleValidator(-4000, 4000, 3, dialogGetValue);
         dialogGetValue->lineOption->setValidator(validator);
+        QTimer::singleShot(0, dialogGetValue, [dialogGetValue]{dialogGetValue->lineOption->setFocus();});
     } else if(itemType == "Quaternion"){
         dialogGetValue = ProgWindow::makeSpecificPopup(isDialogOpen, {"boxset", "4"}, {"x:", "y:", "z:", "scalar:"});
         /*Need to find the actual maximum and minimum*/
@@ -1032,15 +1035,20 @@ std::shared_ptr<taData> dictItem::editAttributeValue(QString itemType, std::shar
         for(int i = 0; i < dialogGetValue->boxList.size(); i++){
             dialogGetValue->boxList[i]->setValidator(validator);
         }
+        QTimer::singleShot(0, dialogGetValue, [dialogGetValue]{dialogGetValue->boxList[0]->setFocus();});
     } else if(itemType == "Integer"){
         dialogGetValue = ProgWindow::makeSpecificPopup(isDialogOpen, {"lineedit"}, {"Value:"});
         /*Need to find the actual maximum and minimum*/
         QValidator *validator = new QIntValidator(-4000, 4000, dialogGetValue);
         dialogGetValue->lineOption->setValidator(validator);
+        QTimer::singleShot(0, dialogGetValue, [dialogGetValue]{dialogGetValue->lineOption->setFocus();});
     } else if(itemType == "Link" || itemType == "Flag"){
+        /*Currently only limits to short, so this accommodates both Link and Flag. Later, having link pull from
+         the list of available Instances would be convenient*/
         dialogGetValue = ProgWindow::makeSpecificPopup(isDialogOpen, {"lineedit"}, {"Value:"});
         QValidator *validator = new QIntValidator(0, 65535, dialogGetValue);
         dialogGetValue->lineOption->setValidator(validator);
+        QTimer::singleShot(0, dialogGetValue, [dialogGetValue]{dialogGetValue->lineOption->setFocus();});
     } /*else if(itemType == "Flag"){
         dialogGetValue = ProgWindow::makeSpecificPopup(isDialogOpen, {"lineedit"}, {"Value:"});
         QValidator *validator = new QIntValidator(0, 65535, dialogGetValue);
@@ -1052,6 +1060,8 @@ std::shared_ptr<taData> dictItem::editAttributeValue(QString itemType, std::shar
         for(int i = 0; i < dialogGetValue->boxList.size(); i++){
             dialogGetValue->boxList[i]->setValidator(validator);
         }
+        //dialogGetValue->setFocusProxy(dialogGetValue->boxList[0]); //this does nothing, not sure why
+        QTimer::singleShot(0, dialogGetValue, [dialogGetValue]{dialogGetValue->boxList[0]->setFocus();});
     } else if(itemType == "Enum"){
         dialogGetValue = ProgWindow::makeSpecificPopup(isDialogOpen, {"button","combobox"}, {"Add option", "Value options"});
         for(int i = 0; i < itemToEdit->options().size(); i++){
@@ -1082,6 +1092,7 @@ std::shared_ptr<taData> dictItem::editAttributeValue(QString itemType, std::shar
         for(int i = 0; i < dialogGetValue->boxList.size(); i++){
             dialogGetValue->boxList[i]->setValidator(validator);
         }
+        QTimer::singleShot(0, dialogGetValue, [dialogGetValue]{dialogGetValue->boxList[0]->setFocus();});
     } else {
         qDebug() << Q_FUNC_INFO << "Data type" << itemType << "hasn't been implemented yet.";
         return itemToEdit;
