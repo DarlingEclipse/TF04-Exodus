@@ -721,7 +721,7 @@ void VBIN::outputDataDAE(){
     std::vector<std::shared_ptr<TFFile>> loadedInstances;
     for(int i = 0; i < instanceNameList.size(); i++){
         /*This should probably be moved to the loading side of things*/
-        parent->loadRequiredFile(inputPath, instanceNameList[i], "VBIN");
+        parent->loadRequiredFile(this, instanceNameList[i], "VBIN");
         testLoaded = parent->matchFile(instanceNameList[i] + ".VBIN");
         /*if(testLoaded == nullptr){
             //putting this separate from the while - don't want to run this check multiple times if it won't do anything

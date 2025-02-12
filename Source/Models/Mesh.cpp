@@ -738,7 +738,7 @@ void FileSection::writeNodesDAE(QTextStream &fileOut){
 void Instance::writeNodesDAE(QTextStream &fileOut){
     std::shared_ptr<TFFile> testLoaded;
     for(int i = 0; i < file->instanceNameList.size(); i++){
-        file->parent->loadRequiredFile(file->inputPath, file->instanceNameList[i], "VBIN");
+        file->parent->loadRequiredFile(file, file->instanceNameList[i], "VBIN");
         /*testLoaded = file->parent->matchFile(file->instanceNameList[i] + ".VBIN");
         while(testLoaded == nullptr){
             file->parent->messageError("Please load a file " + file->instanceNameList[i]+".VBIN");
