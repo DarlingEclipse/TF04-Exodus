@@ -470,7 +470,7 @@ public:
     void editAttributeValue(int selectedInstanceID, QString instanceName, QString attributeName);
     int getInstance(QString itemName);
     int getInstance(int instanceID);
-    void copyOrDeleteInstance(int instanceID);
+    void copyOrDeleteInstance(QModelIndex selected);
     void copyInstance(int instanceID);
 
     std::vector<std::shared_ptr<taData>> generateAttributes(QString className);

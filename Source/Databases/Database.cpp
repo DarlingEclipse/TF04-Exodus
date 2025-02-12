@@ -97,8 +97,10 @@ void DatabaseFile::updateCenter(){
     parent->setUpdatesEnabled(false);
     bool treeExisted = false;
     int selectedInstance = 0;
-    if(dataModel != nullptr){
-        selectedInstance = getSelectedInstance(dataTree->selectionModel()->currentIndex());
+    if(dataModel != nullptr && dataTree != nullptr){
+        if(dataTree->selectionModel()->selectedRows().size() > 0){
+            selectedInstance = getSelectedInstance(dataTree->selectionModel()->currentIndex());
+        }
         treeExisted = true;
         dataModel->clear();
     }
@@ -377,6 +379,7 @@ void DatabaseFile::createDBTree(){
     //dataTree->expandAll();
     QTreeView::connect(dataTree, &QTreeView::expanded, parent, [this](QModelIndex index){setItemExpansion(index, true);});
     QTreeView::connect(dataTree, &QTreeView::collapsed, parent, [this](QModelIndex index){setItemExpansion(index, false);});
+    QTreeView::connect(dataTree, &QTreeView::destroyed, parent, [this](){dataTree = nullptr;});
     dataTree->expand(dataTree->model()->index(1, 0));
     dataTree->expand(dataTree->model()->index(0, 0));
     dataTree->show();
@@ -390,7 +393,7 @@ void DatabaseFile::removeTreeInstance(QModelIndex item){
 }
 
 void DatabaseFile::removeInstance(int instanceIndex){
-    instances.erase(instances.begin() + instanceIndex);
+    instances.erase(instances.begin() + instanceIndex-1);
 }
 
 void DatabaseFile::removeAll(QString itemType){
@@ -643,7 +646,7 @@ int DatabaseFile::readInstances(SectionHeader signature){
     /*for(int i = 0; i < warpgates.size(); i++){
         qDebug() << Q_FUNC_INFO << "Warpgate" << i << "is instance index" << warpgates[i].instanceIndex << "with name" << warpgates[i].name << "and position" << warpgates[i].position;
     }*/
-    maxInstances = instances.size();
+    maxInstances = std::max(static_cast<int>(instances.size()), instances[instances.size()-1].instanceIndex);
     qDebug() << Q_FUNC_INFO << "file" << fileName << "has instance count" << instances.size();
     return 0;
 }
@@ -735,7 +738,7 @@ int DictionaryFile::readIncludedFiles(QString fullRead){
     }
 
     QString extension = fullRead.right(3).toUpper();
-    parent->loadRequiredFile(inputPath, fullRead, extension);
+    parent->loadRequiredFile(this, fullRead, extension);
 
     static QRegularExpression pathRemover = QRegularExpression("../");
     inheritedFileName = fullRead.remove(pathRemover);
@@ -1038,7 +1041,7 @@ int DatabaseFile::readInstances(){
         sectionEnd = false;
         fileData->textSignature(&signature);
         instances[sectionIndex].name = signature.type;
-        qDebug() << Q_FUNC_INFO << "reading class" << instances[sectionIndex].name;
+        //qDebug() << Q_FUNC_INFO << "reading class" << instances[sectionIndex].name;
         for(int i = 0; i < dictionary.size(); i++){
             //qDebug() << Q_FUNC_INFO << "comparing class" << i << dictionary[i].name << "to inherited class" << signature.type;
             if(dictionary[i].name == signature.type){
@@ -1059,8 +1062,8 @@ int DatabaseFile::readInstances(){
             }
         }
         for(int j = 0; j < instances[sectionIndex].attributes.size(); j++){
-            qDebug() << Q_FUNC_INFO << "class" << sectionIndex << instances[sectionIndex].name << "item" << j << "is" << instances[sectionIndex].attributes[j]->index
-                   << instances[sectionIndex].attributes[j]->type << instances[sectionIndex].attributes[j]->name;
+            //qDebug() << Q_FUNC_INFO << "class" << sectionIndex << instances[sectionIndex].name << "item" << j << "is" << instances[sectionIndex].attributes[j]->index
+            //       << instances[sectionIndex].attributes[j]->type << instances[sectionIndex].attributes[j]->name;
         }
         fileData->nextLine();
         fileData->skipLine();
@@ -1080,7 +1083,7 @@ int DatabaseFile::readInstances(){
                 fileData->currentPosition += 6;
                 //qDebug() << Q_FUNC_INFO << "Reading object ID at" << fileData->currentPosition;
                 instances[sectionIndex].instanceIndex = fileData->textWord().toInt();
-                qDebug() << Q_FUNC_INFO << "setting instance index to" << instances[sectionIndex].instanceIndex;
+                //qDebug() << Q_FUNC_INFO << "setting instance index to" << instances[sectionIndex].instanceIndex;
                 fileData->nextLine();
                 continue;
             }
@@ -1116,15 +1119,15 @@ int DatabaseFile::readInstances(){
                 isPickup = false;
             }*/
             fileData->nextLine();
-            qDebug() << Q_FUNC_INFO << "Data read as:" << instances[sectionIndex].attributes[itemIndex]->type << instances[sectionIndex].attributes[itemIndex]->name
-                     << instances[sectionIndex].attributes[itemIndex]->active << instances[sectionIndex].attributes[itemIndex]->display() << instances[sectionIndex].attributes[itemIndex]->comment;
+            //qDebug() << Q_FUNC_INFO << "Data read as:" << instances[sectionIndex].attributes[itemIndex]->type << instances[sectionIndex].attributes[itemIndex]->name
+            //         << instances[sectionIndex].attributes[itemIndex]->active << instances[sectionIndex].attributes[itemIndex]->display() << instances[sectionIndex].attributes[itemIndex]->comment;
 
             itemIndex++;
         }
 
         sectionIndex++;
     }
-    maxInstances = instances.size();
+    maxInstances = std::max(static_cast<int>(instances.size()), instances[instances.size()-1].instanceIndex);
     qDebug() << Q_FUNC_INFO << "file" << fileName << "has instance count" << instances.size();
     return 0;
 }
@@ -1906,7 +1909,8 @@ void DatabaseFile::editRow(QModelIndex selected){
         addFileDictionaryAttributes(firstColumn);
     } else if(parentName == "Instances"){
         //user selected an instance of an item. provide an option to copy or delete that instance
-        copyOrDeleteInstance(secondColumn.toInt());
+        //copyOrDeleteInstance(secondColumn.toInt());
+        copyOrDeleteInstance(selected);
     } else if(parentName != ""){
         //by process of elimination, we know the user selected an attribute. What we do now depends on where that attribute is
         if(selected.parent().parent().data().toString() == "Instances"){
@@ -1924,7 +1928,7 @@ void DatabaseFile::editRow(QModelIndex selected){
     updateCenter();
 }
 
-void DatabaseFile::copyOrDeleteInstance(int instanceID){
+void DatabaseFile::copyOrDeleteInstance(QModelIndex selected){
     bool isDialogOpen = true;
     CustomPopup* dialogCopyDelete = ProgWindow::makeSpecificPopup(isDialogOpen, {"combobox"}, {""});
 
@@ -1945,10 +1949,10 @@ void DatabaseFile::copyOrDeleteInstance(int instanceID){
     int userSelection = dialogCopyDelete->comboOption->currentIndex();
     switch(userSelection){
         case 0: //make a copy
-            copyInstance(instanceID);
+            copyInstance(selected.siblingAtColumn(1).data().toInt());
             break;
         case 1: //User chose to delete
-            removeInstance(instanceID);
+            removeInstance(selected.row()+1);
             break;
         case 2: //user chose to change instance type
             //not implemented yet but could be useful
