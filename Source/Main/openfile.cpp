@@ -148,10 +148,12 @@ void ProgWindow::openFile(QString fileType, QString givenPath){
         std::shared_ptr<DefinitionFile> definitionFile(new DefinitionFile);
         definitionFile->fileExtension = fileType;
         ProgWindow::loadFile(definitionFile, givenPath);
+        definitionFile->acceptVisitor(*this);
     } else if (fileType == "BDB" or fileType == "TDB"){
         std::shared_ptr<DatabaseFile> databaseFile(new DatabaseFile);
         databaseFile->fileExtension = fileType;
         ProgWindow::loadFile(databaseFile, givenPath);
+        databaseFile->acceptVisitor(*this);
     } else if (fileType == "VAC"){
         std::shared_ptr<VACFile> vacFile(new VACFile);
         vacFile->fileExtension = fileType;

@@ -724,7 +724,7 @@ int ProgWindow::loadDatabases(){
             return 1;
         }
         //adds the database to the database list
-        testLoaded->acceptVisitor(*this);
+        //testLoaded->acceptVisitor(*this);
     }
 
     QString levelPath = gamePath + "/TFA/LEVELS/EPISODES";
@@ -746,7 +746,7 @@ int ProgWindow::loadDatabases(){
             gamePath = "";
             return 1;
         }
-        testLoaded->acceptVisitor(*this);
+        //testLoaded->acceptVisitor(*this);
 
     }
     return 0;
