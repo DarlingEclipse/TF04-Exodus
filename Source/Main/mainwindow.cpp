@@ -117,8 +117,7 @@ ProgWindow::ProgWindow(QWidget *parent)
     isoBuilder = new IsoBuilder();
     isoBuilder->parent = this;
 
-    dataHandler = new DataHandler();
-    dataHandler->parent = this;
+    dataHandler = new DataHandler(this);
 
     modHandler = nullptr;
 
@@ -353,19 +352,22 @@ void ProgWindow::bulkSave(QString category){
 
 }
 
-void ProgWindow::loadRequiredFile(QString startingPath, QString fileName, QString fileType){
-    qDebug() << Q_FUNC_INFO << "dependant file is:" << fileName << "with starting path" << startingPath;
+void ProgWindow::loadRequiredFile(TFFile* fromFile, QString needFile, QString fileType){
+    qDebug() << Q_FUNC_INFO << "dependant file is:" << needFile << "from starting file" << fromFile->fullFileName();
     static QRegularExpression pathRemover = QRegularExpression("../");
-    int directoriesToAscend = fileName.count(pathRemover)+1;
-    fileName = fileName.remove(pathRemover);
-    if(!fileName.contains("."+fileType)){
-        fileName += "."+fileType;
+    int directoriesToAscend = needFile.count(pathRemover);
+    needFile = needFile.remove(pathRemover);
+    if(!needFile.contains("."+fileType) && !needFile.contains("." + fileType.toLower())){
+        needFile += "."+fileType;
     }
 
     long storedPosition = fileData.currentPosition;
-    QString storedPath = startingPath;
+    QString storedPath = fromFile->inputPath;
 
-    std::shared_ptr<TFFile> testLoaded = matchFile(fileName);
+    QString startingPath = fromFile->inputPath;
+    startingPath.remove(fromFile->fullFileName());
+
+    std::shared_ptr<TFFile> testLoaded = matchFile(needFile);
     if(testLoaded == nullptr){
         QDir dir(startingPath);
         qDebug() << Q_FUNC_INFO << "Dir before ascending:" << dir.absolutePath();
@@ -375,7 +377,7 @@ void ProgWindow::loadRequiredFile(QString startingPath, QString fileName, QStrin
         qDebug() << Q_FUNC_INFO << "Dir after ascending:" << dir.absolutePath();
             //then check if file exists at that path
             //then also check in TFA2 (or TFA)
-        QString inheritPath = dir.absolutePath() + "/" + fileName;
+        QString inheritPath = dir.absolutePath() + "/" + needFile;
         qDebug() << Q_FUNC_INFO << "Checking path" << inheritPath;
         bool isFileInDirectory = QFileInfo::exists(inheritPath);
         qDebug() << Q_FUNC_INFO << "file directory original is" << inheritPath << "and file exists?" << isFileInDirectory;
@@ -394,12 +396,12 @@ void ProgWindow::loadRequiredFile(QString startingPath, QString fileName, QStrin
         if(isFileInDirectory){
             openFile(fileType, inheritPath);
         }
-        testLoaded = matchFile(fileName);
+        testLoaded = matchFile(needFile);
     }
     while(testLoaded == nullptr){
-        messageError("Please load file " + fileName);
+        messageError("Please load file " + needFile);
         openFile(fileType);
-        testLoaded = matchFile(fileName);
+        testLoaded = matchFile(needFile);
     }
     fileData.readFile(storedPath);
     fileData.currentPosition = storedPosition;
