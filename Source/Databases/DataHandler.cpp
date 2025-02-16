@@ -19,6 +19,29 @@ std::vector<Warpgate> convertWarpgates(std::vector<dictItem> itemList){
     return warpgateList;
 }*/
 
+// DataHandler::DataHandler(){
+//     qDebug() << Q_FUNC_INFO << "Base DataHandler intialization called. This shouldn't happen";
+// }
+
+DataHandler::DataHandler(ProgWindow* passParent){
+    parent = passParent;
+
+    parent->openFile("TDB", QDir::currentPath() + "/DATA/EXODUS_MAIN.TDB");
+    for(int i = 0; i < parent->databaseList.size(); i++){
+        qDebug() << Q_FUNC_INFO << "checking file name" << parent->databaseList[i]->fileName;
+        if(parent->databaseList[i]->fileName == "DATA-EXODUS_MAIN"){
+            exodusData.dataFile = parent->databaseList[i];
+        }
+    }
+
+    if(exodusData.dataFile == nullptr){
+        qDebug() << Q_FUNC_INFO << "Main database was not found.";
+    } else {
+        qDebug() << Q_FUNC_INFO << "Main database file was found.";
+    }
+
+    return;
+}
 
 Pickup::Pickup(dictItem copyItem){
     dataID = 99;
@@ -46,7 +69,7 @@ Pickup::Pickup(){
     setAttribute("Position", "0, 0, 0");
 }
 
-exPickup::exPickup(taPickupPlaced copyItem){
+/*exPickup::exPickup(taPickupPlaced copyItem){
     this->pickupID = static_cast<int>(copyItem.pickupToSpawn);
     this->placed = false;
     this->dataID = static_cast<int>(copyItem.productArt);
@@ -64,11 +87,11 @@ exPickup::exPickup(){
     this->pickupToSpawn = "";
     this->dataID = 99;
     this->placed = false;
-}
+}*/
 
 taMinicon::taMinicon(){
     this->name = "UNLOADED";
-    this->minicon = MiniconNames::LIST;
+    this->minicon = MiniconEffects::None;
 }
 
 taMinicon::taMinicon(dictItem copyItem){
@@ -82,7 +105,7 @@ taMinicon::taMinicon(dictItem copyItem){
     this->crosshairIndex = static_cast<CrosshairIndex>(copyItem.searchAttributes<int>("CrosshairIndex"));
     this->equipInHQ = copyItem.searchAttributes<bool>("EquipInHQ");
     this->icon = static_cast<Icon>(copyItem.searchAttributes<int>("Icon"));
-    this->minicon = static_cast<MiniconNames>(copyItem.searchAttributes<int>("Minicon"));
+    this->minicon = static_cast<MiniconEffects>(copyItem.searchAttributes<int>("Minicon"));
     this->minimumChargeToUse = copyItem.searchAttributes<float>("MinimumChargeToUse");
     this->minimumChargeToUsePerShot = copyItem.searchAttributes<float>("MinimumChargeToUsePerShot");
     this->name = copyItem.searchAttributes<QString>("Name");
@@ -102,42 +125,76 @@ taMinicon::taMinicon(dictItem copyItem){
 }
 
 exMinicon::exMinicon(dictItem copyItem){
-    this->pickupID = copyItem.searchAttributes<int>("PickupID");
-    this->miniconID = copyItem.searchAttributes<int>("MiniconID");
-    this->pickupToSpawn = copyItem.searchAttributes<QString>("PickupToSpawn");
-    this->hasVanillaPlacement = copyItem.searchAttributes<bool>("hasVanillaPlacement");
-    this->dataID = 99; //this shouldn't exist?
+    this->creatureID = copyItem.searchAttributes<int>("CreatureID");
+    this->metagameID = copyItem.searchAttributes<int>("MetagameID");
+    this->name = copyItem.searchAttributes<QString>("Name");
+    this->rating = copyItem.searchAttributes<int>("Rating");
+    this->hasVanillaPlacement = copyItem.searchAttributes<bool>("HasVanillaPlacement");
+    this->isWeapon = copyItem.searchAttributes<bool>("IsWeapon");
+    this->isExplosive = copyItem.searchAttributes<bool>("IsExplosive");
     this->placed = false;
-    this->isWeapon = copyItem.searchAttributes<bool>("Weapon");
-    this->isExplosive = copyItem.searchAttributes<bool>("Explosive");
+}
+
+taEpisode::taEpisode(dictItem copyItem){
+    this->alternativeDirectoryName = copyItem.searchAttributes<QString>("AlternativeDirectoryName");
+    this->bossType = static_cast<BossType>(copyItem.searchAttributes<int>("BossType"));
+    this->dataconCount = copyItem.searchAttributes<int>("DataconCount");
+    this->directoryName = copyItem.searchAttributes<QString>("DirectoryName");
+    this->episodeOrder = copyItem.searchAttributes<int>("Episode");
+    this->episodeID = static_cast<Episode>(episodeOrder);
+    this->hasAlternativeDirectory = copyItem.searchAttributes<bool>("HasAlternativeDirectory");
+    this->miniconCount = copyItem.searchAttributes<int>("MiniconCount");
+    this->miniconUnlockCountExtreme = copyItem.searchAttributes<int>("MiniconUnlockCountExtreme");
+    this->miniconUnlockCountHard = copyItem.searchAttributes<int>("MiniconUnlockCountHard");
+    this->miniconUnlockCountNormal = copyItem.searchAttributes<int>("MiniconUnlockCountNormal");
+    this->name = copyItem.searchAttributes<QString>("Name");
+    this->WarpGateMusicTrack = {}; //copyItem.searchAttributes<bool>("MiniconCount");
+    this->warpgates = copyItem.searchAttributes<int>("Warpgates");
+}
+
+void taEpisode::updateDirectories(){
+    if(hasAlternativeDirectory){
+        alternativeDirectoryName = "levels//episodes//0" + QString::number(static_cast<int>(episodeOrder)) + "_" + name + "Defeated/";
+    }
+    directoryName = "levels//episodes//0" + QString::number(static_cast<int>(episodeOrder)) + "_" + name + "/";
 }
 
 exPickupLocation::exPickupLocation(dictItem copyItem){
-    level = static_cast<World>(copyItem.searchAttributes<int>("Level"));
-    levelName = copyItem.searchAttributes<QString>("Level");
-    inputDatabaseInstance = copyItem.searchAttributes<int>("InstanceIndex");
+    originalEpisode = static_cast<Episode>(copyItem.searchAttributes<int>("Level"));
+    usesAlternate = copyItem.searchAttributes<bool>("UsesAlternateDirectory");
+    //levelName = copyItem.searchAttributes<QString>("LevelName");
+    inputDatabaseInstance = copyItem.searchAttributes<int>("GameID");
     //uniqueID = copyItem.searchAttributes<int>("ExodusID");
     uniqueID = copyItem.instanceIndex;
 
-    slipstreamDifficulty = copyItem.searchAttributes<int>("SlipstreamDifficulty");
-    highjumpDifficulty = copyItem.searchAttributes<int>("HighjumpDifficulty");
+    requiresSlipstream = copyItem.searchAttributes<bool>("RequiresSlipstream");
+    requiresHighjump = copyItem.searchAttributes<bool>("RequiresHighjump");
+    requiresExplosive = copyItem.searchAttributes<bool>("RequiresExplosive");
+    //trick list excluded for now
     locationName = copyItem.searchAttributes<QString>("LocationName");
     spawnEvent = copyItem.searchAttributes<QString>("SpawnEvent");
-    bunkerID = copyItem.searchAttributes<int>("BunkerID");
+    isBunker = copyItem.searchAttributes<bool>("IsBunker");
     position = copyItem.searchAttributes<QVector3D>("Position");
-    requiresExplosive = copyItem.searchAttributes<bool>("RequiresExplosive");
-    maximumGenerationDifficulty = copyItem.searchAttributes<int>("MaxGenDifficulty");
-    minimumGenerationDifficulty = copyItem.searchAttributes<int>("MinGenDifficulty");
+    maximumGenerationDifficulty = copyItem.searchAttributes<int>("MinimumGenerationDifficulty");
+    minimumGenerationDifficulty = copyItem.searchAttributes<int>("MaximumGenerationDifficulty");
 
     //linkedLocationIDs = copyItem.searchAttributes<std::vector<int>>("LinkedLocations");
     linkedLocationIDs = {}; //this needs some work on the taData side of things - the template function and variant system is a mess and I hate it
-    alternativeRequirements = {}; //same as above
+    /*At the very least, manually define the linked locations for Mid-Atlantic. */
+    availableTricks = {}; //same as above
 
+    pickup = nullptr;
+    spoiled = false;
 }
 
 exEpisode::exEpisode(dictItem copyItem){
-    logName = copyItem.searchAttributes<QString>("LogName");
-    outputFileName = copyItem.searchAttributes<QString>("OutputFileName");
+    logName = copyItem.searchAttributes<QString>("EpisodeName");
+    //outputFileName = copyItem.searchAttributes<QString>("EpisodeFolder");
+    originalEpisode = copyItem.searchAttributes<int>("EpisodeID");
+    currentEpisode = originalEpisode;
+    episodeID = static_cast<Episode>(originalEpisode);
+    requirements = copyItem.searchAttributes<int>("Requirements");
+    placeable = copyItem.searchAttributes<bool>("Placeable");
 
     assignedMinicons = 0;
     assignedDatacons = 0;
@@ -145,13 +202,17 @@ exEpisode::exEpisode(dictItem copyItem){
 
 exEpisode::exEpisode(){
     logName = "UNLOADED LEVEL";
-    outputFileName = "00_TESTLEVEL";
+    episodeID = Episode::Cybertron;
     assignedMinicons = 0;
     assignedDatacons = 0;
 }
 
-void exMinicon::setCreature(exPickup copyItem){
-    this->pickupID = copyItem.pickupID;
+void exMinicon::setCreature(taPickup copyItem){
+    if(!copyItem.isMinicon()){
+        qDebug() << Q_FUNC_INFO << "Attempted to set a Minicon with a Datacon value. Not doing that.";
+        return;
+    }
+    this->creatureID = copyItem.pickupToSpawn;
     //this->instanceIndex = copyItem.instanceIndex;
     //this->isWeapon = copyItem.isWeapon;
     placed = false;
@@ -160,48 +221,51 @@ void exMinicon::setCreature(exPickup copyItem){
 exMinicon::exMinicon(){
     //instanceIndex = 0;
     isWeapon = false;
-    pickupToSpawn = "Default Shockpunch";
-    pickupID = 27;
-    miniconID = 0; //unknown for now, find shockpunch in the list
+    name = "Shockpunch";
+    creatureID = 27;
+    metagameID = 0; //unknown for now, find shockpunch in the list
     //setAttribute("Position", "0, 0, 0");
 }
 
-exEpisode* DataHandler::getExodusEpisode(QString levelToGet){
+exEpisode* DataHandler::getExodusEpisode(Episode episodeToGet){
     for(int i = 0; i < exodusData.loadedLevels.size(); i++){
-        if(exodusData.loadedLevels[i].outputFileName == levelToGet){
+        if(exodusData.loadedLevels[i].episodeID == episodeToGet){
             return &exodusData.loadedLevels[i];
         }
     }
-    qDebug() << Q_FUNC_INFO << "Episode" << levelToGet << "was not found in the Exodus data";
+    qDebug() << Q_FUNC_INFO << "Episode" << static_cast<int>(episodeToGet) << "was not found in the Exodus data";
     return nullptr;
 }
 
-taEpisode* DataHandler::getGameEpisode(QString levelToGet){
+taEpisode* DataHandler::getGameEpisode(Episode episodeToGet){
     QStringList splitPath;
     for(int i = 0; i < gameData.levelList.size(); i++){
-        splitPath = gameData.levelList[i].directoryName.split("/");
-        if(splitPath.contains(levelToGet)){
-            qDebug() << Q_FUNC_INFO << "Matched main directory for game data.";
-            return &gameData.levelList[i];
-        }
-        splitPath = gameData.levelList[i].alternativeDirectoryName.split("/");
-        if(splitPath.contains(levelToGet)){
-            qDebug() << Q_FUNC_INFO << "Matched alternate directory for game data.";
+        if(gameData.levelList[i].episodeID == episodeToGet){
             return &gameData.levelList[i];
         }
     }
-    qDebug() << Q_FUNC_INFO << "Episode" << levelToGet << "was not found in the Game data";
+    qDebug() << Q_FUNC_INFO << "Episode" << static_cast<int>(episodeToGet) << "was not found in the Game data";
     return nullptr;
 }
 
-/*Currently only search by pickupID instead of miniconID*/
+taPickup* DataHandler::getPickup(int searchID){
+    for(int i = 0; i < gameData.pickupList.size(); i++){
+        if(gameData.pickupList[i].pickupToSpawn == searchID){
+            return &gameData.pickupList[i];
+        }
+    }
+    qDebug() << Q_FUNC_INFO << "Pickup" << searchID << "was not found.";
+    return nullptr;
+}
+
+/*Currently only search by creatureID instead of metagameID*/
 exMinicon* DataHandler::getExodusMinicon(int searchID){
     if(searchID == 3){
         qDebug() << Q_FUNC_INFO << "Searching for a datacon instead of minicon. This shouldn't happen.";
         return nullptr;
     }
     for(int i = 0; i < exodusData.miniconList.size(); i++){
-        if(exodusData.miniconList[i].pickupID == searchID){
+        if(exodusData.miniconList[i].creatureID == searchID){
             return &exodusData.miniconList[i];
         }
     }
@@ -211,7 +275,7 @@ exMinicon* DataHandler::getExodusMinicon(int searchID){
 
 exMinicon* DataHandler::getExodusMinicon(QString searchName){
     for(int i = 0; i < exodusData.miniconList.size(); i++){
-        if(exodusData.miniconList[i].pickupToSpawn == searchName){
+        if(exodusData.miniconList[i].name == searchName){
             return &exodusData.miniconList[i];
         }
     }
@@ -220,11 +284,6 @@ exMinicon* DataHandler::getExodusMinicon(QString searchName){
 }
 
 taMinicon* DataHandler::getGameMinicon(int searchID){
-    /*There's some complication with this one - the METAGMAE minicon list does not match the CREATURE taPickupPlaced PickupToSpawn list. Another way needs to be figured out for linking these two types.*/
-    if(searchID == 3){
-        qDebug() << Q_FUNC_INFO << "Searching for a datacon instead of minicon. This shouldn't happen.";
-        return nullptr;
-    }
     for(int i = 0; i < gameData.miniconList.size(); i++){
         if(static_cast<int>(gameData.miniconList[i].minicon) == searchID){
             return &gameData.miniconList[i];
@@ -251,9 +310,9 @@ void DataHandler::resetMinicons(){
 }
 
 void DataHandler::resetDatacons(){
-    for(int i = 0; i < exodusData.dataconList.size(); i++){
+    /*for(int i = 0; i < exodusData.dataconList.size(); i++){
         exodusData.dataconList[i].placed = false;
-    }
+    }*/
 }
 
 void DataHandler::resetLevels(){
@@ -288,20 +347,83 @@ exWarpgate::exWarpgate(){
     activationType = ActivationType::AlwaysOn; //same as above
 }*/
 
-taPickupPlaced::taPickupPlaced(dictItem fromItem){
-
+taPickup::taPickup(dictItem fromItem){
+    datacon_HealthPickupCount_Large = 0;
+    datacon_HealthPickupCount_Small = 2;
+    pickupToSpawn = static_cast<PickupToSpawn>(fromItem.searchAttributes<int>("PickupToSpawn"));
+    productArt = static_cast<ProductArt>(fromItem.searchAttributes<int>("ProductionArt"));
+    instanceIndex = fromItem.instanceIndex;
 }
 
-bool exEpisode::addLocation(exPickupLocation locationToAdd){
-    if(locationToAdd.levelName == logName){
-        spawnLocations.push_back(locationToAdd);
-        return true;
+exTrick::exTrick(dictItem fromItem){
+    this->name = fromItem.searchAttributes<QString>("Name");
+    this->description = fromItem.searchAttributes<QString>("Description");
+    this->difficulty = fromItem.searchAttributes<int>("Difficulty");
+    this->guideLink = fromItem.searchAttributes<QString>("Guide");
+    /*Minicon requirements have to be hard-coded for now*/
+    QStringList hardcodedTricks = {"Damage Boost", "Ramp Boost", "Death Boost","Airdash","Starship Skip", "Infinite Glide Up (IGU)"};
+    switch (hardcodedTricks.indexOf(name)){
+    case 0: //Damage Boost - hailstorm
+        this->requiredMinicons = {11, 12};
+        this->needAllRequirements = false;
+        break;
+    case 1: //Ramp boost
+        this->requiredMinicons = {31, 37};
+        this->needAllRequirements = false;
+        break;
+    case 2: //Death boost
+        this->requiredMinicons = {12, 41, 46};
+        this->needAllRequirements = true;
+        break;
+    case 3: //Airdash
+        this->requiredMinicons = {31, 37};
+        this->needAllRequirements = false;
+        break;
+    case 4: //Starship skip
+        this->requiredMinicons = {25};
+        this->needAllRequirements = true;
+        break;
+    case 5: //IGU
+        this->requiredMinicons = {25};
+        this->needAllRequirements = true;
+        break;
+    default:
+        this->requiredMinicons = {};
+        this->needAllRequirements = false;
+        break;
     }
-    return false;
+}
+
+void DataHandler::loadTricks(){
+    exodusData.trickList = convertInstances<exTrick>(exodusData.dataFile->sendInstances("exTrick"));
+    std::sort(exodusData.trickList.begin(), exodusData.trickList.end());
 }
 
 void DataHandler::loadLevels(){
+
+    for(int i = 0; i < parent->databaseList.size(); i++){
+        qDebug() << Q_FUNC_INFO << "checking file name" << parent->databaseList[i]->fileName;
+        if(parent->databaseList[i]->fileName == "TFA-METAGAME"){
+            gameData.metagameFile = parent->databaseList[i];
+        }
+    }
+
     exodusData.loadedLevels = convertInstances<exEpisode>(exodusData.dataFile->sendInstances("exEpisode"));
+    gameData.levelList = convertInstances<taEpisode>(gameData.metagameFile->sendInstances("Episode"));
+
+    qDebug() << Q_FUNC_INFO << "Loaded levels:" << exodusData.loadedLevels.size();
+
+    for(int i = 0; i< exodusData.loadedLevels.size(); i++){
+        taEpisode* currentEpisode = getGameEpisode(exodusData.loadedLevels[i].episodeID);
+        QString nameCheck = "0" + QString::number(exodusData.loadedLevels[i].originalEpisode+1) + "_" + currentEpisode->name.toUpper() + "-CREATURE";
+        for(int j = 0; j < parent->databaseList.size(); j++){
+            qDebug() << Q_FUNC_INFO << "Checking for file name:" << nameCheck << "vs" << parent->databaseList[j]->fileName;
+            if(parent->databaseList[j]->fileName == nameCheck){
+                qDebug() << Q_FUNC_INFO << "Setting level file.";
+                exodusData.loadedLevels[i].levelFile = parent->databaseList[j];
+            }
+        }
+    }
 
 
     std::vector<exPickupLocation> loadedLocations = convertInstances<exPickupLocation>(exodusData.dataFile->sendInstances("exPickupLocation"));
@@ -316,46 +438,52 @@ void DataHandler::loadLevels(){
 
     for(int i = 0; i < exodusData.loadedLevels.size(); i++){
         for(int j = 0; j < loadedLocations.size(); j++){
-            exodusData.loadedLevels[i].addLocation(loadedLocations[j]);
+            if(exodusData.loadedLevels[i].episodeID != loadedLocations[j].originalEpisode){
+                continue;
+            }
+            loadedLocations[j].episode = &exodusData.loadedLevels[i];
+            exodusData.loadedLevels[i].spawnLocations.push_back(loadedLocations[j]);
         }
     }
 
     qDebug() << Q_FUNC_INFO << "Total loaded locations:" << loadedLocations.size();
 
     for(int i = 0; i < exodusData.loadedLevels.size(); i++){
+        qDebug() << Q_FUNC_INFO << "Level file name:" << exodusData.loadedLevels[i].levelFile->fileName;
         for(int j = 0; j < exodusData.loadedLevels[i].spawnLocations.size(); j++){
             QVector3D debugPosition = exodusData.loadedLevels[i].spawnLocations[j].position;
             qDebug() << Q_FUNC_INFO << i << " " << exodusData.loadedLevels[i].spawnLocations[j].uniqueID << "  "
-                     << exodusData.loadedLevels[i].spawnLocations[j].linkedLocationIDs << "    " << static_cast<int>(exodusData.loadedLevels[i].spawnLocations[j].level) << "    "
+                     << exodusData.loadedLevels[i].spawnLocations[j].linkedLocationIDs << "    " << exodusData.loadedLevels[i].spawnLocations[j].episode->originalEpisode << "    "
                      << exodusData.loadedLevels[i].spawnLocations[j].locationName << "    " << debugPosition.x() << "   " << debugPosition.y() << "  " << debugPosition.z();
+            qDebug() << Q_FUNC_INFO << "is pickup nullptr? (it should be)" << (exodusData.loadedLevels[i].spawnLocations[j].pickup == nullptr);
         }
     }
 
 }
 
-dictItem DataHandler::createGamePickupPlaced(exPickupLocation location){
-    exEpisode targetLevel = exodusData.loadedLevels[static_cast<int>(location.level)];
+dictItem DataHandler::createGamePickupPlaced(const exPickupLocation* location){
+    //exEpisode targetLevel = exodusData.loadedLevels[static_cast<int>(location.episode)];
     dictItem convertedData;
     convertedData.name = "PickupPlaced";
-    convertedData.attributes = targetLevel.levelFile->generateAttributes("PickupPlaced");
-    qDebug() << Q_FUNC_INFO << "new item has" << convertedData.attributes.size() << "attributes";
+    convertedData.attributes = location->episode->levelFile->generateAttributes("PickupPlaced");
+    //qDebug() << Q_FUNC_INFO << "new item has" << convertedData.attributes.size() << "attributes";
 
-    convertedData.setAttribute("Position", QString::number(location.position.x()) + ", " + QString::number(location.position.y()) + ", " + QString::number(location.position.z()));
+    convertedData.setAttribute("Position", QString::number(location->position.x()) + ", " + QString::number(location->position.y()) + ", " + QString::number(location->position.z()));
 
-    convertedData.setAttribute("PickupToSpawn", QString::number(location.assignedPickup()->pickupID));
+    convertedData.setAttribute("PickupToSpawn", QString::number(location->pickup->pickupToSpawn));
 
-    if(!location.assignedPickup()->isMinicon()){
-        qDebug() << Q_FUNC_INFO << "Datacon - setting production art value to" << location.assignedPickup()->dataID << "from" << location.assignedPickup()->pickupToSpawn;
-        convertedData.setAttribute("ProductionArt", QString::number(location.assignedPickup()->dataID));
+    if(!location->pickup->isMinicon()){
+        //qDebug() << Q_FUNC_INFO << "Datacon - setting production art value to" << location->pickup->productArt << "from" << location->pickup->pickupToSpawn;
+        convertedData.setAttribute("ProductionArt", QString::number(location->pickup->productArt));
     }
 
-    if(location.spawnEvent != ""){
-        convertedData.setAttribute("SpawnEvent", location.spawnEvent);
+    if(location->spawnEvent != ""){
+        convertedData.setAttribute("SpawnEvent", location->spawnEvent);
     }
 
-    for(int i = 0; i < convertedData.attributes.size(); i++){
+    /*for(int i = 0; i < convertedData.attributes.size(); i++){
         qDebug() << Q_FUNC_INFO << "attribute" << i << "name" << convertedData.attributes[i]->name << "value" << convertedData.attributes[i]->display();
-    }
+    }*/
 
     return convertedData;
 }
@@ -417,37 +545,42 @@ void DataHandler::loadMinicons(){
 
     std::vector<taMinicon> metagameMinicons;
     for(int type = 0; type < miniconTypes.size(); type++){
+        qDebug() << Q_FUNC_INFO << "Calling for minicon type" << miniconTypes[type];
         metagameMinicons = convertInstances<taMinicon>(gameData.metagameFile->sendInstances(miniconTypes[type]));
-        gameData.miniconList.insert(gameData.miniconList.end(), metagameMinicons.begin(), metagameMinicons.end());
-    }
-
-    qDebug() << Q_FUNC_INFO << "Total loaded minicons:" << exodusData.miniconList.size();
-    for(int i = 0; i < exodusData.miniconList.size(); i++){
-        qDebug() << Q_FUNC_INFO << "loaded minicon" << i << "is named" << exodusData.miniconList[i].pickupToSpawn;
-    }
-
-    //move this to DataHandler's initialization
-    for(int i = 0; i < parent->databaseList.size(); i++){
-        qDebug() << Q_FUNC_INFO << "checking file name" << parent->databaseList[i]->fileName;
-        if(parent->databaseList[i]->fileName == "DATA-EXODUS_MAIN"){
-            exodusData.dataFile = parent->databaseList[i];
+        for(int i = 0; i < metagameMinicons.size(); i++){
+            if(metagameMinicons[i].minicon != MiniconEffects::None){
+                gameData.miniconList.push_back(metagameMinicons[i]);
+            }
         }
+        //gameData.miniconList.insert(gameData.miniconList.end(), metagameMinicons.begin(), metagameMinicons.end());
+        qDebug() << Q_FUNC_INFO << "Minicon list now has:" << gameData.miniconList.size() << "loaded minicons";
     }
 
+    qDebug() << Q_FUNC_INFO << "gameData loaded minicons:" << gameData.miniconList.size();
+    for(int i = 0; i < gameData.miniconList.size(); i++){
+        qDebug() << Q_FUNC_INFO << "loaded minicon" << i << "is named" << gameData.miniconList[i].name << static_cast<int>(gameData.miniconList[i].minicon);
+    }
 
     exodusData.miniconList = convertInstances<exMinicon>(exodusData.dataFile->sendInstances("exMinicon"));
 
     for(int i = 0; i < exodusData.loadedLevels.size(); i++){
-        std::vector<taPickupPlaced> filePickupsBase = convertInstances<taPickupPlaced>(exodusData.loadedLevels[i].levelFile->sendInstances("PickupPlaced"));
-        gameData.pickupList.insert(gameData.pickupList.end(), filePickupsBase.begin(), filePickupsBase.end());
+        std::vector<taPickup> filePickupsBase = convertInstances<taPickup>(exodusData.loadedLevels[i].levelFile->sendInstances("PickupPlaced"));
+        for(int j = 0; j < filePickupsBase.size(); j++){
+            if(!duplicatePickup(filePickupsBase[j])){
+                gameData.pickupList.push_back(filePickupsBase[j]);
+            }
+        }
     }
 
-    qDebug() << Q_FUNC_INFO << "Remaining pickups to process (should be 0):" << exodusData.pickupList.size();
+    qDebug() << Q_FUNC_INFO << "Total gameData pickuplist items:" << gameData.pickupList.size();
+    for(int i = 0; i < gameData.pickupList.size(); i++){
+        qDebug() << Q_FUNC_INFO << i << gameData.pickupList[i].isMinicon() << gameData.pickupList[i].pickupToSpawn << gameData.pickupList[i].productArt;
+    }
 
-    qDebug() << Q_FUNC_INFO << "Total loaded minicons:" << exodusData.miniconList.size();
+    qDebug() << Q_FUNC_INFO << "exodusData loaded minicons:" << exodusData.miniconList.size();
     for(int i = 0; i < exodusData.miniconList.size(); i++){
-        qDebug() << Q_FUNC_INFO << i << " " << exodusData.miniconList[i].pickupID << "  " << exodusData.miniconList[i].pickupToSpawn << "    "
-                 << exodusData.miniconList[i].dataID << " is weapon:" << exodusData.miniconList[i].isWeapon;
+        qDebug() << Q_FUNC_INFO << i << " " << exodusData.miniconList[i].creatureID << "  " << exodusData.miniconList[i].name << "    "
+                 << " is weapon:" << exodusData.miniconList[i].isWeapon;
     }
 
 
@@ -469,18 +602,18 @@ void DataHandler::loadAutobots(){
 }
 
 void DataHandler::loadDatacons(){
-    foreach(exPickup currentPickup, exodusData.pickupList){
+    foreach(taPickup currentPickup, gameData.pickupList){
         bool dataconIsLoaded = false;
         if(currentPickup.isMinicon()){
             continue;
         }
-        qDebug() << Q_FUNC_INFO << "pickup properties for:" << currentPickup.pickupToSpawn << "pickupID" << currentPickup.pickupID << "dataID" << currentPickup.dataID;
-        dataconIsLoaded = dataconLoaded(currentPickup.dataID);
+        qDebug() << Q_FUNC_INFO << "pickup properties for:" << currentPickup.pickupToSpawn << "dataID" << currentPickup.productArt;
+        dataconIsLoaded = dataconLoaded(currentPickup.productArt);
         qDebug() << Q_FUNC_INFO << "already loaded?" << dataconIsLoaded;
-        if (!dataconIsLoaded && currentPickup.pickupID == 3){
+        if (!dataconIsLoaded && currentPickup.pickupToSpawn == 3){
             //we now know it's a datacon (but still check to be sure). if it hasn't been loaded, add it to the datacon list
-            exodusData.dataconList.push_back(currentPickup);
-        } else if (dataconIsLoaded && currentPickup.pickupID == 3){
+            gameData.dataconList.push_back(currentPickup);
+        } else if (dataconIsLoaded && currentPickup.pickupToSpawn == 3){
             //if it has been loaded, just skip it
             continue;
         } else {
@@ -490,10 +623,9 @@ void DataHandler::loadDatacons(){
         }
     }
 
-    qDebug() << Q_FUNC_INFO << "Total loaded datacons:" << exodusData.dataconList.size();
-    for(int i = 0; i < exodusData.dataconList.size(); i++){
-        qDebug() << Q_FUNC_INFO << i << " " << exodusData.dataconList[i].pickupID << "  " << exodusData.dataconList[i].pickupToSpawn << "    "
-                 << exodusData.dataconList[i].dataID;
+    qDebug() << Q_FUNC_INFO << "Total loaded datacons:" << gameData.dataconList.size();
+    for(int i = 0; i < gameData.dataconList.size(); i++){
+        qDebug() << Q_FUNC_INFO << i << " " << gameData.dataconList[i].pickupToSpawn << "  " << gameData.dataconList[i].productArt;
     }
 }
 
@@ -549,7 +681,7 @@ void DataHandler::loadCustomLocations(){
             }
             for(int i = 0; i <currentLocations.locationCount; i++){
                 exPickupLocation customLocation = exPickupLocation();
-                customLocation.level = static_cast<World>(targetLevel);
+                customLocation.originalEpisode = static_cast<Episode>(targetLevel);
                 //double-check that the below doesn't need to find the specific database for the target level
                 //customLocation.attributes = levelList[0].levelFile->generateAttributes("PickupPlaced");
                 bool readingLocation = true;
@@ -561,10 +693,10 @@ void DataHandler::loadCustomLocations(){
                                 qDebug() << Q_FUNC_INFO << "comparing level" << gameData.levelList[i].name << "to" << modProperty.readValue;
                                 if(gameData.levelList[i].name == modProperty.readValue){
                                     qDebug() << Q_FUNC_INFO << "comparing level: match";
-                                    customLocation.level = static_cast<World>(i);
+                                    customLocation.originalEpisode = static_cast<Episode>(i);
                                 }
                             }
-                            if(customLocation.level == World::Invalid){
+                            if(customLocation.originalEpisode == Episode::Cybertron){
                                 qDebug() << Q_FUNC_INFO << "Invalid level:" << modProperty.readValue;
                             }
                             break;
@@ -601,17 +733,17 @@ void DataHandler::loadCustomLocations(){
                             }
                             break;
                         case 10: //Highjump difficulty
-                            customLocation.highjumpDifficulty = modProperty.readValue.toInt();
+                            customLocation.requiresHighjump = modProperty.readValue.toInt();
                             break;
                         case 11: //Slipstream difficulty
-                            customLocation.slipstreamDifficulty = modProperty.readValue.toInt();
+                            customLocation.requiresSlipstream = modProperty.readValue.toInt();
                             readingLocation = false;
                             break;
                         default:
                             qDebug() << Q_FUNC_INFO << "Unknown property" << modProperty.name << "with value" << modProperty.readValue << "found at" << modBuffer.currentPosition;
                     }
                 }
-                qDebug() << Q_FUNC_INFO << "Adding location" << customLocation.locationName << "for level" << customLocation.levelName << "at coordinates" << customLocation.position;
+                qDebug() << Q_FUNC_INFO << "Adding location" << customLocation.locationName << "for level" << customLocation.episode->logName << "at coordinates" << customLocation.position;
                 currentLocations.locationList.push_back(customLocation);
             }
             exodusData.customLocationList.push_back(currentLocations);
@@ -620,7 +752,15 @@ void DataHandler::loadCustomLocations(){
     }
 }
 
-
+bool DataHandler::duplicatePickup(taPickup testPickup){
+    for(int i = 0; i < gameData.pickupList.size(); i++){
+        if(testPickup.pickupToSpawn == gameData.pickupList[i].pickupToSpawn
+            && testPickup.productArt == gameData.pickupList[i].productArt){
+            return true;
+        }
+    }
+    return false;
+}
 
 bool DataHandler::duplicateLocation(exPickupLocation testLocation){
     QVector3D loadedPosition;
@@ -632,7 +772,7 @@ bool DataHandler::duplicateLocation(exPickupLocation testLocation){
             if((testPosition.x() < loadedPosition.x()+5 && testPosition.x() > loadedPosition.x() - 5)
                     && (testPosition.y() < loadedPosition.y()+5 && testPosition.y() > loadedPosition.y() - 5)
                     && (testPosition.z() < loadedPosition.z()+5 && testPosition.z() > loadedPosition.z() - 5)
-                    && (testLocation.level == exodusData.loadedLevels[i].spawnLocations[j].level)){
+                    && (testLocation.episode == exodusData.loadedLevels[i].spawnLocations[j].episode)){
                 locationCount++;
             }
             if(locationCount > 1){
@@ -645,7 +785,7 @@ bool DataHandler::duplicateLocation(exPickupLocation testLocation){
 
 bool DataHandler::miniconLoaded(int checkID){
     for(int i = 0; i < exodusData.miniconList.size(); i++){
-        if(checkID == exodusData.miniconList[i].pickupID){
+        if(checkID == exodusData.miniconList[i].creatureID){
             return true;
         }
     }
@@ -654,8 +794,8 @@ bool DataHandler::miniconLoaded(int checkID){
 
 bool DataHandler::dataconLoaded(int checkID){
     int pickupCount = 0;
-    for(int i = 0; i < exodusData.dataconList.size(); i++){
-        if(checkID == exodusData.dataconList[i].dataID){
+    for(int i = 0; i < gameData.dataconList.size(); i++){
+        if(checkID == gameData.dataconList[i].productArt){
             pickupCount++;
         }
         if(pickupCount > 0){
@@ -665,40 +805,37 @@ bool DataHandler::dataconLoaded(int checkID){
     return false;
 }
 
-void exPickupLocation::assignPickup(exPickup* pickupToAssign){
+void exPickupLocation::assignPickup(taPickup* pickupToAssign){
     pickup = pickupToAssign;
 }
 
-exPickup* exPickupLocation::assignedPickup(){
+taPickup* exPickupLocation::assignedPickup(){
     return pickup;
 }
 
-/*void exPickupLocation::assignMinicon(int miniconID){
-    qDebug() << Q_FUNC_INFO << "Assigning minicon" << miniconID << "to position" << uniqueID;
-    pickupID = miniconID;
-    //setAttribute("PickupToSpawn", QString::number(miniconID));
-    //qDebug() << Q_FUNC_INFO << "checking placement" << searchAttributes<int>("PickupToSpawn") << "vs" << miniconID;
-    //qDebug() << Q_FUNC_INFO << "done assigning minicon";
+int DataHandler::highestAvailableLevel(int checkRequirements){
+    /*Useful when the level order has been randomized*/
+    int availableWorld = 0;
+    int checkWorld = 0;
+    qDebug() << Q_FUNC_INFO << "Checking for highest level available without requirement" << checkRequirements;
+    for(int i = 0; i < exodusData.loadedLevels.size(); i++){
+        qDebug() << Q_FUNC_INFO << "original episode" << exodusData.loadedLevels[i].originalEpisode << "has current episode" << exodusData.loadedLevels[i].currentEpisode;
+        /*set up a case statement to handle alternate requirements based on available tricks*/
+        checkWorld = exodusData.loadedLevels[i].currentEpisode;
+        if(availableWorld > checkWorld){
+            /*With the level list sorting, this should never happen*/
+            continue;
+        }
+        availableWorld = checkWorld;
+        if(exodusData.loadedLevels[i].requirements & checkRequirements){
+            qDebug() << Q_FUNC_INFO << "Found a level with this requirement. Returning" << availableWorld;
+            return availableWorld;
+        }
+    }
+    return availableWorld;
 }
 
-void exPickupLocation::assignDatacon(int dataID){
-    qDebug() << Q_FUNC_INFO << "Assigning datacon" << dataID << "to position" << uniqueID;
-    pickupID = 3;
-    dataconID = dataID;
-    //setAttribute("PickupToSpawn", QString::number(3));
-    //setAttribute("ProductionArt", QString::number(dataID));
-    //qDebug() << Q_FUNC_INFO << "done assigning datacon";
-}
-
-int exPickupLocation::assignedMinicon(){
-    //int miniconID = 0;
-    //miniconID = searchAttributes<int>("PickupToSpawn");
-    //qDebug() << Q_FUNC_INFO << "Position" << uniqueID << "currently has pickup ID" << miniconID;
-    //return miniconID;
-    return pickupID;
-}*/
-
-exPickupLocation::exPickupLocation(taPickupPlaced fromItem){
+exPickupLocation::exPickupLocation(taLocation fromItem){
     //QVector3D location = fromItem.searchAttributes<QVector3D>("Position");
     //setAttribute("Position", QString::number(location.x()) + ", " + QString::number(location.y()) + ", " + QString::number(location.z()));
     //position = fromItem.searchAttributes<QVector3D>("Position");
@@ -707,11 +844,12 @@ exPickupLocation::exPickupLocation(taPickupPlaced fromItem){
     //attributes = fromItem.attributes;
     //assignMinicon(0);
     spoiled = false;
-    bunkerID = 0;
+    inputDatabaseInstance = 0;
     //instanceIndex = 0;
     linkedLocationIDs = std::vector<int>();
     //this->spawnEvent = fromItem.searchAttributes<QString>("SpawnEvent");
     spawnEvent = fromItem.spawnEvent;
+    pickup = nullptr;
     //setAttributeDefault("GenerationDifficulty");
     //setAttributeDefault("ProductionArt");
 
@@ -724,7 +862,7 @@ exPickupLocation::exPickupLocation(){
     position = QVector3D();
     inputDatabaseInstance = 0;
     assignPickup(nullptr);
-    bunkerID = 0;
+    inputDatabaseInstance = 0;
     //instanceIndex = 0;
     linkedLocationIDs = std::vector<int>();
     spoiled = false;

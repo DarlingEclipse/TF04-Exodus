@@ -30,8 +30,6 @@ public:
         //int overallDifficulty = 0;
         int progressionBalancing = 0;
         int locationChallenge = 0;
-        int slipstreamDifficulty = 0;
-        int highjumpDifficulty = 0;
         bool randomizeTeams = false;
         bool balancedTeams = false;
         bool randomizePower = false;
@@ -39,6 +37,8 @@ public:
         bool randomizeAutobotStats = false;
         bool randomizeLevelOrder = false;
     } randSettings;
+
+    long enabledTricks = 0; //not sure if we'll actually use this
 
     //https://stackoverflow.com/questions/1604588/how-do-you-remove-elements-from-a-stdvector-while-iterating
     //use the above for turning pickuplist into the minicon and datacon lists
@@ -49,8 +49,8 @@ public:
     //also set a < operator for minicon based on their enumID
     //will probably want to subtract 3 when reading and add 3 when writing these
 
-    std::vector<exPickupLocation> availableLocations;
-    std::vector<exPickupLocation> placedLocations;
+    std::vector<exPickupLocation*> availableLocations;
+    std::vector<exPickupLocation*> placedLocations;
 
     void reset();
 
@@ -62,11 +62,11 @@ public:
 
     void randomize();
     void randomFileReplacements();
-    void removeLocation(exPickupLocation locationToRemove);
+    void removeLocation(const exPickupLocation* locationToRemove);
     void placeAll();
     void placeMinicon(int miniconToPlace, int placementID);
     void placeDatacon(int dataconToPlace, int placementID);
-    void placeDatacon(exPickup* dataconToPlace, exPickupLocation location);
+    void placeDatacon(taPickup* dataconToPlace, exPickupLocation* location);
     void placeSlipstreamRequirement(int miniconID, int placementID);
     void placeRangefinder();
     void placeShepherd();
@@ -75,13 +75,15 @@ public:
     void placeStarterWeapon();
     void manualSettings();
     void exportSettings();
-    void fixBunkerLinks(int level);
+    void fixBunkerLinks();
     void setSeed(QString value);
+
+    std::vector<int> createRandomList(int listSize);
 
     float randomFloat(float minimum, float maximum);
 
     int writeSpoilers();
-    void spoilMinicon(exPickupLocation placement, QTextStream& stream);
+    void spoilMinicon(const exPickupLocation* placement, QTextStream& stream);
     void spoilMinicon(int miniconID, QTextStream& stream);
 
     int editDatabases();

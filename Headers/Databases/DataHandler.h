@@ -77,26 +77,70 @@ enum class GameModes{None, BossMode, ExploreMode}; //None, probably not used
 enum class GenerationDifficulty{Always, CadetAndVeteranOnly, CommanderOnly}; //Always
 enum class GenerationGameBuildType{Any, FullGame, Demo}; //Any
 enum class GenerationSpawnType{Narrative, Always, LevelDone}; //Always
-enum class PickupToSpawn{LIST}; //not typing all that. default Health_Small
-enum class ProductArt{LIST}; //really not typing all that. default None
-class taPickupPlaced : public taDatabaseInstance{
+enum PickupToSpawn{Health_Small, Health_Large,  SidekickJuice, Data, AssaultBlaster, HeavyAssaultBlaster, SuperHeavyAssaultBlaster, SuperHeavyCannon
+                           , HeavyElectricArcGun, SuperHeavyElectricArcGun, ImpactGun, HeavyRibbonBeam, SuperHeavyRibbonBeam, UltimatePrimary, ClusterRocket
+                           , HeavyClusterRocket, DarkEnergonBlaster, DecoyLauncher, EMPBlast, FlakBurst, GrenadeLauncher, HomingMissile, LimpetMine, DropMine
+                           , SniperRifle, VortexCannon, UltimateSecondary, ElectroField,Glide, UltimateGlide, AreaEffectScrambler, Armor, HeavyArmor
+                           , SuperHeavyArmor, Dash, EmergencyWarpGate, EnergonMeleeWeapon, BallisticShield, EnergonVision, EnergonShield, EnhancedDash
+                           , MeleeDamageEnhance, MiniconSensor, WeaponDistanceEnhance, ReflectionShield, Stealth, TractorBeam, UltimateShield, AutoRepair
+                           , Revive, BoostJump, HeavyHomingMissile};
+enum ProductArt{None,CharacterEnergon,RendersAutobots2,CardArtwork,DecepticloneSubmission,LeClezio1,RendersDecepticons2,ConceptArtDecepticlone,LeClezio2
+                  , TVSeriesThemeMusic,LevelStoryboardsAmazon,ArtPostcards,InstructionSheetOptimus,ConceptArtAutobots,MovieStills6,MovieStills7,RendersDecepticon
+                  , ThemeRegurgitator,MiniComic1,MiniComic2,MiniComic3,MiniComic4,ProductionArtAmazon,ProductionArtAntarctica,ProductionArtDeepAmazon
+                  , ProductionArtMidAtlantic,ProductionArtAlaska,ProductionArtStarship,ProdcutionArtPacificIsland,ProductionArtAutobotHQ,RendersAutobots
+                  , RendersDecepticlone,RendersMiniCons,ToyProductionHotShot,ToyProductionOptimus,ToyProductionRedAlert,ToyProductionMinicons
+                  , ToyProductionCyclonus,ToyProductionStarscream,ToyProductionTidalWave,ToyProductionMegatron,RendersAutobots3,CGProductionSequence2
+                  , CGProductionSequence,InstructionSheetMegatron,InstructionSheetHotShot,RendersDecepticlone2,RendersDecepticlone3,RendersDecepticlone4
+                  , TVSpot1,TVSpot2,TVSpot3,TVSpot4,TVSpot5,InstructionSheetRedAlert,MovieStills1,MovieStills2,MovieStills3,MovieStills4,MovieStills5
+                  , Dropbox_Wishbone,ThemeDropbox,LaunchPhotos,ThemeOrchestral};
+class taPickup : public taDatabaseInstance{
 public:
     int datacon_HealthPickupCount_Large; //0
     int datacon_HealthPickupCount_Small; //2
+    PickupToSpawn pickupToSpawn;
+    ProductArt productArt;
+
+    bool placed = false;
+
+    taPickup(dictItem fromItem);
+
+    const bool isMinicon(){
+        if(pickupToSpawn > 3){
+            return true;
+        }
+        return false;
+    };
+
+
+    bool operator < (const taPickup& compPickup) const
+    {
+        return (pickupToSpawn < compPickup.pickupToSpawn);
+    }
+
+    bool operator == (const taPickup& compPickup) const
+    {
+        if(productArt != 0){
+            return (productArt == compPickup.productArt);
+        } else {
+            return (pickupToSpawn == compPickup.pickupToSpawn);
+        }
+    }
+};
+
+class taLocation : public taDatabaseInstance{
+public:
     GameModes gameModes;
     bool generate; //true
     GenerationDifficulty generationDifficulty;
     GenerationGameBuildType generationGameBuildType;
     GenerationSpawnType generationSpawnType;
-    int linkedDropship; //null
     QQuaternion orientation; //1 0 0 0
-    PickupToSpawn pickupToSpawn;
     QVector3D position; //0 0 0
-    ProductArt productArt;
     QString spawnEvent; //""
     QString synchronizeEvent; //""
 
-    taPickupPlaced(dictItem fromItem);
+    taLocation(dictItem fromItem);
+
 };
 
 enum class BossType{None, Starscream, Cyclonus, Megatron, TidalWave, Unicron};
@@ -108,7 +152,7 @@ public:
     BossType bossType;
     int dataconCount;
     QString directoryName;
-    Episode episode;
+    Episode episodeID;
     bool hasAlternativeDirectory;
     int miniconCount;
     int miniconUnlockCountExtreme;
@@ -117,9 +161,15 @@ public:
     QString name;
     std::vector<int> WarpGateMusicTrack;
     int warpgates;
+
+    /*Populated at runtime*/
+    int episodeOrder;
+
+    taEpisode(dictItem copyItem);
+    void updateDirectories();
 };
 
-class exPickup {
+/*class exPickup {
 public:
     int pickupID; //connects to taPickupPlaced
     int dataID;
@@ -132,125 +182,137 @@ public:
     exPickup(dictItem copyItem);
     exPickup();
 
-    const bool isMinicon(){
-        if(pickupID > 3){
-            return true;
-        }
-        return false;
-    };
 
+};*/
 
-    bool operator < (const exPickup& compPickup) const
-    {
-        return (pickupID < compPickup.pickupID);
-    }
-
-    bool operator == (const exPickup& compPickup) const
-    {
-        if(dataID != 99){
-            return (dataID == compPickup.dataID);
-        } else {
-            return (pickupID == compPickup.pickupID);
-        }
-    }
-};
-
-class exMinicon : public exPickup{
+class exMinicon{
     /*Contains data useful for Exodus that is not defined in the METAGAME files. */
 public:
     /*From Exodus database files*/
-    int miniconID; //connects to taMinicon
+    QString name;
+    int creatureID; //for CREATURE files
+    int metagameID; //for METAGAME files
     int rating;
     bool isWeapon;
     bool isExplosive;
 
     /*Set and used at runtime*/
-    bool hasVanillaPlacement;
+    bool hasVanillaPlacement; //should be redundant - if it doesn't have a creatureID, it doesn't have a placement
     bool isSlipstream;
     bool isHighjump;
+    bool placed;
 
 
-    void setCreature(exPickup copyItem);
+    void setCreature(taPickup copyItem);
     exMinicon(dictItem copyItem);
     exMinicon();
 };
 
-enum class World{Amazon, Antarctica, DeepAmazon, MidAtlantic, MidAtlanticEmpty, Alaska, Spaceship, PacificIsland, Invalid};
+class exTrick{
+public:
+    QString name;
+    QString description;
+    int difficulty;
+    bool enabled;
+    QString guideLink;
+    std::vector<int> requiredMinicons;
+    bool needAllRequirements; //defines if the entire list of requirements is needed or just one
+
+    exTrick(dictItem fromItem);
+
+    bool operator < (const exTrick& compTrick) const
+    {
+        return (difficulty < compTrick.difficulty);
+    }
+};
+
+class exEpisode;
+
 class exPickupLocation{
 public:
-    World level;
-    int gameID; //instance index
+    exEpisode* episode;
+    Episode originalEpisode;
+    bool usesAlternate;
     QString levelName;
     int uniqueID; //randomizer ID
 
     /*The difficulties are determined by how hard it is to get to that location from the start of the level*/
-    int slipstreamDifficulty;
-    int highjumpDifficulty;
+    bool requiresSlipstream;
+    bool requiresHighjump;
     bool requiresExplosive;
-    /*Alternative requirements: list of minicons that must all be available if this location has a key minicon
-    for example, revive, shield, and missiles for warship skip
-    or highgear/fullspeed for the spire
-    not sure about this one but it would solve the problem of complex requirements*/
-    std::vector<int> alternativeRequirements;
+
+    std::vector<exTrick*> availableTricks; //currently handled as a single link in the file
     QString locationName;
     QString spawnEvent;
     int inputDatabaseInstance;
     int outputDatabaseInstance;
     bool spoiled;
-    int bunkerID;
+    bool isBunker;
     QVector3D position;
     /*Generation difficulty: If the LocationChallenge is outside this range, then the location will not be added to the available
     location pool*/
     int minimumGenerationDifficulty;
     int maximumGenerationDifficulty;
-    exPickup* pickup;
+    taPickup* pickup;
 
     std::vector<int> linkedLocationIDs; //if a minicon is placed at one of these, it's placed at both of them
     //so far only used for starship (vanilla Aftershock) and mid-atlantic, since it has separate database files
 
     exPickupLocation();
     exPickupLocation(dictItem copyItem);
-    exPickupLocation(taPickupPlaced fromItem);
-    exPickup* assignedPickup();
-    void assignPickup(exPickup* pickupToPlace);
+    exPickupLocation(taLocation fromItem);
+    taPickup* assignedPickup();
+    void assignPickup(taPickup* pickupToPlace);
     void generateAttributes(); //for custom locations
     //implementing the < operator so we can simply sort the location vector
     //using std::sort instead of making a whole function for it
     bool operator < (const exPickupLocation& compLocation) const
     {
-        return (level < compLocation.level);
+        return (episode < compLocation.episode);
     }
 };
 
 class exEpisode{
-    /*Can link to taEpisode using outputFileName and comparing to directoryName and alternativeDirectoryName*/
 public:
     //from database file
     QString logName;
-    QString outputFileName;
     int requirements;
+    Episode episodeID;
     /*whether the level needs highjump or slipstream to beat normally
      * Handling requirements this way because integerarrays won't work for a while
      * 0 = no requirements
      * 1 = slipstream
      * 2 = highjump
      * 3 = both*/
-    std::vector<exPickupLocation> spawnLocations;
+    std::vector<exTrick*> availableTricks; //tricks that can be used to complete the level without its typical requirements
+    bool placeable; //only used for post-boss Mid-Atlantic
+    int originalEpisode; //for reconstructing the original CREATURE folder's location
 
     //populated at runtime
+    int currentEpisode; //for randomizing the level order
+    std::vector<exPickupLocation> spawnLocations;
     int assignedMinicons; //max 13 of any specific minicon without mods
     int assignedDatacons; //max 13 without mods
     std::shared_ptr<DatabaseFile> levelFile;
 
-    bool addLocation(exPickupLocation locationToAdd);
     exEpisode(dictItem copyItem);
     exEpisode();
+
+    bool operator < (const exEpisode& compEpisode) const
+    {
+        return (currentEpisode < compEpisode.currentEpisode);
+    }
 };
 
 enum class ActivationType{HoldDown, AlwaysOn, PressInstant, ReleaseInstant, PressAndRelease, ChargeRelease, ChargeReleasePartial, Toggle, ToggleDrain, HoldDownDrain};
 enum class CrosshairIndex{None, AssaultBlaster, Lockon, Slingshot, Claymore, Tractor, Firefight, Hailstorm, Landslide, Smackdown, Watchdog, Lookout, Sparkjump, Skirmish, Airburst, Sandstorm, Twister, Discord, Corona, Aftershock, Aurora, Failsafe, Jumpstart, Endgame, UltimatePrimary, UltimateSecondary};
 enum class Icon{Armor, Beam, Blaster, Exotic, Lobbed, Melee, Missile, Movement, Repair, Shield, Stealth, Vision, None};
-enum class MiniconNames{LIST}; //same comment as above
+enum class MiniconEffects{None, AssaultBlaster, HeavyAssaultBlaster, SuperHeavyAssaultBlaster, SuperHeavyCannon, HeavyElectricArcGun, SuperHeavyElectricArcGun
+                          , ImpactGun, HeavyRibbonBeam, SuperHeavyRibbonBeam, UltimatePrimary, ClusterRocket, HeavyClusterRocket, DarkEnergonBlaster
+                          , DecoyLauncher, EMPBlast, FlakBurst, GrenadeLauncher, HomingMissile, LimpetMine, DropMine, SniperRifle, VortexCannon, UltimateSecondary
+                          , ElectroField, Glide, UltimateGlide, AreaEffectScrambler, Armor, HeavyArmor, SuperHeavyArmor, Dash, EmergencyWarpGate, EnergonMeleeWeapon
+                          , EnergonScreen, EnergonVision, EnergonShield, EnhancedDash, MeleeDamageEnhance, MiniconSensor, WeaponDistanceEnhance, ReflectionShield
+                          , Stealth, TractorBeam, UltimateShield, AutoRepair, Revive, BoostJump, HeavyHomingMissile};
 enum class RecoilType{None, Small, Large};
 enum class RestrictToButton{Default, L2, R2, L1, R1};
 enum class Slot{PrimaryWeapon, SecondaryWeapon, Movement, Ability};
@@ -275,7 +337,7 @@ public:
     QString description;
     bool equipInHQ;
     Icon icon;
-    MiniconNames minicon;
+    MiniconEffects minicon;
     float minimumChargeToUse;
     float minimumChargeToUsePerShot;
     QString name;
@@ -340,11 +402,10 @@ class ExodusData{
  public:
     std::shared_ptr<DatabaseFile> dataFile;
 
-    std::vector<exPickup> pickupList;
     std::vector<exMinicon> miniconList;
-    std::vector<exPickup> dataconList;
     std::vector<exCustomLocation> customLocationList;
     std::vector<exEpisode> loadedLevels;
+    std::vector<exTrick> trickList;
 };
 
 class GameData{
@@ -352,7 +413,8 @@ class GameData{
 public:
     std::shared_ptr<DatabaseFile> metagameFile;
 
-    std::vector<taPickupPlaced> pickupList;
+    std::vector<taPickup> pickupList;
+    std::vector<taPickup> dataconList;
     std::vector<dictItem> autobotList;
     std::vector<taEpisode> levelList;
     std::vector<taMinicon> miniconList;
@@ -380,16 +442,20 @@ public:
         return convertedList;
     };
 
+    //DataHandler();
+    DataHandler(ProgWindow* passParent);
+
     /*Used for converting processed location data into a database file. Should rarely need to be used.*/
     void createExodusLocationDatabase();
 
 
-    dictItem createGamePickupPlaced(exPickupLocation location);
+    dictItem createGamePickupPlaced(const exPickupLocation* location);
     dictItem createMetagameMinicon(taMinicon minicon);
     void loadMinicons();
     void loadDatacons();
     void loadLevels();
     void loadAutobots();
+    void loadTricks();
     bool miniconLoaded(int checkID);
     bool dataconLoaded(int checkID);
     void loadCustomLocations();
@@ -399,14 +465,19 @@ public:
     exMinicon* getExodusMinicon(int searchID);
     taMinicon* getGameMinicon(int searchID);
 
+    taPickup* getPickup(int searchID);
+
     //compare taMinicon name to exMinicon pickupToSpawn
     exMinicon* getExodusMinicon(QString searchName);
     taMinicon* getGameMinicon(QString searchName);
 
-    exEpisode* getExodusEpisode(QString levelToGet);
-    taEpisode* getGameEpisode(QString levelToGet);
+    exEpisode* getExodusEpisode(Episode episodeToGet);
+    taEpisode* getGameEpisode(Episode episodeToGet);
+
+    int highestAvailableLevel(int checkRequirements);
 
     bool duplicateLocation(exPickupLocation testLocation);
+    bool duplicatePickup(taPickup testPickup);
 
     void resetMinicons();
     void resetDatacons();
