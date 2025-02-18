@@ -41,7 +41,10 @@ void ProgWindow::loadFile(theFile fileToOpen, QString givenPath){
         loadedFileNames.push_back(fileToOpen->fullFileName().toUpper());
         fileBrowser->addItem(fileToOpen->fullFileName());
         qDebug() << Q_FUNC_INFO << "number of items in file browser" << fileBrowser->count();
-        fileBrowser->setCurrentRow(fileBrowser->count()-1);
+        if(!bulkLoading){
+            /*This sets the most recent file as the selected file and updates the center view. When loading multiple files, we don't need to do this until the last file.*/
+            fileBrowser->setCurrentRow(fileBrowser->count()-1);
+        }
 
     }
 }

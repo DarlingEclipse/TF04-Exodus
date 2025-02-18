@@ -98,6 +98,7 @@ public:
     int vSize = 768;
     double version = 6.6;
     QString gamePath = "";
+    bool bulkLoading = false;
 
     QString fileMode;
 

@@ -664,6 +664,7 @@ void ProgWindow::visit(DatabaseFile dataFile){
 int ProgWindow::loadDatabases(){
     qDebug() << Q_FUNC_INFO << "Attempting to load all level database files";
     std::shared_ptr<TFFile> testLoaded;
+    bulkLoading = true;
     //need to prompt the user for the game directory, then use that
     if(setW->getValue("Game extract path") == ""){
         //can re-empty gamePath if there's an error reading the files
@@ -749,6 +750,7 @@ int ProgWindow::loadDatabases(){
         //testLoaded->acceptVisitor(*this);
 
     }
+    bulkLoading = false;
     return 0;
 }
 
