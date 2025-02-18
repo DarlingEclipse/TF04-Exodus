@@ -160,12 +160,13 @@ void taEpisode::updateDirectories(){
 }
 
 exPickupLocation::exPickupLocation(dictItem copyItem){
-    originalEpisode = static_cast<Episode>(copyItem.searchAttributes<int>("Level"));
+    int levelID = copyItem.searchAttributes<int>("Level");
+    originalEpisode = static_cast<Episode>(levelID);
     usesAlternate = copyItem.searchAttributes<bool>("UsesAlternateDirectory");
     //levelName = copyItem.searchAttributes<QString>("LevelName");
     inputDatabaseInstance = copyItem.searchAttributes<int>("GameID");
     //uniqueID = copyItem.searchAttributes<int>("ExodusID");
-    uniqueID = copyItem.instanceIndex;
+    uniqueID = (usesAlternate * 10000) + (levelID * 1000) + copyItem.instanceIndex;
 
     requiresSlipstream = copyItem.searchAttributes<bool>("RequiresSlipstream");
     requiresHighjump = copyItem.searchAttributes<bool>("RequiresHighjump");
@@ -189,6 +190,10 @@ exPickupLocation::exPickupLocation(dictItem copyItem){
 
 exEpisode::exEpisode(dictItem copyItem){
     logName = copyItem.searchAttributes<QString>("EpisodeName");
+    if(logName == "Post-Boss Mid-Atlantic"){
+        /*Being lazy and hard-coding this instead of adding it to the DB. TODO: do this properly*/
+        usesAlternate = true;
+    }
     //outputFileName = copyItem.searchAttributes<QString>("EpisodeFolder");
     originalEpisode = copyItem.searchAttributes<int>("EpisodeID");
     currentEpisode = originalEpisode;
@@ -415,7 +420,11 @@ void DataHandler::loadLevels(){
 
     for(int i = 0; i< exodusData.loadedLevels.size(); i++){
         taEpisode* currentEpisode = getGameEpisode(exodusData.loadedLevels[i].episodeID);
-        QString nameCheck = "0" + QString::number(exodusData.loadedLevels[i].originalEpisode+1) + "_" + currentEpisode->name.toUpper() + "-CREATURE";
+        QString alternateCheck = "";
+        if(exodusData.loadedLevels[i].usesAlternate){
+            alternateCheck = "DEFEATED";
+        }
+        QString nameCheck = "0" + QString::number(exodusData.loadedLevels[i].originalEpisode+1) + "_" + currentEpisode->name.toUpper() + alternateCheck + "-CREATURE";
         for(int j = 0; j < parent->databaseList.size(); j++){
             qDebug() << Q_FUNC_INFO << "Checking for file name:" << nameCheck << "vs" << parent->databaseList[j]->fileName;
             if(parent->databaseList[j]->fileName == nameCheck){
@@ -436,9 +445,50 @@ void DataHandler::loadLevels(){
         }
     }
 
+    /*Manually setting linked locations, since they don't work until the Database system is fixed*/
+    for(int i = 0; i < loadedLocations.size(); i++){
+        switch(loadedLocations[i].uniqueID){
+            case 3061:
+            loadedLocations[i].linkedLocationIDs.push_back(13065);
+            break;
+            case 3062:
+            loadedLocations[i].linkedLocationIDs.push_back(13066);
+            break;
+            case 3063:
+            loadedLocations[i].linkedLocationIDs.push_back(13068);
+            break;
+            case 3064:
+            loadedLocations[i].linkedLocationIDs.push_back(13067);
+            break;
+            case 13065:
+            loadedLocations[i].linkedLocationIDs.push_back(3061);
+            break;
+            case 13066:
+            loadedLocations[i].linkedLocationIDs.push_back(3062);
+            break;
+            case 13067:
+            loadedLocations[i].linkedLocationIDs.push_back(3064);
+            break;
+            case 13068:
+            loadedLocations[i].linkedLocationIDs.push_back(3063);
+            break;
+            case 5094:
+            loadedLocations[i].linkedLocationIDs.push_back(5095);
+            break;
+            case 5095:
+            loadedLocations[i].linkedLocationIDs.push_back(5094);
+            break;
+        default:
+            break;
+        }
+    }
+
     for(int i = 0; i < exodusData.loadedLevels.size(); i++){
         for(int j = 0; j < loadedLocations.size(); j++){
             if(exodusData.loadedLevels[i].episodeID != loadedLocations[j].originalEpisode){
+                continue;
+            }
+            if(exodusData.loadedLevels[i].usesAlternate != loadedLocations[j].usesAlternate){
                 continue;
             }
             loadedLocations[j].episode = &exodusData.loadedLevels[i];
@@ -452,7 +502,7 @@ void DataHandler::loadLevels(){
         qDebug() << Q_FUNC_INFO << "Level file name:" << exodusData.loadedLevels[i].levelFile->fileName;
         for(int j = 0; j < exodusData.loadedLevels[i].spawnLocations.size(); j++){
             QVector3D debugPosition = exodusData.loadedLevels[i].spawnLocations[j].position;
-            qDebug() << Q_FUNC_INFO << i << " " << exodusData.loadedLevels[i].spawnLocations[j].uniqueID << "  "
+            qDebug() << Q_FUNC_INFO << i << j << " " << exodusData.loadedLevels[i].spawnLocations[j].uniqueID << "  "
                      << exodusData.loadedLevels[i].spawnLocations[j].linkedLocationIDs << "    " << exodusData.loadedLevels[i].spawnLocations[j].episode->originalEpisode << "    "
                      << exodusData.loadedLevels[i].spawnLocations[j].locationName << "    " << debugPosition.x() << "   " << debugPosition.y() << "  " << debugPosition.z();
             qDebug() << Q_FUNC_INFO << "is pickup nullptr? (it should be)" << (exodusData.loadedLevels[i].spawnLocations[j].pickup == nullptr);
@@ -639,7 +689,7 @@ void DataHandler::loadCustomLocations(){
     qDebug() << Q_FUNC_INFO << "next file info:" << modIterator.nextFileInfo().fileName() << "from path" << modFolder.absolutePath();
     bool headerFinished = false;
     TextProperty modProperty;
-    QStringList propertyOptions = {"File Version", "Name", "Author", "Description", "Location Count", "Level", "Location Name", "Coordinates", "Location ID", "Linked Locations", "Requires Highjump", "Requires Slipstream"};
+    QStringList propertyOptions = {"File Version", "Name", "Author", "Description", "Location Count", "Level", "Location Name", "Coordinates", "Location ID", "Linked Locations", "Requires Highjump", "Requires Slipstream", "Alternate Directory"};
     int modVersion = 0;
 
     while (modIterator.hasNext()){
@@ -747,6 +797,13 @@ void DataHandler::loadCustomLocations(){
                             }
                             readingLocation = false;
                             break;
+                        case 12:
+                            if(modProperty.readValue.toUpper() == "TRUE"){
+                                customLocation.usesAlternate = true;
+                            } else {
+                                customLocation.usesAlternate = false;
+                            }
+                            break;
                         default:
                             qDebug() << Q_FUNC_INFO << "Unknown property" << modProperty.name << "with value" << modProperty.readValue << "found at" << modBuffer.currentPosition;
                     }
@@ -852,7 +909,6 @@ exPickupLocation::exPickupLocation(taLocation fromItem){
     //attributes = fromItem.attributes;
     //assignMinicon(0);
     spoiled = false;
-    inputDatabaseInstance = 0;
     //instanceIndex = 0;
     linkedLocationIDs = std::vector<int>();
     //this->spawnEvent = fromItem.searchAttributes<QString>("SpawnEvent");
@@ -870,7 +926,6 @@ exPickupLocation::exPickupLocation(){
     position = QVector3D();
     inputDatabaseInstance = 0;
     assignPickup(nullptr);
-    inputDatabaseInstance = 0;
     //instanceIndex = 0;
     linkedLocationIDs = std::vector<int>();
     spoiled = false;

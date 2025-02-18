@@ -278,6 +278,7 @@ public:
     QString logName;
     int requirements;
     Episode episodeID;
+    bool usesAlternate = false;
     /*whether the level needs highjump or slipstream to beat normally
      * Handling requirements this way because integerarrays won't work for a while
      * 0 = no requirements

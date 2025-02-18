@@ -667,10 +667,10 @@ void Randomizer::placeMinicon(int miniconToPlace, int placementID){
             bool foundLocation = false;
             for(int j = 0; j < availableLocations.size(); j++){
                 //qDebug() << Q_FUNC_INFO << "checking linked location ID" << availableLocations[j].uniqueID << "vs" << linkedLocation;
-                if(std::find(linkedLocations.begin(), linkedLocations.end(), availableLocations[j]->uniqueID) != linkedLocations.end()){
+                if(std::find(linkedLocations.begin(), linkedLocations.end(), availableLocations[j]->uniqueID) == linkedLocations.end()){
                     continue;
                 }
-                qDebug() << Q_FUNC_INFO << "found linked location ID" << linkedLocations;
+                qDebug() << Q_FUNC_INFO << "found linked location ID" << linkedLocations << availableLocations[j]->uniqueID;
                 foundLocation = true;
                 availableLocations[j]->assignPickup(chosenMinicon);
                 placedLocations.push_back(availableLocations[j]);
@@ -722,10 +722,10 @@ void Randomizer::placeDatacon(int dataconToPlace, int placementID){
             bool foundLocation = false;
             for(int j = 0; j < availableLocations.size(); j++){
                 qDebug() << Q_FUNC_INFO << "checking linked location ID" << availableLocations[j]->uniqueID << "vs" << linkedLocations;
-                if(std::find(linkedLocations.begin(), linkedLocations.end(), availableLocations[j]->uniqueID) != linkedLocations.end()){
+                if(std::find(linkedLocations.begin(), linkedLocations.end(), availableLocations[j]->uniqueID) == linkedLocations.end()){
                     continue;
                 }
-                qDebug() << Q_FUNC_INFO << "found linked location ID" << linkedLocations;
+                qDebug() << Q_FUNC_INFO << "found linked location ID" << linkedLocations << availableLocations[j]->uniqueID;
                 foundLocation = true;
                 availableLocations[j]->assignPickup(chosenDatacon);
                 placedLocations.push_back(availableLocations[j]);
@@ -845,10 +845,10 @@ void Randomizer::placeDatacon(taPickup* dataconToPlace, exPickupLocation* locati
         bool foundLocation = false;
         for(int j = 0; j < availableLocations.size(); j++){
             //qDebug() << Q_FUNC_INFO << "checking linked location ID" << availableLocations[j].uniqueID << "vs" << linkedLocation;
-            if(std::find(linkedLocations.begin(), linkedLocations.end(), availableLocations[j]->uniqueID) != linkedLocations.end()){
+            if(std::find(linkedLocations.begin(), linkedLocations.end(), availableLocations[j]->uniqueID) == linkedLocations.end()){
                 continue;
             }
-            qDebug() << Q_FUNC_INFO << "found linked location ID" << linkedLocations;
+            qDebug() << Q_FUNC_INFO << "found linked location ID" << linkedLocations << availableLocations[j]->uniqueID;
             foundLocation = true;
             availableLocations[j]->assignPickup(dataconToPlace);
             placedLocations.push_back(availableLocations[j]);
@@ -973,8 +973,14 @@ int Randomizer::editDatabases(){
 
         }
 
-        qDebug() << Q_FUNC_INFO << "output path for this level will be" << QString(parent->isoBuilder->copyOutputPath + "/TFA/" + parent->dataHandler->getGameEpisode(currentLevel->episodeID)->directoryName + "/CREATURE.TDB");
-        levelPath = parent->isoBuilder->copyOutputPath + "/TFA/" + parent->dataHandler->getGameEpisode(currentLevel->episodeID)->directoryName;
+        if(currentLevel->usesAlternate){
+            qDebug() << Q_FUNC_INFO << "output path for this level will be" << QString(parent->isoBuilder->copyOutputPath + "/TFA/" + parent->dataHandler->getGameEpisode(currentLevel->episodeID)->alternativeDirectoryName.toUpper() + "/CREATURE.TDB");
+            levelPath = parent->isoBuilder->copyOutputPath + "/TFA/" + parent->dataHandler->getGameEpisode(currentLevel->episodeID)->alternativeDirectoryName.toUpper();
+        } else {
+            qDebug() << Q_FUNC_INFO << "output path for this level will be" << QString(parent->isoBuilder->copyOutputPath + "/TFA/" + parent->dataHandler->getGameEpisode(currentLevel->episodeID)->directoryName.toUpper() + "/CREATURE.TDB");
+            levelPath = parent->isoBuilder->copyOutputPath + "/TFA/" + parent->dataHandler->getGameEpisode(currentLevel->episodeID)->directoryName.toUpper();
+        }
+
         //get containing directory
         //create Randomizer folder in that directory
         qDebug() << Q_FUNC_INFO << "path being checked:" << levelPath;
