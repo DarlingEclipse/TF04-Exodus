@@ -639,7 +639,7 @@ void DataHandler::loadCustomLocations(){
     qDebug() << Q_FUNC_INFO << "next file info:" << modIterator.nextFileInfo().fileName() << "from path" << modFolder.absolutePath();
     bool headerFinished = false;
     TextProperty modProperty;
-    QStringList propertyOptions = {"File Version", "Name", "Author", "Description", "Location Count", "Level", "Location Name", "Coordinates", "Location ID", "Linked Locations", "Highjump Difficulty", "Slipstream Difficulty"};
+    QStringList propertyOptions = {"File Version", "Name", "Author", "Description", "Location Count", "Level", "Location Name", "Coordinates", "Location ID", "Linked Locations", "Requires Highjump", "Requires Slipstream"};
     int modVersion = 0;
 
     while (modIterator.hasNext()){
@@ -652,7 +652,6 @@ void DataHandler::loadCustomLocations(){
             modBuffer.input = true;
             exCustomLocation currentLocations;
             headerFinished = false;
-            int targetLevel = 8;
             int locationValue = 0;
             while(!headerFinished){
                 modProperty = modBuffer.readProperty();
@@ -681,7 +680,7 @@ void DataHandler::loadCustomLocations(){
             }
             for(int i = 0; i <currentLocations.locationCount; i++){
                 exPickupLocation customLocation = exPickupLocation();
-                customLocation.originalEpisode = static_cast<Episode>(targetLevel);
+                customLocation.originalEpisode = Episode::Cybertron;
                 //double-check that the below doesn't need to find the specific database for the target level
                 //customLocation.attributes = levelList[0].levelFile->generateAttributes("PickupPlaced");
                 bool readingLocation = true;
@@ -690,8 +689,9 @@ void DataHandler::loadCustomLocations(){
                     switch(propertyOptions.indexOf(modProperty.name)){
                         case 5: //Level
                             for(int i = 0; i < gameData.levelList.size(); i++){
-                                qDebug() << Q_FUNC_INFO << "comparing level" << gameData.levelList[i].name << "to" << modProperty.readValue;
-                                if(gameData.levelList[i].name == modProperty.readValue){
+                                customLocation.levelName = modProperty.readValue;
+                                qDebug() << Q_FUNC_INFO << "comparing level" << gameData.levelList[i].name << "to" << customLocation.levelName;
+                                if(gameData.levelList[i].name == customLocation.levelName){
                                     qDebug() << Q_FUNC_INFO << "comparing level: match";
                                     customLocation.originalEpisode = static_cast<Episode>(i);
                                 }
@@ -733,17 +733,25 @@ void DataHandler::loadCustomLocations(){
                             }
                             break;
                         case 10: //Highjump difficulty
-                            customLocation.requiresHighjump = modProperty.readValue.toInt();
+                            if(modProperty.readValue.toUpper() == "FALSE"){
+                                customLocation.requiresHighjump = false;
+                            } else {
+                                customLocation.requiresHighjump = true;
+                            }
                             break;
                         case 11: //Slipstream difficulty
-                            customLocation.requiresSlipstream = modProperty.readValue.toInt();
+                            if(modProperty.readValue.toUpper() == "FALSE"){
+                                customLocation.requiresSlipstream = false;
+                            } else {
+                                customLocation.requiresSlipstream = true;
+                            }
                             readingLocation = false;
                             break;
                         default:
                             qDebug() << Q_FUNC_INFO << "Unknown property" << modProperty.name << "with value" << modProperty.readValue << "found at" << modBuffer.currentPosition;
                     }
                 }
-                qDebug() << Q_FUNC_INFO << "Adding location" << customLocation.locationName << "for level" << customLocation.episode->logName << "at coordinates" << customLocation.position;
+                qDebug() << Q_FUNC_INFO << "Adding location" << customLocation.locationName << "for level" << customLocation.levelName << "at coordinates" << customLocation.position;
                 currentLocations.locationList.push_back(customLocation);
             }
             exodusData.customLocationList.push_back(currentLocations);
