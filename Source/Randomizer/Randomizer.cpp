@@ -57,6 +57,9 @@ Randomizer::Randomizer(ProgWindow *parentPass){
     for(int i = 0; i < parent->dataHandler->exodusData.miniconList.size(); i++){
         exodusMinicon = &parent->dataHandler->exodusData.miniconList[i];
         gameMinicon = parent->dataHandler->getGameMinicon(exodusMinicon->metagameID);
+        if(gameMinicon == nullptr){
+            continue;
+        }
         int team = static_cast<int>(gameMinicon->team);
         //int team = parent->dataHandler->exodusData.miniconList[i].searchAttributes<int>("Team");
         int power = gameMinicon->powerCost;
