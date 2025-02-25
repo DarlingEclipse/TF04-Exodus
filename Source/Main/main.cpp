@@ -6,7 +6,7 @@ int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);
     ProgWindow w;
-    w.setWindowTitle("Exodus 0.7.3.8");
+    w.setWindowTitle("Exodus 0.7.4.0");
     w.setGeometry(QRect(QPoint(0,0), QSize(w.hSize,w.vSize)));
     //w.resize(1200, 600);
     w.show();
