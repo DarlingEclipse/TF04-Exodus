@@ -361,6 +361,7 @@ public:
 
     std::shared_ptr<DefinitionFile> inheritedFile;
     QString inheritedFileName;
+    QString inheritedFileRelativePath;
     QTreeView *dataTree = nullptr;
     QStandardItemModel *dataModel = nullptr;
     int versionNumber;

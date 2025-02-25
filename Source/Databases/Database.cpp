@@ -741,7 +741,9 @@ int DictionaryFile::readIncludedFiles(QString fullRead){
     parent->loadRequiredFile(this, fullRead, extension);
 
     static QRegularExpression pathRemover = QRegularExpression("../");
+    inheritedFileRelativePath = fullRead;
     inheritedFileName = fullRead.remove(pathRemover);
+    inheritedFileRelativePath = inheritedFileRelativePath.remove(inheritedFileName);
     inheritedFile = std::static_pointer_cast<DefinitionFile>(parent->matchFile(inheritedFileName));
 
     if(inheritedFile != nullptr){
@@ -1271,8 +1273,8 @@ void DatabaseFile::writeText(){
         tdbOut.write("	");
         if(inheritedFile->fileName.trimmed().size() != 0){
             //need the relative path here. the ../../ stuff.
-            qDebug() << Q_FUNC_INFO << "includedFile value" << inheritedFileName.toUtf8();
-            tdbOut.write("\"" + inheritedFileName.toUtf8() + "\" \r\n");
+            qDebug() << Q_FUNC_INFO << "includedFile value" << inheritedFileRelativePath.toUtf8() + inheritedFileName.toUtf8();
+            tdbOut.write("\"" + inheritedFileRelativePath.toUtf8() + inheritedFileName.toUtf8() + "\" \r\n");
         }
         tdbOut.write("	\r\n} // IncludedFiles\r\n");
         tdbOut.write("\r\n~FileDictionary \r\n{");
