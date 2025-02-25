@@ -281,6 +281,10 @@ int IsoBuilder::rezipTFA_sevenZip(bool removeFiles){
         QStringList existingFiles;
         QString zipFileOut = outputPath + "\\tempzip.txt";
         QString zipFileExclude = QCoreApplication::applicationDirPath() + "/excludezip.txt";
+        QFileInfo excludeFile(zipFileExclude);
+        if(!excludeFile.isFile()){
+            parent->messageError("excludezip.txt was not found. The rebuild will have the BDB files. If this is a Randomizer build, that will break the randomization.");
+        }
         QFile zipTextFile(zipFileOut);
         zipTextFile.open(QIODevice::WriteOnly);
         while(outputIterator.hasNext()){
@@ -358,7 +362,9 @@ int IsoBuilder::rezipTFA_sevenZip(bool removeFiles){
         } else {
             args.append("-mx3");
         }
-        args.append("-x@" + zipFileExclude);
+        if(excludeFile.isFile()){
+            args.append("-x@" + zipFileExclude);
+        }
         qDebug() << Q_FUNC_INFO << "Here we would start 7zip with the commands:" << args;
         sevenZip->start(sevenZipPath, args);
         sevenZip->waitForFinished();
