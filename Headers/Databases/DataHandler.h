@@ -235,6 +235,7 @@ public:
     bool usesAlternate;
     QString levelName;
     int uniqueID; //randomizer ID
+    int originalTeleportNode; //Used for bunkers
 
     /*The difficulties are determined by how hard it is to get to that location from the start of the level*/
     bool requiresSlipstream;
@@ -460,6 +461,8 @@ public:
     bool miniconLoaded(int checkID);
     bool dataconLoaded(int checkID);
     void loadCustomLocations();
+    void addCustomLocations();
+    void debugLocations();
     //void addCustomLocation(int locationID, int level, QVector3D location);
 
     //compare taMinicon MiniconList to exMinicon enumID

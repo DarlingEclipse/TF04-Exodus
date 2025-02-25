@@ -89,18 +89,21 @@ Randomizer::Randomizer(ProgWindow *parentPass){
     editSettings->setGeometry(QRect(QPoint(200,320), QSize(150,30)));
     parent->currentModeWidgets.push_back(editSettings);
     editSettings->show();
+    editSettings->hide();
 
     QPushButton* buttonSetSettings = new QPushButton("Import Settings", parent->centralContainer);
     buttonSetSettings->setGeometry(QRect(QPoint(50,320), QSize(150,30)));
     QAbstractButton::connect(buttonSetSettings, &QPushButton::released, parent, [this] {manualSettings();});
     parent->currentModeWidgets.push_back(buttonSetSettings);
     buttonSetSettings->show();
+    buttonSetSettings->hide();
 
     QPushButton* buttonGetSettings = new QPushButton("Export Settings", parent->centralContainer);
     buttonGetSettings->setGeometry(QRect(QPoint(50,350), QSize(150,30)));
     QAbstractButton::connect(buttonGetSettings, &QPushButton::released, parent, [this] {exportSettings();});
     parent->currentModeWidgets.push_back(buttonGetSettings);
     buttonGetSettings->show();
+    buttonGetSettings->hide();
 
     QGroupBox *groupRandomizerOptions = new QGroupBox("Randomizer Options", parent->centralContainer);
     groupRandomizerOptions->setGeometry(QRect(QPoint(360,100), QSize(200,500)));
@@ -116,13 +119,15 @@ Randomizer::Randomizer(ProgWindow *parentPass){
     //parent->currentModeWidgets.push_back(checkDatacon);
 
     SettingSlider* sliderBalancing = new SettingSlider("Progression Balancing", groupRandomizerOptions);
-    sliderBalancing->setGeometry(QRect(QPoint(20,60), QSize(150,30)));
+    sliderBalancing->setGeometry(QRect(QPoint(20,60), QSize(150,60)));
     QSlider::connect(sliderBalancing->slider, &QAbstractSlider::valueChanged, parent, [this](int value) {randSettings.progressionBalancing = value;});
+    sliderBalancing->hide();
     sliderBalancing->show();
 
     SettingSlider* sliderVariety = new SettingSlider("Location Challenge", groupRandomizerOptions);
-    sliderVariety->setGeometry(QRect(QPoint(20,120), QSize(150,30)));
+    sliderVariety->setGeometry(QRect(QPoint(20,120), QSize(150,60)));
     QSlider::connect(sliderVariety->slider, &QAbstractSlider::valueChanged, parent, [this](int value) {randSettings.locationChallenge = value;});
+    sliderVariety->hide();
     sliderVariety->show();
 
     randSettings.autoBuild = false;
@@ -147,6 +152,7 @@ Randomizer::Randomizer(ProgWindow *parentPass){
     QAbstractButton::connect(checkPower, &QCheckBox::checkStateChanged, parent, [checkPower, checkPowerBalance, this]
                              {randSettings.randomizePower = checkPower->isChecked();
         checkPowerBalance->setVisible(checkPower->isChecked());});
+    checkPower->hide();
     checkPower->show();
 
     QCheckBox *checkTeamBalance = new QCheckBox("Balanced Team Colors", groupRandomizerOptions);
@@ -163,6 +169,7 @@ Randomizer::Randomizer(ProgWindow *parentPass){
     QAbstractButton::connect(checkTeam, &QCheckBox::checkStateChanged, parent, [checkTeam, checkTeamBalance, this]
                              {randSettings.randomizeTeams = checkTeam->isChecked();
         checkTeamBalance->setVisible(checkTeam->isChecked());});
+    checkTeam->hide();
     checkTeam->show();
 
     QCheckBox *checkAutobots = new QCheckBox("Randomize Autobot Stats", groupRandomizerOptions);
@@ -170,6 +177,7 @@ Randomizer::Randomizer(ProgWindow *parentPass){
     checkAutobots->setToolTip("Slightly randomizes some Autobot stats (Health, height, dash speed). More will be added after further research.");
     QAbstractButton::connect(checkAutobots, &QCheckBox::checkStateChanged, parent, [checkAutobots, this]
                              {randSettings.randomizeAutobotStats = checkAutobots->isChecked();});
+    checkAutobots->hide();
     checkAutobots->show();
 
     QCheckBox *checkLevels = new QCheckBox("Randomize Level Order", groupRandomizerOptions);
@@ -177,6 +185,7 @@ Randomizer::Randomizer(ProgWindow *parentPass){
     checkLevels->setToolTip("Randomize level order.");
     QAbstractButton::connect(checkLevels, &QCheckBox::checkStateChanged, parent, [checkLevels, this]
                              {randSettings.randomizeLevelOrder = checkLevels->isChecked();});
+    checkLevels->hide();
     checkLevels->show();
 
     groupRandomizerOptions->show();
@@ -244,14 +253,13 @@ Randomizer::Randomizer(ProgWindow *parentPass){
     groupModOptions->show();
     groupLocations->show();
     groupTrickOptions->show();
-    //checkBalancePatch->hide();
-    //checkAlwaysGlider->hide();
 
     qDebug() << Q_FUNC_INFO << "testing randomization";
 
     //testAllPlacements();
     /*Uncommenting the above also requires commenting out the lines to spoil slipstream and highjump
-    plus the removal of available locations in the place function*/
+    plus the removal of available locations in the place function
+    TODO: make the spoiler system more stable*/
 
     //randomize();
 }
@@ -350,7 +358,8 @@ void Randomizer::randomize(){
     }
     qDebug() << Q_FUNC_INFO << "progression" << randSettings.progressionBalancing << "locations" << randSettings.locationChallenge;
 
-
+    parent->dataHandler->addCustomLocations();
+    parent->dataHandler->debugLocations();
 
     placemaster.seed(seed);
 
@@ -511,6 +520,16 @@ void Randomizer::placeSlipstream(){
     if(!slipstreamLocations[locationNumber]->requiresSlipstream){
         return;
     }
+    if(slipstreamLocations[locationNumber]->requiresExplosive){
+        std::vector<int> explosives;
+        for(int i = 0; i < parent->dataHandler->exodusData.miniconList.size(); i++){
+            if(parent->dataHandler->exodusData.miniconList[i].isExplosive){
+                explosives.push_back(parent->dataHandler->exodusData.miniconList[i].creatureID);
+            }
+        }
+        int chosenExplosive = placemaster.bounded(explosives.size());
+        placeSlipstreamRequirement(chosenExplosive, slipstreamLocations[locationNumber]->uniqueID);
+    }
     for(int i = 0; i < slipstreamLocations[locationNumber]->availableTricks.size(); i++){
         currentTrick = slipstreamLocations[locationNumber]->availableTricks[i];
         if(!currentTrick->enabled){
@@ -526,6 +545,8 @@ void Randomizer::placeSlipstream(){
         }
     }
 }
+
+
 
 void Randomizer::placeHighjump(){
     qDebug() << Q_FUNC_INFO << "Placing highjump. Available locations" << availableLocations.size();
@@ -565,7 +586,7 @@ void Randomizer::placeRangefinder(){
         }
     }
     for(int i = 0; i < availableLocations.size(); i++){
-        if((availableLocations[i]->episode->currentEpisode <= searchLevel && randSettings.progressionBalancing < 4)
+        if((availableLocations[i]->episode->currentEpisode < searchLevel && randSettings.progressionBalancing < 4)
             || randSettings.progressionBalancing > 3){
             rangefinderLocations.push_back(availableLocations[i]);
         }
@@ -972,6 +993,8 @@ int Randomizer::editDatabases(){
             currentLevel->spawnLocations[j].outputDatabaseInstance = currentLevel->levelFile->addInstance(parent->dataHandler->createGamePickupPlaced(&currentLevel->spawnLocations[j]));
 
         }
+        /*This will end up being called multiple times. TODO: Split editDatabases and writeDatabases so this only has to be called once.*/
+        fixBunkerLinks();
 
         if(currentLevel->usesAlternate){
             qDebug() << Q_FUNC_INFO << "output path for this level will be" << QString(parent->isoBuilder->copyOutputPath + "/TFA/" + parent->dataHandler->getGameEpisode(currentLevel->episodeID)->alternativeDirectoryName.toUpper() + "/CREATURE.TDB");
@@ -1011,9 +1034,8 @@ int Randomizer::editDatabases(){
         }
     }
 
+    //exiting function now until I can confirm that the move to DataHandler didn't break these
     return 0;
-
-    fixBunkerLinks();
 
     bool metagameEdited = false;
     for(int i = 0; i<parent->databaseList.size(); i++){
@@ -1061,6 +1083,7 @@ void Randomizer::fixBunkerLinks(){
     exEpisode* pacificLevel;
     for(int i = 0; i < parent->dataHandler->exodusData.loadedLevels.size(); i++){
         pacificLevel = &parent->dataHandler->exodusData.loadedLevels[i];
+        qDebug() << Q_FUNC_INFO << "Checking level" << pacificLevel->logName;
         if(pacificLevel->episodeID != Episode::EasterIsland){
             continue;
         }
@@ -1070,14 +1093,20 @@ void Randomizer::fixBunkerLinks(){
                 //not a bunker, nothing to see here
                 continue;
             }
+            if(pacificLevel->spawnLocations[j].pickup == nullptr){
+                //no pickup assigned, these get fixed later
+                continue;
+            }
             if(pacificLevel->spawnLocations[j].pickup->isMinicon()){
                 //skipping if the assigned pickup is a minicon because the reward system only works with datacons - for now.
                 continue;
             }
-            usedBunkers.push_back(pacificLevel->spawnLocations[j].inputDatabaseInstance);
+            usedBunkers.push_back(pacificLevel->spawnLocations[j].originalTeleportNode);
+            qDebug() << Q_FUNC_INFO << "Searching for teleport node" << pacificLevel->spawnLocations[j].originalTeleportNode;
             for(int k = 0; k < pacificLevel->levelFile->instances.size(); k++){
                 //so nested. ew
-                if(pacificLevel->levelFile->instances[k].instanceIndex == pacificLevel->spawnLocations[j].inputDatabaseInstance){
+                if(pacificLevel->levelFile->instances[k].instanceIndex == pacificLevel->spawnLocations[j].originalTeleportNode){
+                    qDebug() << Q_FUNC_INFO << "Attempting to set teleport node reward to" << pacificLevel->spawnLocations[j].outputDatabaseInstance;
                     pacificLevel->levelFile->instances[k].setAttribute("Reward_PickupLink", QString::number(pacificLevel->spawnLocations[j].outputDatabaseInstance));
                 }
             }
@@ -1088,10 +1117,13 @@ void Randomizer::fixBunkerLinks(){
         }
         /*Set all unused bunkers to have no reward link, otherwise completing that bunker will softlock.*/
         for(int j = 0; j < pacificLevel->levelFile->instances.size(); j++){
+            if(pacificLevel->levelFile->instances[j].name != "TeleportNode"){
+                continue;
+            }
             if(std::find(usedBunkers.begin(), usedBunkers.end(), pacificLevel->levelFile->instances[j].instanceIndex) != usedBunkers.end()){
                 continue;
             }
-            //qDebug() << Q_FUNC_INFO << "Unused bunker index ID found at" << pacificFile->instances[j].instanceIndex;
+            qDebug() << Q_FUNC_INFO << "Unused bunker index ID found at" << pacificLevel->levelFile->instances[j].instanceIndex;
             for(int attribute = 0; attribute < pacificLevel->levelFile->instances[j].attributes.size(); attribute++){
                 pacificLevel->levelFile->instances[j].setAttributeDefault("Reward_PickupLink");
             }

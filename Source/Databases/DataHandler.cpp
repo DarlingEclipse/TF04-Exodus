@@ -175,6 +175,7 @@ exPickupLocation::exPickupLocation(dictItem copyItem){
     locationName = copyItem.searchAttributes<QString>("LocationName");
     spawnEvent = copyItem.searchAttributes<QString>("SpawnEvent");
     isBunker = copyItem.searchAttributes<bool>("IsBunker");
+    originalTeleportNode = copyItem.searchAttributes<int>("OriginalTeleportNode");
     position = copyItem.searchAttributes<QVector3D>("Position");
     maximumGenerationDifficulty = copyItem.searchAttributes<int>("MinimumGenerationDifficulty");
     minimumGenerationDifficulty = copyItem.searchAttributes<int>("MaximumGenerationDifficulty");
@@ -404,6 +405,36 @@ void DataHandler::loadTricks(){
     std::sort(exodusData.trickList.begin(), exodusData.trickList.end());
 }
 
+void DataHandler::addCustomLocations(){
+    std::vector<exPickupLocation> loadedLocations;
+    qDebug() << Q_FUNC_INFO << "Adding custom locations to list." << exodusData.customLocationList.size() << "custom locations to add.";
+    for(int i = 0; i < exodusData.customLocationList.size(); i++){
+        qDebug() << Q_FUNC_INFO << "enabled?" << exodusData.customLocationList[i].enabled;
+        if(exodusData.customLocationList[i].enabled){
+            qDebug() << Q_FUNC_INFO << "Locationlist" << i << "has" << exodusData.customLocationList[i].locationList.size() << "locations";
+            for(int j = 0; j < exodusData.customLocationList[i].locationList.size(); j++){
+                loadedLocations.push_back(exodusData.customLocationList[i].locationList[j]);
+            }
+        }
+    }
+    for(int i = 0; i < loadedLocations.size(); i++){
+        qDebug() << Q_FUNC_INFO << "custom location has original episode" << static_cast<int>(loadedLocations[i].originalEpisode) << "uses alternate?" << loadedLocations[i].usesAlternate;
+    }
+
+    for(int i = 0; i < exodusData.loadedLevels.size(); i++){
+        for(int j = 0; j < loadedLocations.size(); j++){
+            if(exodusData.loadedLevels[i].episodeID != loadedLocations[j].originalEpisode){
+                continue;
+            }
+            if(exodusData.loadedLevels[i].usesAlternate != loadedLocations[j].usesAlternate){
+                continue;
+            }
+            loadedLocations[j].episode = &exodusData.loadedLevels[i];
+            exodusData.loadedLevels[i].spawnLocations.push_back(loadedLocations[j]);
+        }
+    }
+}
+
 void DataHandler::loadLevels(){
 
     for(int i = 0; i < parent->databaseList.size(); i++){
@@ -436,14 +467,6 @@ void DataHandler::loadLevels(){
 
 
     std::vector<exPickupLocation> loadedLocations = convertInstances<exPickupLocation>(exodusData.dataFile->sendInstances("exPickupLocation"));
-
-    for(int i = 0; i < exodusData.customLocationList.size(); i++){
-        if(exodusData.customLocationList[i].enabled){
-            for(int j = 0; j < exodusData.customLocationList[i].locationList.size(); j++){
-                loadedLocations.push_back(exodusData.customLocationList[i].locationList[j]);
-            }
-        }
-    }
 
     /*Manually setting linked locations, since they don't work until the Database system is fixed*/
     for(int i = 0; i < loadedLocations.size(); i++){
@@ -497,18 +520,22 @@ void DataHandler::loadLevels(){
     }
 
     qDebug() << Q_FUNC_INFO << "Total loaded locations:" << loadedLocations.size();
+}
 
+void DataHandler::debugLocations(){
+    exPickupLocation* currentLocation = nullptr;
     for(int i = 0; i < exodusData.loadedLevels.size(); i++){
         qDebug() << Q_FUNC_INFO << "Level file name:" << exodusData.loadedLevels[i].levelFile->fileName;
         for(int j = 0; j < exodusData.loadedLevels[i].spawnLocations.size(); j++){
-            QVector3D debugPosition = exodusData.loadedLevels[i].spawnLocations[j].position;
-            qDebug() << Q_FUNC_INFO << i << j << " " << exodusData.loadedLevels[i].spawnLocations[j].uniqueID << "  "
-                     << exodusData.loadedLevels[i].spawnLocations[j].linkedLocationIDs << "    " << exodusData.loadedLevels[i].spawnLocations[j].episode->originalEpisode << "    "
-                     << exodusData.loadedLevels[i].spawnLocations[j].locationName << "    " << debugPosition.x() << "   " << debugPosition.y() << "  " << debugPosition.z();
+            currentLocation = &exodusData.loadedLevels[i].spawnLocations[j];
+            QVector3D debugPosition = currentLocation->position;
+            qDebug() << Q_FUNC_INFO << i << j << " " << currentLocation->uniqueID << "  "
+                     << currentLocation->linkedLocationIDs << "    " << currentLocation->episode->originalEpisode << "    "
+                     << currentLocation->locationName << "    " << debugPosition.x() << "   " << debugPosition.y() << "  " << debugPosition.z()
+                     << "  " << currentLocation->originalTeleportNode;
             qDebug() << Q_FUNC_INFO << "is pickup nullptr? (it should be)" << (exodusData.loadedLevels[i].spawnLocations[j].pickup == nullptr);
         }
     }
-
 }
 
 dictItem DataHandler::createGamePickupPlaced(const exPickupLocation* location){
@@ -701,6 +728,7 @@ void DataHandler::loadCustomLocations(){
             modBuffer.dataBytes = currentModFile.readAll();
             modBuffer.input = true;
             exCustomLocation currentLocations;
+            currentLocations.enabled = false;
             headerFinished = false;
             int locationValue = 0;
             while(!headerFinished){
@@ -735,6 +763,7 @@ void DataHandler::loadCustomLocations(){
                 //customLocation.attributes = levelList[0].levelFile->generateAttributes("PickupPlaced");
                 bool readingLocation = true;
                 while(readingLocation){
+                    qDebug() << Q_FUNC_INFO << "read property type:" << modProperty.name << "with value:" << modProperty.readValue << "switch case:" << propertyOptions.indexOf(modProperty.name);
                     modProperty = modBuffer.readProperty();
                     switch(propertyOptions.indexOf(modProperty.name)){
                         case 5: //Level
@@ -774,6 +803,7 @@ void DataHandler::loadCustomLocations(){
                             break;
                         }
                         case 8: //LocationID
+                            qDebug() << Q_FUNC_INFO << "Location ID:" << modProperty.readValue;
                             customLocation.uniqueID = modProperty.readValue.toInt();
                             break;
                         case 9: //Linked Location
@@ -811,10 +841,12 @@ void DataHandler::loadCustomLocations(){
                 qDebug() << Q_FUNC_INFO << "Adding location" << customLocation.locationName << "for level" << customLocation.levelName << "at coordinates" << customLocation.position;
                 currentLocations.locationList.push_back(customLocation);
             }
+            qDebug() << Q_FUNC_INFO << "Adding currentlocations" << currentLocations.locationList.size();
             exodusData.customLocationList.push_back(currentLocations);
         }
         qDebug() << Q_FUNC_INFO << "file" << currentModFile.fileName();
     }
+
 }
 
 bool DataHandler::duplicatePickup(taPickup testPickup){
