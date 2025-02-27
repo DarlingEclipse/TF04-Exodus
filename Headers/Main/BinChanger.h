@@ -32,25 +32,23 @@ public:
 
 class BinChanger{
   public:
-    ProgWindow *parent;
-
-    QString reverse_input(QString input, int unitLength);
-    QByteArray reverse_input(QByteArray input, int unitLength);
-    QString hex_to_bin(QByteArray arrhex);
-    int twosCompConv(QString input, int length);
-    QString twosCompConv(int intput, int length);
-    QString signExtend(QString input, int length);
-    QByteArray remakeImm(QString tempRead, long immediate);
-    std::tuple<int8_t,int8_t> byte_to_nib(QByteArray input);
-    int nib_to_byte(std::tuple<int8_t, int8_t> input);
-    float hex_to_float(QByteArray array);
-    QByteArray float_to_hex(float input);
-    qint64 hexWrite(QFile& file, QByteArray var);
-    qint64 byteWrite(QFile& file, int8_t var);
-    qint64 shortWrite(QFile& file, int16_t var);
-    qint64 intWrite(QFile& file, int32_t var);
-    qint64 longWrite(QFile& file, int64_t var);
-    QVector3D forcedRotate(QMatrix3x3 rotMatrix, QVector3D offset, QVector3D point);
+    static QString reverse_input(QString input, int unitLength);
+    static QByteArray reverse_input(QByteArray input, int unitLength);
+    static QString hex_to_bin(QByteArray arrhex);
+    static int twosCompConv(QString input, int length);
+    static QString twosCompConv(int intput, int length);
+    static QString signExtend(QString input, int length);
+    static QByteArray remakeImm(QString tempRead, long immediate);
+    static std::tuple<int8_t,int8_t> byte_to_nib(QByteArray input);
+    static int nib_to_byte(std::tuple<int8_t, int8_t> input);
+    static float hex_to_float(QByteArray array);
+    static QByteArray float_to_hex(float input);
+    static qint64 hexWrite(QFile& file, QByteArray var);
+    static qint64 byteWrite(QFile& file, int8_t var);
+    static qint64 shortWrite(QFile& file, int16_t var);
+    static qint64 intWrite(QFile& file, int32_t var);
+    static qint64 longWrite(QFile& file, int64_t var);
+    static QVector3D forcedRotate(QMatrix3x3 rotMatrix, QVector3D offset, QVector3D point);
 };
 
 class FileData{

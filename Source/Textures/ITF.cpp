@@ -596,7 +596,7 @@ void ITF::readIndexedData(){
             //however every image should be an even number of pixels so we can just grab them in pairs.
             for (int i = 0; i < (mipMaps[m].width() * mipMaps[m].height())/2; i++){
                 //qDebug() << Q_FUNC_INFO << "current pixel pair" << i << "x" << pixelIndex%width << "y" << pixelIndex/width;
-                nibTup = parent->binChanger.byte_to_nib(parent->fileData.mid(location+i, 1));
+                nibTup = BinChanger::byte_to_nib(parent->fileData.mid(location+i, 1));
                 mipMaps[m].setPixel(pixelIndex % mipMaps[m].width(), pixelIndex / mipMaps[m].width(), std::get<0>(nibTup));
                 pixelIndex += 1;
                 mipMaps[m].setPixel(pixelIndex % mipMaps[m].width(), pixelIndex / mipMaps[m].width(), std::get<1>(nibTup));
@@ -957,28 +957,28 @@ void ITF::writeITF(){
 
         qDebug() << Q_FUNC_INFO << "Writing ITF header info";
         itfOut.write("FORM");
-        parent->binChanger.intWrite(itfOut, fileLength);
+        BinChanger::intWrite(itfOut, fileLength);
         itfOut.write("ITF0HDR");
-        parent->binChanger.byteWrite(itfOut, versionNum);
-        parent->binChanger.intWrite(itfOut, headerLength);
+        BinChanger::byteWrite(itfOut, versionNum);
+        BinChanger::intWrite(itfOut, headerLength);
         itfOut.write("PS2");
-        parent->binChanger.byteWrite(itfOut, propertyByte);
-        parent->binChanger.intWrite(itfOut, alphaType);
-        parent->binChanger.intWrite(itfOut, mipMaps[0].width());
-        parent->binChanger.intWrite(itfOut, mipMaps[0].height());
-        parent->binChanger.intWrite(itfOut, mipmapCount);
-        parent->binChanger.intWrite(itfOut, paletteCount);
-        parent->binChanger.intWrite(itfOut, unknown4Byte3);
-        parent->binChanger.intWrite(itfOut, unknown4Byte4);
+        BinChanger::byteWrite(itfOut, propertyByte);
+        BinChanger::intWrite(itfOut, alphaType);
+        BinChanger::intWrite(itfOut, mipMaps[0].width());
+        BinChanger::intWrite(itfOut, mipMaps[0].height());
+        BinChanger::intWrite(itfOut, mipmapCount);
+        BinChanger::intWrite(itfOut, paletteCount);
+        BinChanger::intWrite(itfOut, unknown4Byte3);
+        BinChanger::intWrite(itfOut, unknown4Byte4);
         itfOut.write("TXTR");
-        parent->binChanger.intWrite(itfOut, dataLength());
+        BinChanger::intWrite(itfOut, dataLength());
         QList<QRgb> tempColorTable = mipMaps[0].colorTable();
         if(hasPalette){
             for(int i = 0; i < mipMaps[0].colorCount(); i++){
-                parent->binChanger.byteWrite(itfOut, qRed(tempColorTable[i]));
-                parent->binChanger.byteWrite(itfOut, qGreen(tempColorTable[i]));
-                parent->binChanger.byteWrite(itfOut, qBlue(tempColorTable[i]));
-                parent->binChanger.byteWrite(itfOut, qAlpha(tempColorTable[i]));
+                BinChanger::byteWrite(itfOut, qRed(tempColorTable[i]));
+                BinChanger::byteWrite(itfOut, qGreen(tempColorTable[i]));
+                BinChanger::byteWrite(itfOut, qBlue(tempColorTable[i]));
+                BinChanger::byteWrite(itfOut, qAlpha(tempColorTable[i]));
             }
             for(int i = 0; i < mipMaps.size(); i++){
                 writeIndexedData(itfOut, &mipMaps[i]);
@@ -1005,7 +1005,7 @@ void ITF::writeIndexedData(QFile& fileOut, QImage *writeData){
         parent->log("Exporting to ITF with bit depth: 8bpp");
         for(int i = 0; i < reverseImage.height(); i++){
             for(int j = 0; j < reverseImage.width(); j++){
-                parent->binChanger.byteWrite(fileOut, reverseImage.pixelIndex(j,i));
+                BinChanger::byteWrite(fileOut, reverseImage.pixelIndex(j,i));
             }
         }
         break;
@@ -1015,7 +1015,7 @@ void ITF::writeIndexedData(QFile& fileOut, QImage *writeData){
         for(int i = 0; i < reverseImage.height()*reverseImage.width(); i+=2){
             std::get<0>(nibTup) = reverseImage.pixelIndex(i % reverseImage.width(), i / reverseImage.width());
             std::get<1>(nibTup) = reverseImage.pixelIndex((i+1) % reverseImage.width(), (i+1) / reverseImage.width());
-            parent->binChanger.byteWrite(fileOut, parent->binChanger.nib_to_byte(nibTup));
+            BinChanger::byteWrite(fileOut, BinChanger::nib_to_byte(nibTup));
         }
         break;
 
@@ -1039,20 +1039,20 @@ void ITF::writeImageData(QFile& fileOut, QImage *writeData){
                 //QColor currentPixel = qRgba(((combinedIntensity >> 0) & 31)*8, ((combinedIntensity >> 5) & 31)*8, ((combinedIntensity >> 10) & 31)*8, alpha);
                 alpha = std::min(currentPixel.alpha(), 1);
                 combinedIntensities = (currentPixel.red()/8) + ((currentPixel.green()/8) << 5) + ((currentPixel.blue()/8) << 10) + (alpha<<15);
-                parent->binChanger.shortWrite(fileOut, combinedIntensities);
+                BinChanger::shortWrite(fileOut, combinedIntensities);
                 break;
 
                 case 24:
-                parent->binChanger.byteWrite(fileOut, currentPixel.blue());
-                parent->binChanger.byteWrite(fileOut, currentPixel.green());
-                parent->binChanger.byteWrite(fileOut, currentPixel.red());
+                BinChanger::byteWrite(fileOut, currentPixel.blue());
+                BinChanger::byteWrite(fileOut, currentPixel.green());
+                BinChanger::byteWrite(fileOut, currentPixel.red());
                 break;
 
                 case 32:
-                parent->binChanger.byteWrite(fileOut, currentPixel.blue());
-                parent->binChanger.byteWrite(fileOut, currentPixel.green());
-                parent->binChanger.byteWrite(fileOut, currentPixel.red());
-                parent->binChanger.byteWrite(fileOut, currentPixel.alpha());
+                BinChanger::byteWrite(fileOut, currentPixel.blue());
+                BinChanger::byteWrite(fileOut, currentPixel.green());
+                BinChanger::byteWrite(fileOut, currentPixel.red());
+                BinChanger::byteWrite(fileOut, currentPixel.alpha());
                 break;
 
                 default:

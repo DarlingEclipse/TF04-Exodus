@@ -1399,18 +1399,18 @@ void DefinitionFile::writeBinary(){
         //getFileLengths();
 
         bmdOut.write("FISH");
-        parent->binChanger.intWrite(bmdOut, versionNumber);
+        BinChanger::intWrite(bmdOut, versionNumber);
         bmdOut.write("~IncludedFiles");
-        parent->binChanger.shortWrite(bmdOut, 0);
+        BinChanger::shortWrite(bmdOut, 0);
         if(inheritedFile != nullptr){
             qDebug() << Q_FUNC_INFO << "includedFile value" << includedFilePath << "length" << 4+includedFilePath.length();
-            parent->binChanger.intWrite(bmdOut, 4+includedFilePath.length());
+            BinChanger::intWrite(bmdOut, 4+includedFilePath.length());
             bmdOut.write(includedFilePath.toUtf8());
         } else {
-            parent->binChanger.intWrite(bmdOut, 4);
+            BinChanger::intWrite(bmdOut, 4);
         }
         bmdOut.write("~Dictionary");
-        parent->binChanger.shortWrite(bmdOut, 0);
+        BinChanger::shortWrite(bmdOut, 0);
 
         for(int i = 0; i < dictionary.size(); i++){
             sectionLength += 4; //int length for dictItem
@@ -1422,30 +1422,30 @@ void DefinitionFile::writeBinary(){
             sectionLength += dictionary[i].name.length()+3; //2 for spacing, 1 for tilde
         }
 
-        parent->binChanger.intWrite(bmdOut, sectionLength);
+        BinChanger::intWrite(bmdOut, sectionLength);
 
         for(int i = 0; i < dictionary.size(); i++){
             dictionary[i].length = 4; //setting this just to be sure - not sure if this is initialized elsewhere
             bmdOut.write("~" + dictionary[i].name.toUtf8());
-            parent->binChanger.shortWrite(bmdOut, 0);
+            BinChanger::shortWrite(bmdOut, 0);
             for(int j = 0; j < dictionary[i].attributes.size(); j++){
                 checkLength = dictionary[i].attributes[j]->binarySize();
                 //qDebug() << Q_FUNC_INFO << "second pass attribute" << dictionary[i].attributes[j]->name << "is length" << checkLength;
                 dictionary[i].length += checkLength;
             }
-            parent->binChanger.intWrite(bmdOut, dictionary[i].length);
+            BinChanger::intWrite(bmdOut, dictionary[i].length);
             for(int j = 0; j < dictionary[i].attributes.size(); j++){
                 qDebug() << Q_FUNC_INFO << "class" << dictionary[i].name << "item" << j << "is type" << dictionary[i].attributes[j]->type;
-                parent->binChanger.intWrite(bmdOut, dictionary[i].attributes[j]->type.length());
+                BinChanger::intWrite(bmdOut, dictionary[i].attributes[j]->type.length());
                 bmdOut.write(dictionary[i].attributes[j]->type.toUtf8());
                 if(dictionary[i].attributes[j]->active){
-                    parent->binChanger.intWrite(bmdOut, 4);
+                    BinChanger::intWrite(bmdOut, 4);
                     bmdOut.write("True");
                 } else {
-                    parent->binChanger.intWrite(bmdOut, 5);
+                    BinChanger::intWrite(bmdOut, 5);
                     bmdOut.write("False");
                 }
-                parent->binChanger.intWrite(bmdOut, dictionary[i].attributes[j]->name.length());
+                BinChanger::intWrite(bmdOut, dictionary[i].attributes[j]->name.length());
                 bmdOut.write(dictionary[i].attributes[j]->name.toUtf8());
                 dictionary[i].attributes[j]->write(bmdOut);
                 //binaryOutput(bmdOut, dictionary[i].attributes[j]);
@@ -1469,19 +1469,19 @@ void DatabaseFile::writeBinary(){
         //getFileLengths();
 
         bmdOut.write("FISH");
-        parent->binChanger.intWrite(bmdOut, versionNumber);
+        BinChanger::intWrite(bmdOut, versionNumber);
         bmdOut.write("~IncludedFiles");
-        parent->binChanger.shortWrite(bmdOut, 0);
+        BinChanger::shortWrite(bmdOut, 0);
         if(inheritedFile != nullptr){
             qDebug() << Q_FUNC_INFO << "includedFile value" << includedFilePath.toUtf8() << "length" << 4+includedFilePath.length();
-            parent->binChanger.intWrite(bmdOut, 8+includedFilePath.length());
-            parent->binChanger.intWrite(bmdOut, includedFilePath.length());
+            BinChanger::intWrite(bmdOut, 8+includedFilePath.length());
+            BinChanger::intWrite(bmdOut, includedFilePath.length());
             bmdOut.write(includedFilePath.toUtf8());
         } else {
-            parent->binChanger.intWrite(bmdOut, 4);
+            BinChanger::intWrite(bmdOut, 4);
         }
         bmdOut.write("~FileDictionary");
-        parent->binChanger.shortWrite(bmdOut, 0);
+        BinChanger::shortWrite(bmdOut, 0);
 
         for(int i = 0; i < dictionary.size(); i++){
             sectionLength += 4; //int length for dictItem
@@ -1493,7 +1493,7 @@ void DatabaseFile::writeBinary(){
             sectionLength += dictionary[i].name.length()+3; //2 for spacing, 1 for tilde
         }
 
-        parent->binChanger.intWrite(bmdOut, sectionLength);
+        BinChanger::intWrite(bmdOut, sectionLength);
 
         for(int i = 0; i < dictionary.size(); i++){
             dictionary[i].length = 4;
@@ -1503,16 +1503,16 @@ void DatabaseFile::writeBinary(){
                 dictionary[i].length += checkLength;
             }
             bmdOut.write("~" + dictionary[i].name.toUtf8());
-            parent->binChanger.shortWrite(bmdOut, 0);
-            parent->binChanger.intWrite(bmdOut, dictionary[i].length);
+            BinChanger::shortWrite(bmdOut, 0);
+            BinChanger::intWrite(bmdOut, dictionary[i].length);
             for(int j = 0; j < dictionary[i].attributes.size(); j++){
-                parent->binChanger.intWrite(bmdOut, dictionary[i].attributes[j]->name.length());
+                BinChanger::intWrite(bmdOut, dictionary[i].attributes[j]->name.length());
                 bmdOut.write(dictionary[i].attributes[j]->name.toUtf8());
             }
         }
 
         bmdOut.write("~Instances");
-        parent->binChanger.shortWrite(bmdOut, 0);
+        BinChanger::shortWrite(bmdOut, 0);
         sectionLength = 4;
 
         for(int i = 0; i < instances.size(); i++){
@@ -1529,7 +1529,7 @@ void DatabaseFile::writeBinary(){
             }
         }
 
-        parent->binChanger.intWrite(bmdOut, sectionLength);
+        BinChanger::intWrite(bmdOut, sectionLength);
 
         for(int i = 0; i < instances.size(); i++){
             instances[i].length += 6;
@@ -1542,14 +1542,14 @@ void DatabaseFile::writeBinary(){
                 instances[i].length += checkLength;
             }
             bmdOut.write("~" + instances[i].name.toUtf8());
-            parent->binChanger.shortWrite(bmdOut, 0);
-            parent->binChanger.intWrite(bmdOut, instances[i].length);
-            parent->binChanger.shortWrite(bmdOut, instances[i].instanceIndex);
+            BinChanger::shortWrite(bmdOut, 0);
+            BinChanger::intWrite(bmdOut, instances[i].length);
+            BinChanger::shortWrite(bmdOut, instances[i].instanceIndex);
             for(int j = 0; j < instances[i].attributes.size(); j++){
                 if(instances[i].attributes[j]->isDefault){
-                    parent->binChanger.byteWrite(bmdOut, 1);
+                    BinChanger::byteWrite(bmdOut, 1);
                 } else {
-                    parent->binChanger.byteWrite(bmdOut, 0);
+                    BinChanger::byteWrite(bmdOut, 0);
                     instances[i].attributes[j]->write(bmdOut);
                 }
             }

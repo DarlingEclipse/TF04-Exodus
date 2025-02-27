@@ -14,27 +14,27 @@ void TFFile::acceptVisitor(ProgWindow& visitor){
 }
 
 uint32_t FileData::readSpecial(int length, long location){
-    uint32_t readValue = parent->binChanger.reverse_input(parent->binChanger.reverse_input(dataBytes.mid(currentPosition + location, length).toHex(),2), 1).toUInt(nullptr, 16);
+    uint32_t readValue = BinChanger::reverse_input(BinChanger::reverse_input(dataBytes.mid(currentPosition + location, length).toHex(),2), 1).toUInt(nullptr, 16);
     currentPosition += length;
     return readValue;
 }
 
 long FileData::readLong(int length, long location){
-    long readValue = parent->binChanger.reverse_input(dataBytes.mid(currentPosition + location, length).toHex(),2).toLong(nullptr, 16);
+    long readValue = BinChanger::reverse_input(dataBytes.mid(currentPosition + location, length).toHex(),2).toLong(nullptr, 16);
     currentPosition += length;
     return readValue;
 }
 
 int FileData::readInt(int length, long location){
-    QString readBin = parent->binChanger.reverse_input(parent->binChanger.hex_to_bin(dataBytes.mid(currentPosition + location, length)), 8);
-    int twoscompread = parent->binChanger.twosCompConv(readBin, 8);
+    QString readBin = BinChanger::reverse_input(BinChanger::hex_to_bin(dataBytes.mid(currentPosition + location, length)), 8);
+    int twoscompread = BinChanger::twosCompConv(readBin, 8);
     //qDebug() << Q_FUNC_INFO << "hex read:" << dataBytes.mid(currentPosition + location, length).toHex() << "read as" << readBin << "then" << twoscompread;
     currentPosition += length;
     return twoscompread;
 }
 
 int FileData::readUInt(int length, long location){
-    int readValue = parent->binChanger.reverse_input(dataBytes.mid(currentPosition + location, length).toHex(),2).toUInt(nullptr, 16);
+    int readValue = BinChanger::reverse_input(dataBytes.mid(currentPosition + location, length).toHex(),2).toUInt(nullptr, 16);
     currentPosition += length;
     return readValue;
 }
@@ -48,7 +48,7 @@ bool FileData::readBool(int length, long location){
 float FileData::readFloat(int length, long location){
     //qDebug() << Q_FUNC_INFO << "full read" << dataBytes;
     //qDebug() << Q_FUNC_INFO << "current position" << currentPosition << "hex read:" << dataBytes.mid(currentPosition + location, length);
-    float readValue = parent->binChanger.hex_to_float(parent->binChanger.reverse_input(dataBytes.mid(currentPosition + location, length).toHex(), 2));
+    float readValue = BinChanger::hex_to_float(BinChanger::reverse_input(dataBytes.mid(currentPosition + location, length).toHex(), 2));
     if(readValue < 0.00001 and readValue > -0.00001){ //also turbohack
         readValue = 0;
     }
@@ -57,8 +57,8 @@ float FileData::readFloat(int length, long location){
 }
 
 float FileData::readMiniFloat(int length, long location){
-    QString readBin = parent->binChanger.reverse_input(parent->binChanger.hex_to_bin(dataBytes.mid(currentPosition + location, length)), 8);
-    int twoscompread = parent->binChanger.twosCompConv(readBin, 8);
+    QString readBin = BinChanger::reverse_input(BinChanger::hex_to_bin(dataBytes.mid(currentPosition + location, length)), 8);
+    int twoscompread = BinChanger::twosCompConv(readBin, 8);
     float reduceInt = float(twoscompread) / 30000;
     //qDebug() << Q_FUNC_INFO << "int read:" << float(twoscompread) << "then becomes" << reduceInt;
     currentPosition += length;

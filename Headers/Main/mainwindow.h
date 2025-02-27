@@ -82,7 +82,6 @@ public:
     ProgWindow(QWidget *parent = nullptr);
     ~ProgWindow();
 
-    BinChanger binChanger;
     VACFile* vacFile;
     DistanceCalculator* warpgateCalculator;
     Randomizer* randomizer;

@@ -283,7 +283,7 @@ void taDataBool<valueType>::read(){
 
 template <class valueType>
 void taDataBool<valueType>::write(QFile& file){
-    this->file->parent->binChanger.byteWrite(file, this->value);
+    BinChanger::byteWrite(file, this->value);
 }
 
 /*---------- Float ----------*/
@@ -320,8 +320,8 @@ void taDataFloat<valueType>::read(){
 
 template <class valueType>
 void taDataFloat<valueType>::write(QFile& file){
-    QByteArray hexFloat = this->file->parent->binChanger.float_to_hex(this->value);
-    this->file->parent->binChanger.hexWrite(file, hexFloat);
+    QByteArray hexFloat = BinChanger::float_to_hex(this->value);
+    BinChanger::hexWrite(file, hexFloat);
 }
 
 template <class valueType>
@@ -366,8 +366,8 @@ void taDataString<valueType>::read(){
 
 template <class valueType>
 void taDataString<valueType>::write(QFile& file){
-    this->file->parent->binChanger.intWrite(file, this->value.length());
-    this->file->parent->binChanger.hexWrite(file, this->value.toUtf8());
+    BinChanger::intWrite(file, this->value.length());
+    BinChanger::hexWrite(file, this->value.toUtf8());
 }
 
 template <class valueType>
@@ -402,7 +402,7 @@ void taDataInteger<valueType>::read(){
 
 template <class valueType>
 void taDataInteger<valueType>::write(QFile& file){
-    this->file->parent->binChanger.intWrite(file, this->value);
+    BinChanger::intWrite(file, this->value);
 }
 
 /*---------- Link ----------*/
@@ -431,7 +431,7 @@ void taDataLink<valueType>::read(){
 
 template <class valueType>
 void taDataLink<valueType>::write(QFile& file){
-    this->file->parent->binChanger.shortWrite(file, this->value);
+    BinChanger::shortWrite(file, this->value);
 }
 
 /*---------- Flag ----------*/
@@ -460,7 +460,7 @@ void taDataFlag<valueType>::read(){
 
 template <class valueType>
 void taDataFlag<valueType>::write(QFile& file){
-    this->file->parent->binChanger.intWrite(file, this->value);
+    BinChanger::intWrite(file, this->value);
 }
 
 /*---------- Point ----------*/
@@ -500,12 +500,12 @@ void taDataPoint<valueType>::read(){
 template <class valueType>
 void taDataPoint<valueType>::write(QFile& file){
     QByteArray hexFloat;
-    hexFloat = this->file->parent->binChanger.float_to_hex(this->value.x());
-    this->file->parent->binChanger.hexWrite(file, hexFloat);
-    hexFloat = this->file->parent->binChanger.float_to_hex(this->value.y());
-    this->file->parent->binChanger.hexWrite(file, hexFloat);
-    hexFloat = this->file->parent->binChanger.float_to_hex(this->value.z());
-    this->file->parent->binChanger.hexWrite(file, hexFloat);
+    hexFloat = BinChanger::float_to_hex(this->value.x());
+    BinChanger::hexWrite(file, hexFloat);
+    hexFloat = BinChanger::float_to_hex(this->value.y());
+    BinChanger::hexWrite(file, hexFloat);
+    hexFloat = BinChanger::float_to_hex(this->value.z());
+    BinChanger::hexWrite(file, hexFloat);
 }
 
 template <class valueType>
@@ -563,10 +563,10 @@ void taDataColor<valueType>::read(){
 
 template <class valueType>
 void taDataColor<valueType>::write(QFile& file){
-    this->file->parent->binChanger.intWrite(file, this->value.red());
-    this->file->parent->binChanger.intWrite(file, this->value.green());
-    this->file->parent->binChanger.intWrite(file, this->value.blue());
-    this->file->parent->binChanger.intWrite(file, this->value.alpha());
+    BinChanger::intWrite(file, this->value.red());
+    BinChanger::intWrite(file, this->value.green());
+    BinChanger::intWrite(file, this->value.blue());
+    BinChanger::intWrite(file, this->value.alpha());
 }
 
 template <class valueType>
@@ -633,14 +633,14 @@ void taDataQuaternion<valueType>::read(){
 template <class valueType>
 void taDataQuaternion<valueType>::write(QFile& file){
     QByteArray hexFloat;
-    hexFloat = this->file->parent->binChanger.float_to_hex(this->value.x());
-    this->file->parent->binChanger.hexWrite(file, hexFloat);
-    hexFloat = this->file->parent->binChanger.float_to_hex(this->value.y());
-    this->file->parent->binChanger.hexWrite(file, hexFloat);
-    hexFloat = this->file->parent->binChanger.float_to_hex(this->value.z());
-    this->file->parent->binChanger.hexWrite(file, hexFloat);
-    hexFloat = this->file->parent->binChanger.float_to_hex(this->value.scalar());
-    this->file->parent->binChanger.hexWrite(file, hexFloat);
+    hexFloat = BinChanger::float_to_hex(this->value.x());
+    BinChanger::hexWrite(file, hexFloat);
+    hexFloat = BinChanger::float_to_hex(this->value.y());
+    BinChanger::hexWrite(file, hexFloat);
+    hexFloat = BinChanger::float_to_hex(this->value.z());
+    BinChanger::hexWrite(file, hexFloat);
+    hexFloat = BinChanger::float_to_hex(this->value.scalar());
+    BinChanger::hexWrite(file, hexFloat);
 }
 
 template <class valueType>
@@ -729,9 +729,9 @@ void taDataIntArray<valueType>::read(){
 
 template <class valueType>
 void taDataIntArray<valueType>::write(QFile& file){
-    this->file->parent->binChanger.intWrite(file, this->values.size());
+    BinChanger::intWrite(file, this->values.size());
     for(int i = 0; i < this->values.size(); i++){
-        this->file->parent->binChanger.intWrite(file, this->values[i]);
+        BinChanger::intWrite(file, this->values[i]);
     }
 }
 
@@ -767,10 +767,10 @@ void taDataFloatArray<valueType>::read(){
 
 template <class valueType>
 void taDataFloatArray<valueType>::write(QFile& file){
-    this->file->parent->binChanger.intWrite(file, this->values.size());
+    BinChanger::intWrite(file, this->values.size());
     for(int i = 0; i < this->values.size(); i++){
-        QByteArray hexFloat = this->file->parent->binChanger.float_to_hex(this->values[i]);
-        this->file->parent->binChanger.hexWrite(file, hexFloat);
+        QByteArray hexFloat = BinChanger::float_to_hex(this->values[i]);
+        BinChanger::hexWrite(file, hexFloat);
     }
 }
 
@@ -806,9 +806,9 @@ void taDataLinkArray<valueType>::read(){
 
 template <class valueType>
 void taDataLinkArray<valueType>::write(QFile& file){
-    this->file->parent->binChanger.intWrite(file, this->values.size());
+    BinChanger::intWrite(file, this->values.size());
     for(int i = 0; i < this->values.size(); i++){
-        this->file->parent->binChanger.shortWrite(file, this->values[i]);
+        BinChanger::shortWrite(file, this->values[i]);
     }
 }
 
@@ -860,10 +860,10 @@ void taDataStringArray<valueType>::read(){
 
 template <class valueType>
 void taDataStringArray<valueType>::write(QFile& file){
-    this->file->parent->binChanger.intWrite(file, this->values.size());
+    BinChanger::intWrite(file, this->values.size());
     for(int i = 0; i < this->values.size(); i++){
-        this->file->parent->binChanger.intWrite(file, this->values[i].length());
-        this->file->parent->binChanger.hexWrite(file, this->values[i].toUtf8());
+        BinChanger::intWrite(file, this->values[i].length());
+        BinChanger::hexWrite(file, this->values[i].toUtf8());
     }
 }
 
@@ -909,15 +909,15 @@ void taDataVectorArray<valueType>::read(){
 
 template <class valueType>
 void taDataVectorArray<valueType>::write(QFile& file){
-    this->file->parent->binChanger.intWrite(file, this->values.size());
+    BinChanger::intWrite(file, this->values.size());
     QByteArray hexFloat;
     for(int i = 0; i < this->values.size(); i++){
-        hexFloat = this->file->parent->binChanger.float_to_hex(this->values[i].x());
-        this->file->parent->binChanger.hexWrite(file, hexFloat);
-        hexFloat = this->file->parent->binChanger.float_to_hex(this->values[i].y());
-        this->file->parent->binChanger.hexWrite(file, hexFloat);
-        hexFloat = this->file->parent->binChanger.float_to_hex(this->values[i].z());
-        this->file->parent->binChanger.hexWrite(file, hexFloat);
+        hexFloat = BinChanger::float_to_hex(this->values[i].x());
+        BinChanger::hexWrite(file, hexFloat);
+        hexFloat = BinChanger::float_to_hex(this->values[i].y());
+        BinChanger::hexWrite(file, hexFloat);
+        hexFloat = BinChanger::float_to_hex(this->values[i].z());
+        BinChanger::hexWrite(file, hexFloat);
     }
 }
 
@@ -1007,7 +1007,7 @@ void taDataEnum::read(){
 
 void taDataEnum::write(QFile& file){
     //this->file->parent->log("Enum values cannot be written to binary Definition (BMD) files. Incompatible item: " + this->name);
-    this->file->parent->binChanger.intWrite(file, this->defaultValue);
+    BinChanger::intWrite(file, this->defaultValue);
 }
 
 std::shared_ptr<taData> dictItem::editAttributeValue(QString itemType, std::shared_ptr<taData> itemToEdit){

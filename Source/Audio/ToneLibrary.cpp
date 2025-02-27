@@ -53,9 +53,9 @@ void VACFile::tempWrite(){
         QDataStream fileStream(&vacOut);
 
         for(int i = 0; i < noteList.size(); i++){
-            parent->binChanger.shortWrite(vacOut, noteList[i]);
+            BinChanger::shortWrite(vacOut, noteList[i]);
             for(int j = 0; j < freqList[i].size(); j++){
-                parent->binChanger.byteWrite(vacOut, freqList[i][j]);
+                BinChanger::byteWrite(vacOut, freqList[i][j]);
             }
         }
     }

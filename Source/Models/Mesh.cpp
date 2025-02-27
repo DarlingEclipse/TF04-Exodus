@@ -149,7 +149,7 @@ int Mesh::readMesh(){
         if (signature.type == "PositionArray") {
             for(int position = 0; position < (signature.sectionLength-4)/12; position++){
                 x_position = fileData->readFloat();
-                //qDebug() << Q_FUNC_INFO << "X float: " << x_position << " from hex: " << file->parent->binChanger.reverse_input(fileData->mid(positionLocation + (i*12), 4).toHex(), 2);
+                //qDebug() << Q_FUNC_INFO << "X float: " << x_position << " from hex: " << file->BinChanger::reverse_input(fileData->mid(positionLocation + (i*12), 4).toHex(), 2);
                 y_position = fileData->readFloat();
                 z_position = fileData->readFloat();
                 vertexSet.positionArray.positionList.push_back(QVector3D(x_position, y_position, z_position));
