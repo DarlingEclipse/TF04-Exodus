@@ -1,4 +1,6 @@
-#include "Headers/Main/mainwindow.h"
+#include "Headers/Audio/ToneLibraries.h"
+#include "Headers/Main/exDebugger.h"
+#include "Headers/Main/BinChanger.h"
 
 //http://soundfile.sapp.org/doc/WaveFormat/
 
@@ -19,18 +21,18 @@ void VACFile::load(QString fromType){
         failedRead = 1;
     }
     if(failedRead){
-        parent->messageError("There was an error reading " + fileName);
+        m_Debug->MessageError("There was an error reading " + fileName);
         return;
     }
 }
 
 int VACFile::tempRead(){
-    parent->fileData.readFile("D:\\TF2_RevEngineer\\Model work\\FLAKBURST.VAC");
+    fileData->readFile("D:\\TF2_RevEngineer\\Model work\\FLAKBURST.VAC");
     std::vector<int> freqSet;
-    while (parent->fileData.currentPosition < parent->fileData.dataBytes.size()){
-        noteList.push_back(parent->fileData.readInt(2));
+    while (fileData->currentPosition < fileData->dataBytes.size()){
+        noteList.push_back(fileData->readInt(2));
         for(int i = 0; i < 14; i++){
-            freqSet.push_back(parent->fileData.readInt(1));
+            freqSet.push_back(fileData->readInt(1));
         }
         freqList.push_back(freqSet);
         freqSet.clear();
@@ -40,7 +42,7 @@ int VACFile::tempRead(){
 
 void VACFile::tempWrite(){
     if(this->noteList.empty()){
-       parent->messageError("No audio files available to export. Please load an audio file.");
+       m_Debug->MessageError("No audio files available to export. Please load an audio file.");
        return;
     }
     //QString fileOut = QFileDialog::getSaveFileName(parent, parent->tr("Select Output VAC"), QDir::currentPath() + "/VAC/", parent->tr("Tone Files (*.vac)"));

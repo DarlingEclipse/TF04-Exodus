@@ -1,4 +1,10 @@
-#include "Headers/Main/mainwindow.h"
+#include "Headers/Models/Mesh.h"
+
+/*including vbin and levelgeo for now*/
+#include "Headers/Models/vbin.h"
+#include "Headers/Models/LevelGeo.h"
+#include "Headers/Main/exDebugger.h"
+#include "Headers/FileManagement/Zebrafish.h"
 
 void LODInfo::clear(){
     levels= 0;
@@ -87,7 +93,7 @@ void CellManager::readCell(){
     fileData->signature(&signature); //should read "Cell"
     qDebug() << Q_FUNC_INFO << "read section:" << signature.type;
     if(signature.type != "Cell"){
-        file->parent->log(QString::number(fileData->currentPosition) + " | Found unexpected section. Expected: Cell. | " + QString(Q_FUNC_INFO));
+        file->m_Debug->Log(QString::number(fileData->currentPosition) + " | Found unexpected section. Expected: Cell. | " + QString(Q_FUNC_INFO));
     }
     Cell *currentCell = new Cell;
     currentCell->possibleVersion = fileData->readInt();
@@ -736,9 +742,9 @@ void FileSection::writeNodesDAE(QTextStream &fileOut){
 }
 
 void Instance::writeNodesDAE(QTextStream &fileOut){
-    std::shared_ptr<TFFile> testLoaded;
+    std::shared_ptr<taFile> testLoaded;
     for(int i = 0; i < file->instanceNameList.size(); i++){
-        file->parent->loadRequiredFile(file, file->instanceNameList[i], "VBIN");
+        file->m_zlManager->loadRequiredFile(file, file->instanceNameList[i], "VBIN");
         /*testLoaded = file->parent->matchFile(file->instanceNameList[i] + ".VBIN");
         while(testLoaded == nullptr){
             file->parent->messageError("Please load a file " + file->instanceNameList[i]+".VBIN");

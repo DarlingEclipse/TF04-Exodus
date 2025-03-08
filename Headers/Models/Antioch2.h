@@ -99,6 +99,8 @@ class AnimationSourceSet{
     QString name;
     long sectionLength;
     long sectionEnd;
+    int m_selectedAnimation;
+    int m_selectedFrame; //this should be moved to the animation itself
 
     int version;
     int sourceCount;

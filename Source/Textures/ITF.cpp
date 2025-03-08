@@ -1,5 +1,17 @@
-#include "Headers/Main/mainwindow.h"
-#include "ui_mainwindow.h"
+
+#include <QPushButton>
+#include <QByteArrayMatcher>
+
+/*Find a way to remove the file dialog requirement*/
+#include <QFileDialog>
+
+/*This should be handled by exWidnow instead*/
+#include <QHeaderView>
+
+#include "Headers/Textures/itf.h"
+#include "Headers/Main/exDebugger.h"
+#include "Headers/UI/exWindow.h"
+#include "Headers/Main/BinChanger.h"
 
 //https://ps2linux.no-ip.info/playstation2-linux.com/docs/howto/display_docef7c.html?docid=75
 
@@ -13,7 +25,7 @@ void ITF::load(QString fromType){
         adaptProperties();
     }
     if(failedRead){
-        parent->messageError("There was an error reading " + fileName);
+        m_Debug->MessageError("There was an error reading " + fileName);
         return;
     }
 }
@@ -31,11 +43,11 @@ void ITF::save(QString toType){
 }
 
 void ITF::updateCenter(){
-    parent->clearWindow();
+    m_UI->ClearWindow();
 
     currentPalette = 0;
     if(hasPalette){
-        comboPalettes = new QComboBox(parent->centralContainer);
+        comboPalettes = new QComboBox(m_UI->m_centralContainer);
         comboPalettes -> setGeometry(QRect(QPoint(250,50), QSize(150,30)));
         if (paletteCount <= 0){
             comboPalettes->insertItem(0, "1");
@@ -44,95 +56,94 @@ void ITF::updateCenter(){
                 comboPalettes->insertItem(i, QString::number(i+1));
             }
         }
-        //QAbstractButton::connect(comboPalettes, &QComboBox::currentIndexChanged, parent, [parent = this->parent]() {parent->levelSelectChange();});
-        QAbstractButton::connect(comboPalettes, &QComboBox::currentIndexChanged, parent, [this](int index) {selectPalette(index);});
+        QAbstractButton::connect(comboPalettes, &QComboBox::currentIndexChanged, m_UI, [this](int index) {selectPalette(index);});
         //QAbstractButton::connect(comboPalettes, &QComboBox::currentIndexChanged, parent, [this] {populatePalette();});
         comboPalettes->show();
-        parent->currentModeWidgets.push_back(comboPalettes);
-        parent->currentModeWidgets.push_back(CustomLabel::addLabel(comboPalettes->geometry(), "Choose palette:", parent->centralContainer));
+        m_UI->m_currentModeWidgets.push_back(comboPalettes);
+        m_UI->m_currentModeWidgets.push_back(CustomLabel::addLabel(comboPalettes->geometry(), "Choose palette:", m_UI->m_centralContainer));
 
-        paletteTable = new QTableWidget(mipMaps[0].colorCount()/paletteCount, 7, parent->centralContainer);
+        paletteTable = new QTableWidget(mipMaps[0].colorCount()/paletteCount, 7, m_UI->m_centralContainer);
         paletteTable->setGeometry(QRect(QPoint(50,250), QSize(125*7,300)));
-        QAbstractButton::connect(paletteTable, &QTableWidget::cellChanged, parent, [this](int row, int column) {editPalette(row, column);});
+        QAbstractButton::connect(paletteTable, &QTableWidget::cellChanged, m_UI, [this](int row, int column) {editPalette(row, column);});
         paletteTable->show();
-        parent->currentModeWidgets.push_back(paletteTable);
-        parent->currentModeWidgets.push_back(CustomLabel::addLabel(paletteTable->geometry(), "Current palette:", parent->centralContainer));
+        m_UI->m_currentModeWidgets.push_back(paletteTable);
+        m_UI->m_currentModeWidgets.push_back(CustomLabel::addLabel(paletteTable->geometry(), "Current palette:", m_UI->m_centralContainer));
         populatePalette();
 
-        QPushButton* buttonRemovePalette = new QPushButton("Convert to Color", parent->centralContainer);
+        QPushButton* buttonRemovePalette = new QPushButton("Convert to Color", m_UI->m_centralContainer);
         buttonRemovePalette->setGeometry(QRect(QPoint(450,50), QSize(150,30)));
-        QAbstractButton::connect(buttonRemovePalette, &QPushButton::released, parent, [this]{promptIndexToColor();});
+        QAbstractButton::connect(buttonRemovePalette, &QPushButton::released, m_UI, [this]{promptIndexToColor();});
         buttonRemovePalette->show();
-        parent->currentModeWidgets.push_back(buttonRemovePalette);
+        m_UI->m_currentModeWidgets.push_back(buttonRemovePalette);
 
-        QPushButton* buttonImportPalette = new QPushButton("Import new palette", parent->centralContainer);
+        QPushButton* buttonImportPalette = new QPushButton("Import new palette", m_UI->m_centralContainer);
         buttonImportPalette->setGeometry(QRect(QPoint(50,50), QSize(150,30)));
-        QAbstractButton::connect(buttonImportPalette, &QPushButton::released, parent, [this]{importPalette();});
+        QAbstractButton::connect(buttonImportPalette, &QPushButton::released, m_UI, [this]{importPalette();});
         buttonImportPalette->show();
-        parent->currentModeWidgets.push_back(buttonImportPalette);
+        m_UI->m_currentModeWidgets.push_back(buttonImportPalette);
     } else {
-        QPushButton* buttonAddPalette = new QPushButton("Convert to 8bpp", parent->centralContainer);
+        QPushButton* buttonAddPalette = new QPushButton("Convert to 8bpp", m_UI->m_centralContainer);
         buttonAddPalette->setGeometry(QRect(QPoint(250,50), QSize(150,30)));
-        QAbstractButton::connect(buttonAddPalette, &QPushButton::released, parent, [this]{promptColorToIndex();});
+        QAbstractButton::connect(buttonAddPalette, &QPushButton::released, m_UI, [this]{promptColorToIndex();});
         buttonAddPalette->show();
-        parent->currentModeWidgets.push_back(buttonAddPalette);
+        m_UI->m_currentModeWidgets.push_back(buttonAddPalette);
     }
 
     //allow the user to preview the swizzled image (useful for debugging)
-    QComboBox *comboSwizzle = new QComboBox(parent->centralContainer);
+    QComboBox *comboSwizzle = new QComboBox(m_UI->m_centralContainer);
     comboSwizzle -> setGeometry(QRect(QPoint(250,120), QSize(150,30)));
     comboSwizzle->insertItem(0, "Unswizzled");
     comboSwizzle->insertItem(1, "Swizzled");
     comboSwizzle->setCurrentIndex(swizzled);
-    QAbstractButton::connect(comboSwizzle, &QComboBox::currentIndexChanged, parent, [this](int index) {changeSwizzleType(index);});
+    QAbstractButton::connect(comboSwizzle, &QComboBox::currentIndexChanged, m_UI, [this](int index) {changeSwizzleType(index);});
     comboSwizzle->show();
-    parent->currentModeWidgets.push_back(comboSwizzle);
-    parent->currentModeWidgets.push_back(CustomLabel::addLabel(comboSwizzle->geometry(), "Preview image as:", parent->centralContainer));
+    m_UI->m_currentModeWidgets.push_back(comboSwizzle);
+    m_UI->m_currentModeWidgets.push_back(CustomLabel::addLabel(comboSwizzle->geometry(), "Preview image as:", m_UI->m_centralContainer));
 
     //display dropdown to select # of maps, button to generate maps
-    QComboBox *userMipMaps = new QComboBox(parent->centralContainer);
+    QComboBox *userMipMaps = new QComboBox(m_UI->m_centralContainer);
     userMipMaps -> setGeometry(QRect(QPoint(650,50), QSize(150,30)));
     int maxMips = int(fmin(log(mipMaps[0].width())/log(2), log(mipMaps[0].height())/log(2)));
     for(int i=0; i<maxMips; ++i){
         userMipMaps->insertItem(i, QString::number(i+1));
     }
     qDebug() << Q_FUNC_INFO << "selected texture has mipmaps?" << hasMipmaps << "if true, how many:" << mipmapCount << "with potential for" << maxMips << "maps. dropdown contains" << userMipMaps->count() << "items";
-    QAbstractButton::connect(userMipMaps, &QComboBox::currentIndexChanged, parent, [this](int index) {selectMipMap(index+1);});
+    QAbstractButton::connect(userMipMaps, &QComboBox::currentIndexChanged, m_UI, [this](int index) {selectMipMap(index+1);});
     userMipMaps->show();
     userMipMaps->setCurrentIndex(mipmapCount - 1);
-    parent->currentModeWidgets.push_back(userMipMaps);
-    parent->currentModeWidgets.push_back(CustomLabel::addLabel(userMipMaps->geometry(), "# of MipMaps to add:", parent->centralContainer));
+    m_UI->m_currentModeWidgets.push_back(userMipMaps);
+    m_UI->m_currentModeWidgets.push_back(CustomLabel::addLabel(userMipMaps->geometry(), "# of MipMaps to add:", m_UI->m_centralContainer));
 
-    QPushButton* buttonAddMipmaps = new QPushButton("Add MipMaps", parent->centralContainer);
+    QPushButton* buttonAddMipmaps = new QPushButton("Add MipMaps", m_UI->m_centralContainer);
     buttonAddMipmaps->setGeometry(QRect(QPoint(850,50), QSize(150,30)));
-    QAbstractButton::connect(buttonAddMipmaps, &QPushButton::released, parent, [this]{createMipMaps(currentMipMaps);});
+    QAbstractButton::connect(buttonAddMipmaps, &QPushButton::released, m_UI, [this]{createMipMaps(currentMipMaps);});
     buttonAddMipmaps->show();
-    parent->currentModeWidgets.push_back(buttonAddMipmaps);
+    m_UI->m_currentModeWidgets.push_back(buttonAddMipmaps);
 
 
     updatePreview();
-    parent->currentModeWidgets.push_back(CustomLabel::addLabel(QRect(QPoint(50, 600), QSize(0, 0)), "Preview image:", parent->centralContainer));
+    m_UI->m_currentModeWidgets.push_back(CustomLabel::addLabel(QRect(QPoint(50, 600), QSize(0, 0)), "Preview image:", m_UI->m_centralContainer));
 
-    QComboBox *comboAlphaType = new QComboBox(parent->centralContainer);
+    QComboBox *comboAlphaType = new QComboBox(m_UI->m_centralContainer);
     comboAlphaType -> setGeometry(QRect(QPoint(650,120), QSize(150,30)));
     for(int i=0; i<alphaTypes.size(); ++i){
         comboAlphaType->insertItem(i, alphaTypes[i]);
     }
     comboAlphaType->setCurrentIndex(alphaType);
-    QAbstractButton::connect(comboAlphaType, &QComboBox::currentIndexChanged, parent, [this](int index) {convertAlphaType(index);});
+    QAbstractButton::connect(comboAlphaType, &QComboBox::currentIndexChanged, m_UI, [this](int index) {convertAlphaType(index);});
     comboAlphaType->show();
-    parent->currentModeWidgets.push_back(comboAlphaType);
-    parent->currentModeWidgets.push_back(CustomLabel::addLabel(comboAlphaType->geometry(), "Current alpha type:", parent->centralContainer));
+    m_UI->m_currentModeWidgets.push_back(comboAlphaType);
+    m_UI->m_currentModeWidgets.push_back(CustomLabel::addLabel(comboAlphaType->geometry(), "Current alpha type:", m_UI->m_centralContainer));
     qDebug() << Q_FUNC_INFO << "reached the end up updatecenter";
 
 
     // pixmapImageData = QPixmap::fromImage(mipMaps[0]);
 
-    // labelImageDisplay = new QLabel(parent->centralContainer);
+    // labelImageDisplay = new QLabel(m_UI->m_centralContainer);
     // labelImageDisplay->setPixmap(pixmapImageData);
     // labelImageDisplay->setGeometry(QRect(QPoint(50, 600), QSize(mipMaps[0].width(), mipMaps[0].height())));
     // labelImageDisplay->show();
-    // parent->currentModeWidgets.push_back(labelImageDisplay);
+    // m_UI->m_currentModeWidgets.push_back(labelImageDisplay);
 
 }
 
@@ -144,12 +155,12 @@ void ITF::updatePreview(){
     labelMipMaps.clear();
     for(int i = 0; i < mipmapCount; i++){
         QPixmap mipMapData = QPixmap::fromImage(mipMaps[i]);
-        QLabel *displayMipMap = new QLabel(parent->centralContainer);
+        QLabel *displayMipMap = new QLabel(m_UI->m_centralContainer);
         displayMipMap->setPixmap(mipMapData);
         qDebug() << Q_FUNC_INFO << "displaying mipmap at" << mipMaps[i].width()*mapOffset << "given factors width" << mipMaps[i].width() << "mapoffset" << mapOffset;
         displayMipMap->setGeometry(QRect(QPoint(50 + (mipMaps[i].width()*mapOffset), 600), QSize(mipMaps[i].width(), mipMaps[i].height())));
         displayMipMap->show();
-        parent->currentModeWidgets.push_back(displayMipMap);
+        m_UI->m_currentModeWidgets.push_back(displayMipMap);
         labelMipMaps.push_back(displayMipMap);
         mapOffset += pow(2, i+1);
     }
@@ -311,42 +322,42 @@ void ITF::convertAlphaType(int index){
 }
 
 void ITF::promptColorToIndex(){
-    parent->clearWindow();
+    m_UI->ClearWindow();
     QImage indexedImage = mipMaps[0].convertToFormat(QImage::Format_Indexed8); //no way to do 4bpp, as far as I can find
     //aside from writing a whole algorithm for it on my own, and, uh. I'll pass on that for now.
     QPixmap indexedData = QPixmap::fromImage(indexedImage);
     QPixmap originalData = QPixmap::fromImage(mipMaps[0]);
 
-    QLabel *originalDisplay = new QLabel(parent->centralContainer);
+    QLabel *originalDisplay = new QLabel(m_UI->m_centralContainer);
     originalDisplay->setPixmap(originalData);
     originalDisplay->setGeometry(QRect(QPoint(50, 300), QSize(mipMaps[0].width(), mipMaps[0].height())));
     originalDisplay->show();
-    parent->currentModeWidgets.push_back(originalDisplay);
-    parent->currentModeWidgets.push_back(CustomLabel::addLabel(originalDisplay->geometry(), "Current Image:", parent->centralContainer));
+    m_UI->m_currentModeWidgets.push_back(originalDisplay);
+    m_UI->m_currentModeWidgets.push_back(CustomLabel::addLabel(originalDisplay->geometry(), "Current Image:", m_UI->m_centralContainer));
 
-    QLabel *indexedDisplay = new QLabel(parent->centralContainer);
+    QLabel *indexedDisplay = new QLabel(m_UI->m_centralContainer);
     indexedDisplay->setPixmap(indexedData);
     indexedDisplay->setGeometry(QRect(QPoint(100 + mipMaps[0].width(), 300), QSize(mipMaps[0].width(), mipMaps[0].height())));
     indexedDisplay->show();
-    parent->currentModeWidgets.push_back(indexedDisplay);
-    parent->currentModeWidgets.push_back(CustomLabel::addLabel(indexedDisplay->geometry(), "8bpp Image:", parent->centralContainer));
+    m_UI->m_currentModeWidgets.push_back(indexedDisplay);
+    m_UI->m_currentModeWidgets.push_back(CustomLabel::addLabel(indexedDisplay->geometry(), "8bpp Image:", m_UI->m_centralContainer));
 
-    QPushButton* buttonConfirm = new QPushButton("Convert Image", parent->centralContainer);
+    QPushButton* buttonConfirm = new QPushButton("Convert Image", m_UI->m_centralContainer);
     buttonConfirm->setGeometry(QRect(QPoint(250,50), QSize(150,30)));
-    QAbstractButton::connect(buttonConfirm, &QPushButton::released, parent, [this]{convertColorToIndex(false);});
+    QAbstractButton::connect(buttonConfirm, &QPushButton::released, m_UI, [this]{convertColorToIndex(false);});
     buttonConfirm->show();
-    parent->currentModeWidgets.push_back(buttonConfirm);
+    m_UI->m_currentModeWidgets.push_back(buttonConfirm);
 
-    QPushButton* buttonCancel = new QPushButton("Cancel", parent->centralContainer);
+    QPushButton* buttonCancel = new QPushButton("Cancel", m_UI->m_centralContainer);
     buttonCancel->setGeometry(QRect(QPoint(450,50), QSize(150,30)));
-    QAbstractButton::connect(buttonCancel, &QPushButton::released, parent, [this]{convertColorToIndex(true);});
+    QAbstractButton::connect(buttonCancel, &QPushButton::released, m_UI, [this]{convertColorToIndex(true);});
     buttonCancel->show();
-    parent->currentModeWidgets.push_back(buttonCancel);
+    m_UI->m_currentModeWidgets.push_back(buttonCancel);
 
 }
 
 void ITF::convertColorToIndex(bool cancelled){
-    parent->clearWindow();
+    m_UI->ClearWindow();
     if(!cancelled){
         mipMaps[0] = mipMaps[0].convertToFormat(QImage::Format_Indexed8);
         hasPalette = true;
@@ -357,41 +368,41 @@ void ITF::convertColorToIndex(bool cancelled){
 }
 
 void ITF::promptIndexToColor(){
-    parent->clearWindow();
+    m_UI->ClearWindow();
     QImage colorImage = mipMaps[0].convertToFormat(QImage::Format_ARGB32); //going straight to 32
     QPixmap colorData = QPixmap::fromImage(colorImage);
     QPixmap originalData = QPixmap::fromImage(mipMaps[0]);
 
-    QLabel *originalDisplay = new QLabel(parent->centralContainer);
+    QLabel *originalDisplay = new QLabel(m_UI->m_centralContainer);
     originalDisplay->setPixmap(originalData);
     originalDisplay->setGeometry(QRect(QPoint(50, 300), QSize(mipMaps[0].width(), mipMaps[0].height())));
     originalDisplay->show();
-    parent->currentModeWidgets.push_back(originalDisplay);
-    parent->currentModeWidgets.push_back(CustomLabel::addLabel(originalDisplay->geometry(), "Current Image:", parent->centralContainer));
+    m_UI->m_currentModeWidgets.push_back(originalDisplay);
+    m_UI->m_currentModeWidgets.push_back(CustomLabel::addLabel(originalDisplay->geometry(), "Current Image:", m_UI->m_centralContainer));
 
-    QLabel *colorDisplay = new QLabel(parent->centralContainer);
+    QLabel *colorDisplay = new QLabel(m_UI->m_centralContainer);
     colorDisplay->setPixmap(colorData);
     colorDisplay->setGeometry(QRect(QPoint(100 + mipMaps[0].width(), 300), QSize(mipMaps[0].width(), mipMaps[0].height())));
     colorDisplay->show();
-    parent->currentModeWidgets.push_back(colorDisplay);
-    parent->currentModeWidgets.push_back(CustomLabel::addLabel(colorDisplay->geometry(), "Color (non-indexed) Image:", parent->centralContainer));
+    m_UI->m_currentModeWidgets.push_back(colorDisplay);
+    m_UI->m_currentModeWidgets.push_back(CustomLabel::addLabel(colorDisplay->geometry(), "Color (non-indexed) Image:", m_UI->m_centralContainer));
 
-    QPushButton* buttonConfirm = new QPushButton("Convert Image", parent->centralContainer);
+    QPushButton* buttonConfirm = new QPushButton("Convert Image", m_UI->m_centralContainer);
     buttonConfirm->setGeometry(QRect(QPoint(250,50), QSize(150,30)));
-    QAbstractButton::connect(buttonConfirm, &QPushButton::released, parent, [this]{convertIndexToColor(false);});
+    QAbstractButton::connect(buttonConfirm, &QPushButton::released, m_UI, [this]{convertIndexToColor(false);});
     buttonConfirm->show();
-    parent->currentModeWidgets.push_back(buttonConfirm);
+    m_UI->m_currentModeWidgets.push_back(buttonConfirm);
 
-    QPushButton* buttonCancel = new QPushButton("Cancel", parent->centralContainer);
+    QPushButton* buttonCancel = new QPushButton("Cancel", m_UI->m_centralContainer);
     buttonCancel->setGeometry(QRect(QPoint(450,50), QSize(150,30)));
-    QAbstractButton::connect(buttonCancel, &QPushButton::released, parent, [this]{convertIndexToColor(true);});
+    QAbstractButton::connect(buttonCancel, &QPushButton::released, m_UI, [this]{convertIndexToColor(true);});
     buttonCancel->show();
-    parent->currentModeWidgets.push_back(buttonCancel);
+    m_UI->m_currentModeWidgets.push_back(buttonCancel);
 
 }
 
 void ITF::convertIndexToColor(bool cancelled){
-    parent->clearWindow();
+    m_UI->ClearWindow();
     if(!cancelled){
         mipMaps[0] = mipMaps[0].convertToFormat(QImage::Format_ARGB32);
         hasPalette = false;
@@ -427,11 +438,11 @@ void ITF::selectPalette(int palette){
 }
 
 int ITF::importPalette(){
-    QString filePath = QFileDialog::getOpenFileName(parent, parent->tr(QString("Select image file.").toStdString().c_str()), QDir::currentPath());
+    QString filePath = QFileDialog::getOpenFileName(m_UI, m_UI->tr(QString("Select image file.").toStdString().c_str()), QDir::currentPath());
     QImage importData = QImage(filePath);
     qDebug() << Q_FUNC_INFO << "Importing image of format" << importData.format();
     if(importData.format() != QImage::Format_Indexed8){
-        parent->messageError("Invalid image format. The image will be converted to the proper format, but this may cause unintended results.");
+        m_Debug->MessageError("Invalid image format. The image will be converted to the proper format, but this may cause unintended results.");
         importData = importData.convertToFormat(QImage::Format_Indexed8);
     }
 
@@ -443,19 +454,19 @@ int ITF::importPalette(){
 
     if(addedColors > colorsPerPalette){
         qDebug() << Q_FUNC_INFO << "Colors per palette:" << colorsPerPalette << "new texture has" << addedColors << "colors";
-        parent->messageError("Imported image has more colors per palette than the current texture. This is not currently supported.");
+        m_Debug->MessageError("Imported image has more colors per palette than the current texture. This is not currently supported.");
         return 1;
         //maybe at some point the base color table can be expanded to allow for this compatibility, but I don't see much of a reason for that
         //the pixel indecies won't change, so only the original palette's size will be visible.
         //image editing should be done in another program anyway.
     } else if (addedColors < colorsPerPalette){
-        parent->messageError("Imported image has fewer colors per palette than the current texture. This is the aforementioned unintended results.");
+        m_Debug->MessageError("Imported image has fewer colors per palette than the current texture. This is the aforementioned unintended results.");
         importData.setColorCount(colorsPerPalette);
         addedColors = importData.colorCount();
     }
     if(addedColors > 256){
         qDebug() << Q_FUNC_INFO << "imported palette color count" << addedColors;
-        parent->messageError("The imported image's color palette has too many colors (let Trevor know, this shouldn't be possible).");
+        m_Debug->MessageError("The imported image's color palette has too many colors (let Everett know, this shouldn't be possible).");
     }
 
     mipMaps[0].setColorCount(currentColors + addedColors);
@@ -509,14 +520,14 @@ void ITF::createMipMaps(int mipmapLevels){
     qDebug() << Q_FUNC_INFO << "requested maps:" << mipmapLevels;
     int maxLevels = int(fmin(log(mipMaps[0].width())/log(2), log(mipMaps[0].height())/log(2)));
     if(mipmapLevels > maxLevels){
-        parent->messageError("Too many mipmaps. Maximum maps for this texture: " + QString::number(maxLevels) + ". Entered maps: " + QString::number(mipmapLevels));
+        m_Debug->MessageError("Too many mipmaps. Maximum maps for this texture: " + QString::number(maxLevels) + ". Entered maps: " + QString::number(mipmapLevels));
     }
     QImage storeImage = QImage(mipMaps[0]);
 
     mipMaps.clear(); //if the image already has maps, they need to be cleaned out to make room for the new ones.
     mipMaps.push_back(storeImage); //this feels gross though, find a better way to clear the extras.
     if(swizzled){
-        parent->messageError("Texture is currently swizzled. Unswizzling before generating new mipmaps.");
+        m_Debug->MessageError("Texture is currently swizzled. Unswizzling before generating new mipmaps.");
         unswizzle();
     }
     if(mipmapLevels == 1){
@@ -553,10 +564,10 @@ void ITF::readPalette(){
     //qDebug() << Q_FUNC_INFO << "color count before:" << mipMaps[0].colorCount() << ". should be set to" << colorsPerPalette*paletteCount;
     mipMaps[0].setColorCount(colorsPerPalette*paletteCount);
     for(int i = 0; i < mipMaps[0].colorCount(); i++){
-        int red = parent->fileData.readUInt(1);
-        int green = parent->fileData.readUInt(1);
-        int blue = parent->fileData.readUInt(1);
-        int alpha = parent->fileData.readUInt(1);
+        int red = fileData->readUInt(1);
+        int green = fileData->readUInt(1);
+        int blue = fileData->readUInt(1);
+        int alpha = fileData->readUInt(1);
         if(alphaType == 1){
             //opaque texture, no alpha
             alpha = 255;
@@ -581,14 +592,14 @@ void ITF::readPalette(){
 void ITF::readIndexedData(){
     int pixelIndex = 0;
     //int contentLength = 0;
-    long location = parent->fileData.currentPosition;
+    long location = fileData->currentPosition;
     std::tuple <int8_t, int8_t> nibTup;
     for(int m = 0; m < mipmapCount; m++){
         if (bytesPerPixel() == 8){
             //8bpp, 256 palette case. nice and easy since each pixel uses 1 byte to refer to the palette
             for (int i = 0; i < mipMaps[m].width() * mipMaps[m].height(); i++){
                 //qDebug() << Q_FUNC_INFO << "current pixel " << i << "x" << i%width << "y" << i/width;
-                mipMaps[m].setPixel(i % mipMaps[m].width(), i / mipMaps[m].width(), parent->fileData.readUInt(1));
+                mipMaps[m].setPixel(i % mipMaps[m].width(), i / mipMaps[m].width(), fileData->readUInt(1));
             }
 
         } else {
@@ -596,7 +607,7 @@ void ITF::readIndexedData(){
             //however every image should be an even number of pixels so we can just grab them in pairs.
             for (int i = 0; i < (mipMaps[m].width() * mipMaps[m].height())/2; i++){
                 //qDebug() << Q_FUNC_INFO << "current pixel pair" << i << "x" << pixelIndex%width << "y" << pixelIndex/width;
-                nibTup = BinChanger::byte_to_nib(parent->fileData.mid(location+i, 1));
+                nibTup = BinChanger::byte_to_nib(fileData->mid(location+i, 1));
                 mipMaps[m].setPixel(pixelIndex % mipMaps[m].width(), pixelIndex / mipMaps[m].width(), std::get<0>(nibTup));
                 pixelIndex += 1;
                 mipMaps[m].setPixel(pixelIndex % mipMaps[m].width(), pixelIndex / mipMaps[m].width(), std::get<1>(nibTup));
@@ -623,8 +634,8 @@ void ITF::readImageData(){
         //16bpp, each pixel has its r,g,b, and a values stored as 4 integers packed into 2 bytes
         //contentLength = dataLength / 2;
         for (int i = 0; i < currentWidth * currentHeight; i++){
-            combinedIntensity = parent->fileData.readUInt(2);
-            //combinedIntensity = parent->fileData.readUInt(1) + parent->fileData.readUInt(1); //this absolutely should not be necessary
+            combinedIntensity = fileData->readUInt(2);
+            //combinedIntensity = fileData.readUInt(1) + fileData.readUInt(1); //this absolutely should not be necessary
             //int alpha = (combinedIntensity >> 15);
             int alpha = (combinedIntensity >> 15) & 1;
             if(alphaType == 1){
@@ -650,9 +661,9 @@ void ITF::readImageData(){
         //contentLength = dataLength / 3;
         for (int i = 0; i < currentWidth * currentHeight; i++){
             QColor currentPixel;
-            currentPixel.setRed(parent->fileData.readUInt(1));
-            currentPixel.setGreen(parent->fileData.readUInt(1));
-            currentPixel.setBlue(parent->fileData.readUInt(1));
+            currentPixel.setRed(fileData->readUInt(1));
+            currentPixel.setGreen(fileData->readUInt(1));
+            currentPixel.setBlue(fileData->readUInt(1));
             currentPixel.setAlpha(255); //don't have to worry about alpha type with this - alpha is always 0
             //qDebug() << Q_FUNC_INFO << "setting color at x" << i % currentWidth << "y" << i / currentWidth << "to" << currentPixel;
             mipMaps[m].setPixelColor(i % currentWidth, i / currentWidth, currentPixel);
@@ -665,10 +676,10 @@ void ITF::readImageData(){
         //contentLength = dataLength / 4;
         for (int i = 0; i < currentWidth * currentHeight; i++){
             QColor currentPixel;
-            currentPixel.setRed(parent->fileData.readUInt(1));
-            currentPixel.setGreen(parent->fileData.readUInt(1));
-            currentPixel.setBlue(parent->fileData.readUInt(1));
-            int alpha = parent->fileData.readUInt(1);
+            currentPixel.setRed(fileData->readUInt(1));
+            currentPixel.setGreen(fileData->readUInt(1));
+            currentPixel.setBlue(fileData->readUInt(1));
+            int alpha = fileData->readUInt(1);
             if(alphaType == 1){
                 //opaque texture, no alpha
                 alpha = 255;
@@ -687,7 +698,7 @@ void ITF::readImageData(){
         break;
 
         default:
-        parent->messageError("Unknown bit depth");
+        m_Debug->MessageError("Unknown bit depth");
         }
     }
 }
@@ -709,10 +720,10 @@ void ITF::adaptProperties(){
     if(mipMaps[0].format() == QImage::Format_Indexed8){
         if(mipMaps[0].colorCount() < 15){
             propertyByte = 10; //4bpp
-            parent->log("Image bit depth: 4bpp");
+            m_Debug->Log("Image bit depth: 4bpp");
         } else {
             propertyByte = 11; //8bpp
-            parent->log("Image bit depth: 8bpp");
+            m_Debug->Log("Image bit depth: 8bpp");
         }
         paletteCount = 1; //additional palettes can be imported
         hasPalette = true;
@@ -720,21 +731,21 @@ void ITF::adaptProperties(){
     } else if (mipMaps[0].format() == QImage::Format_ARGB32 || mipMaps[0].format() == QImage::Format_RGB32){
         //there are probably other formats that need to be included here.
         propertyByte = 2; //32bpp
-        parent->log("Image bit depth: 32bpp");
+        m_Debug->Log("Image bit depth: 32bpp");
         hasPalette = false;
         //need to find a way later to compress these down
     } else {
         qDebug() << Q_FUNC_INFO << "Image format:" << mipMaps[0].format();
-        parent->log(&"Image format read as: " [ mipMaps[0].format()]);
-        parent->messageError("Invalid image format.");
+        m_Debug->Log(&"Image format read as: " [ mipMaps[0].format()]);
+        m_Debug->MessageError("Invalid image format.");
     }
 
     if(int(log(mipMaps[0].width())/log(2)) != log(mipMaps[0].width())/log(2)){
-        parent->messageError("Image width is not a factor of 2");
+        m_Debug->MessageError("Image width is not a factor of 2");
     }
 
     if(int(log(mipMaps[0].height())/log(2)) != log(mipMaps[0].height())/log(2)){
-        parent->messageError("Image height is not a factor of 2");
+        m_Debug->MessageError("Image height is not a factor of 2");
     }
 
 }
@@ -747,26 +758,26 @@ int ITF::readDataITF(){
     long startLocation = 0;
     long contentLength = 0;
     currentPalette = 0;
-    fileLength = parent->fileData.readInt(4, 4);
+    fileLength = fileData->readInt(4, 4);
     qDebug() << Q_FUNC_INFO << "reading file" << fileName;
 
     /*Load header data*/
-    parent->fileData.currentPosition = 15;
-    versionNum = parent->fileData.readUInt(1);
-    headerLength = parent->fileData.readUInt();
-    parent->fileData.currentPosition += 3; //skip the "PS2" label
-    propertyByte = parent->fileData.readUInt(1);
-    alphaType = parent->fileData.readUInt();
+    fileData->currentPosition = 15;
+    versionNum = fileData->readUInt(1);
+    headerLength = fileData->readUInt();
+    fileData->currentPosition += 3; //skip the "PS2" label
+    propertyByte = fileData->readUInt(1);
+    alphaType = fileData->readUInt();
     qDebug() << Q_FUNC_INFO << "Alpha type:" << alphaTypes[alphaType];
-    int width = parent->fileData.readUInt();
-    int height = parent->fileData.readUInt();
+    int width = fileData->readUInt();
+    int height = fileData->readUInt();
     qDebug() << Q_FUNC_INFO << "image height:" << height << "width:" << width;
-    mipmapCount = std::max(1, parent->fileData.readUInt()); //some textures say 0 mipmaps. while this is accurate, the design of this program requires at least 1.
+    mipmapCount = std::max(1, fileData->readUInt()); //some textures say 0 mipmaps. while this is accurate, the design of this program requires at least 1.
     qDebug() << Q_FUNC_INFO << "mipmap count:" << mipmapCount;
-    paletteCount = std::max(1, parent->fileData.readUInt()); //some textures say 0 palettes, this catches those. possibly older ITF file version?
-    qDebug() << Q_FUNC_INFO << "palette count:" << paletteCount << " found at " << parent->fileData.currentPosition;
-    unknown4Byte3 = parent->fileData.readUInt();
-    unknown4Byte4 = parent->fileData.readUInt();
+    paletteCount = std::max(1, fileData->readUInt()); //some textures say 0 palettes, this catches those. possibly older ITF file version?
+    qDebug() << Q_FUNC_INFO << "palette count:" << paletteCount << " found at " << fileData->currentPosition;
+    unknown4Byte3 = fileData->readUInt();
+    unknown4Byte4 = fileData->readUInt();
     /*End header data.*/
 
     if(paletteCount > 16){
@@ -818,9 +829,9 @@ int ITF::readDataITF(){
         //imageData = QImage(width, height, QImage::Format_ARGB32);
     }
 
-    parent->fileData.currentPosition = matcher.indexIn(parent->fileData.dataBytes, 0)+4;
-    startLocation = parent->fileData.currentPosition; //this will be used later to remove the palette from the content
-    int readDataLength = parent->fileData.readInt();
+    fileData->currentPosition = matcher.indexIn(fileData->dataBytes, 0)+4;
+    startLocation = fileData->currentPosition; //this will be used later to remove the palette from the content
+    int readDataLength = fileData->readInt();
     contentLength = readDataLength + 4;
     qDebug() << Q_FUNC_INFO << "content length: " << contentLength;
     //qDebug() << Q_FUNC_INFO << "bpp" << bytesPerPixel() << "has palette" << hasPalette;
@@ -1002,7 +1013,7 @@ void ITF::writeIndexedData(QFile& fileOut, QImage *writeData){
 
     switch(bytesPerPixel()){
         case 8:
-        parent->log("Exporting to ITF with bit depth: 8bpp");
+        m_Debug->Log("Exporting to ITF with bit depth: 8bpp");
         for(int i = 0; i < reverseImage.height(); i++){
             for(int j = 0; j < reverseImage.width(); j++){
                 BinChanger::byteWrite(fileOut, reverseImage.pixelIndex(j,i));
@@ -1011,7 +1022,7 @@ void ITF::writeIndexedData(QFile& fileOut, QImage *writeData){
         break;
 
         case 4:
-        parent->log("Exporting to ITF with bit depth: 4bpp");
+        m_Debug->Log("Exporting to ITF with bit depth: 4bpp");
         for(int i = 0; i < reverseImage.height()*reverseImage.width(); i+=2){
             std::get<0>(nibTup) = reverseImage.pixelIndex(i % reverseImage.width(), i / reverseImage.width());
             std::get<1>(nibTup) = reverseImage.pixelIndex((i+1) % reverseImage.width(), (i+1) / reverseImage.width());
@@ -1020,7 +1031,7 @@ void ITF::writeIndexedData(QFile& fileOut, QImage *writeData){
         break;
 
         default:
-        parent->messageError("Unknown byte depth");
+        m_Debug->MessageError("Unknown byte depth");
     }
 }
 
@@ -1030,7 +1041,7 @@ void ITF::writeImageData(QFile& fileOut, QImage *writeData){
     int alpha = 0;
     int combinedIntensities = 0;
     qDebug() << Q_FUNC_INFO << "width:" << reverseImage.width() << "height" << reverseImage.height() << "Total pixels:" << reverseImage.width() * reverseImage.height();
-    parent->log("Exporting to ITF with bit depth: " + QString::number(bpp) + "bpp");
+    m_Debug->Log("Exporting to ITF with bit depth: " + QString::number(bpp) + "bpp");
     for(int i = 0; i < reverseImage.height(); i++){
         for(int j = 0; j < reverseImage.width(); j++){
             QColor currentPixel = QColor(reverseImage.pixel(j,i));
@@ -1056,7 +1067,7 @@ void ITF::writeImageData(QFile& fileOut, QImage *writeData){
                 break;
 
                 default:
-                parent->messageError("Unknown byte depth.");
+                m_Debug->MessageError("Unknown byte depth.");
             }
         }
     }

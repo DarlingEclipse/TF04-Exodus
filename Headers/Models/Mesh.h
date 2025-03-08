@@ -1,7 +1,51 @@
 #ifndef MESH_H
 #define MESH_H
 
-#include "vbin.h"
+#include <QQuaternion>
+#include "Headers/Main/BinChanger.h"
+
+
+class VBIN;
+class Mesh;
+
+class Triangle{
+  public:
+    QVector3D vertex1;
+    QVector3D vertex2;
+    QVector3D vertex3;
+};
+
+class TriangleStrip{
+public:
+    std::vector<int> stripIndecies;
+};
+
+class NormalArray{
+public:
+  int arrayID;
+  long arrayLength;
+  QString meshName;
+  FileData *fileData;
+  std::vector<QVector3D> positionList;
+};
+
+class ColorArray{
+public:
+  int arrayID;
+  long arrayLength;
+  QString meshName;
+  FileData *fileData;
+  std::vector<QColor> positionList;
+};
+
+class TextureCoords{
+public:
+  int arrayID;
+  long arrayLength;
+  QString meshName;
+  FileData *fileData;
+  std::vector<QVector2D> positionList;
+};
 
 class LODInfo{
 public:
@@ -111,6 +155,71 @@ class ElementArray{
 public:
     std::vector<Element> elementArray;
     LODInfo lodInfo;
+};
+
+class BoundingVolume{
+public:
+    SectionHeader headerData;
+    int version;
+    bool hasVolume;
+    int type;
+    QVector3D center;
+    float radius;
+    FileData *fileData;
+
+    void populateData();
+    const void operator=(BoundingVolume input);
+};
+
+class Modifications{
+public:
+    int modByte;
+    QVector3D offset;
+    QQuaternion rotation;
+    float scale;
+
+    void clear();
+};
+
+class FileSection{
+public:
+    VBIN *file;
+    FileData *fileData;
+    FileSection *parent;
+    SectionHeader headerData;
+    long sectionEnd;
+    BoundingVolume boundVol;
+
+    Modifications mods;
+
+    QStringList sectionTypes;
+    std::vector<FileSection*> sectionList;
+    std::vector<Mesh*> meshList;
+
+    void getSceneNodeTree(long searchStart, long searchEnd, int depth);
+    void readNode();
+    void sendKeyframe(QVector3D keyOffset, QString channelName);
+    void sendKeyframe(QQuaternion keyRotation, QString channelName);
+    void readModifications();
+    //void getModifications();
+    //void modifyPosArrays(std::vector<Modifications> addedMods);
+    void printInfo(int depth); // for debugging
+    const void operator=(FileSection input);
+    void writeSectionListSTL(QTextStream &file);
+    void writeSectionListSTL(QString path);
+    bool meshListContains(QString checkName);
+    void modify(std::vector<Modifications> addedMods);
+    // void modifyPosArrays(); //this might go somewhere else, just
+    // commenting out for now
+
+    void searchListsWriteDAE(QTextStream &fileOut, void (Mesh::*)(QTextStream&));
+    void writeNodes(QTextStream &fileOut);
+    virtual void writeNodesDAE(QTextStream &fileOut);
+
+    //template<typename WriteType>
+    //void searchListsWriteDAE(QString path, WriteType *write);
+
+    void clear();
 };
 
 class Mesh : public FileSection{

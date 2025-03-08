@@ -1,4 +1,10 @@
-#include "Headers/Main/mainwindow.h"
+#include <QRadioButton>
+#include <QFileDialog>
+
+#include "Headers/Models/vbin.h"
+#include "Headers/UI/exWindow.h"
+#include "Headers/Main/exDebugger.h"
+#include "Headers/FileManagement/Zebrafish.h"
 
 /*
 The overall plan with VBIN files is to read through them section by section. The previous code looked for specific sections (positionarrays and indexarrays)
@@ -45,7 +51,7 @@ int VBIN::readDataVBIN(){
     //gets all scene nodes in the file, populates their PositionArrays and IndexArrays, and gets modifications
     currentLocation = 0;
     base.file = this;
-    //base.getSceneNodeTree(0, parent->fileData.dataBytes.length(), 0);
+    //base.getSceneNodeTree(0, fileData->dataBytes.length(), 0);
     if(getSceneNodeTree()){
         qDebug() << Q_FUNC_INFO << "Error while reading scene node tree";
         return 1;
@@ -121,29 +127,29 @@ const void FileSection::operator=(FileSection input){
 
 void VBIN::readAnimationPrototype(){
     SectionHeader signature;
-    int testProto = parent->fileData.readInt();
-    parent->fileData.currentPosition -= 4;
+    int testProto = fileData->readInt();
+    fileData->currentPosition -= 4;
     if(testProto > 20){
-        float unknownFloat1 = parent->fileData.readFloat();
-        int unknown4Byte4 = parent->fileData.readInt();
-        int unknown4Byte5 = parent->fileData.readInt();
+        float unknownFloat1 = fileData->readFloat();
+        int unknown4Byte4 = fileData->readInt();
+        int unknown4Byte5 = fileData->readInt();
 
         fileData->signature(&signature);
         if(signature.type == "NeutralData"){
-            parent->fileData.currentPosition = signature.sectionLength + signature.sectionLocation;
+            fileData->currentPosition = signature.sectionLength + signature.sectionLocation;
         }
     }
 }
 
 void VBIN::readBoundingVolume(SectionHeader* signature){
-    //qDebug() << Q_FUNC_INFO << "current position 1" << parent->fileData.currentPosition;
-    parent->fileData.currentPosition = signature->sectionLength + signature->sectionLocation;
-    //qDebug() << Q_FUNC_INFO << "current position 2" << parent->fileData.currentPosition;
+    //qDebug() << Q_FUNC_INFO << "current position 1" << fileData->currentPosition;
+    fileData->currentPosition = signature->sectionLength + signature->sectionLocation;
+    //qDebug() << Q_FUNC_INFO << "current position 2" << fileData->currentPosition;
 
     fileData->signature(signature);
     //this is such a bad way to do this but w/e
     if(signature->type == "BoundingVolume"){
-        parent->fileData.currentPosition = signature->sectionLength + signature->sectionLocation;
+        fileData->currentPosition = signature->sectionLength + signature->sectionLocation;
     }
 }
 
@@ -179,19 +185,19 @@ void VBIN::readModifications(){
     //eventually AnimationPrototype needs to be a filesection like the rest
     int offsets = 0;
     //offset properties
-    offsets = parent->fileData.readInt(1);
+    offsets = fileData->readInt(1);
     //qDebug() << Q_FUNC_INFO << "offsets read as" << offsets;
     if (!(offsets & 1)) {
         //position offset
-        parent->fileData.currentPosition += 12;
+        fileData->currentPosition += 12;
     }
     if (!(offsets & 2)) {
         //rotation offset
-        parent->fileData.currentPosition += 16;
+        fileData->currentPosition += 16;
     }
     if (!(offsets & 4)) {
         //scale offset
-        parent->fileData.currentPosition += 4;
+        fileData->currentPosition += 4;
     }
 }
 
@@ -218,7 +224,6 @@ bool FileSection::meshListContains(QString checkName){
 }
 
 int VBIN::getSceneNodeTree(){
-    fileData = &parent->fileData;
     fileData->currentPosition = 4; //moving past FISH
     //not a huge fan of while(1)'s but I'll put a loopbreaker in just to be safe
     int loopBreaker = 0;
@@ -241,19 +246,19 @@ int VBIN::getSceneNodeTree(){
 
     while(1){
 
-        if (parent->fileData.currentPosition == base.sectionEnd){
+        if (fileData->currentPosition == base.sectionEnd){
             qDebug() << Q_FUNC_INFO << "Reached end of tree. Exiting now.";
             return 0;
         }
 
         //Checks if we've reached the end of a branch in the scene node tree. If we're at the root of the tree, there's nowhere to go.
-        if(currentBranch->sectionEnd == parent->fileData.currentPosition && currentBranch->headerData.sectionLocation !=0){
+        if(currentBranch->sectionEnd == fileData->currentPosition && currentBranch->headerData.sectionLocation !=0){
             while(currentBranch->sectionEnd == currentBranch->parent->sectionEnd){
                 currentBranch = currentBranch->parent;
                 //qDebug() << Q_FUNC_INFO << "Branch completed, moving back up a layer";
             }
             currentBranch = currentBranch->parent;
-        } else if (possibleBranch->sectionEnd != parent->fileData.currentPosition) {
+        } else if (possibleBranch->sectionEnd != fileData->currentPosition) {
             currentBranch = possibleBranch;
         }
 
@@ -264,13 +269,13 @@ int VBIN::getSceneNodeTree(){
 
         if (base.headerData.sectionLength == 0) {
             base.headerData.sectionLength = signature.sectionLength;
-            base.sectionEnd = parent->fileData.currentPosition -4 + signature.sectionLength;
+            base.sectionEnd = fileData->currentPosition -4 + signature.sectionLength;
         }
 
         if(signature.type == "Mesh"){
             Mesh *meshSection = new Mesh();
             meshSection->file = this; //file will need to be reassigned later as the current VBIN object is temporary
-            meshSection->fileData = &parent->fileData;
+            meshSection->fileData = fileData;
             meshSection->parent = currentBranch;
             meshSection->headerData = signature;
             meshSection->sectionEnd = signature.sectionLength + signature.sectionLocation;
@@ -295,7 +300,7 @@ int VBIN::getSceneNodeTree(){
                 return 1;
             }
             elementCount += meshSection->elementCount;
-            unknown4Byte1 = parent->fileData.readInt();
+            unknown4Byte1 = fileData->readInt();
             meshSection->readModifications();
             //qDebug() << Q_FUNC_INFO << "mesh offsets: scale" << meshSection->mods.scale << "offset" << meshSection->mods.offset << "rotation" << meshSection->mods.rotation;
 
@@ -307,11 +312,11 @@ int VBIN::getSceneNodeTree(){
         if(signature.type == "SceneNode"){
             SceneNode *sceneSection = new SceneNode();
             sceneSection->file = this;
-            sceneSection->fileData = &parent->fileData;
+            sceneSection->fileData = fileData;
             sceneSection->parent = currentBranch;
             sceneSection->headerData = signature;
             sceneSection->sectionEnd = signature.sectionLength + signature.sectionLocation;
-            unknown4Byte1 = parent->fileData.readInt(); //appears to be a version number of some kind
+            unknown4Byte1 = fileData->readInt(); //appears to be a version number of some kind
             sceneSection->readModifications();
             currentBranch->sectionList.push_back(sceneSection);
             possibleBranch = sceneSection;
@@ -321,7 +326,7 @@ int VBIN::getSceneNodeTree(){
         if(signature.type == "Instance"){
             Instance *instanceSection = new Instance();
             instanceSection->file = this;
-            instanceSection->fileData = &parent->fileData;
+            instanceSection->fileData = fileData;
             instanceSection->parent = currentBranch;
             instanceSection->headerData = signature;
             instanceSection->sectionEnd = signature.sectionLength + signature.sectionLocation;
@@ -332,7 +337,7 @@ int VBIN::getSceneNodeTree(){
                 instanceNameList.push_back(instanceSection->modelReference);
             }
 
-            unknown4Byte1 = parent->fileData.readInt(); //appears to be a version number of some kind
+            unknown4Byte1 = fileData->readInt(); //appears to be a version number of some kind
             instanceSection->readModifications();
             currentBranch->sectionList.push_back(instanceSection);
             possibleBranch = instanceSection;
@@ -342,7 +347,7 @@ int VBIN::getSceneNodeTree(){
         if(signature.type == "vlCellManager"){
             CellManager *cellSection = new CellManager();
             cellSection->file = this;
-            cellSection->fileData = &parent->fileData;
+            cellSection->fileData = fileData;
             cellSection->parent = currentBranch;
             cellSection->headerData = signature;
             cellSection->sectionEnd = signature.sectionLength + signature.sectionLocation;
@@ -357,7 +362,7 @@ int VBIN::getSceneNodeTree(){
             fileData->signature(&signature); //should read "~Portals"
             cellSection->readPortals();
 
-            unknown4Byte1 = parent->fileData.readInt(); //appears to be a version number of some kind
+            unknown4Byte1 = fileData->readInt(); //appears to be a version number of some kind
             cellSection->readModifications();
             currentBranch->sectionList.push_back(cellSection);
             possibleBranch = cellSection;
@@ -366,7 +371,7 @@ int VBIN::getSceneNodeTree(){
         if(signature.type == "vlCell"){
             CellManager *cellSection = new CellManager();
             cellSection->file = this;
-            cellSection->fileData = &parent->fileData;
+            cellSection->fileData = fileData;
             cellSection->parent = currentBranch;
             cellSection->headerData = signature;
             cellSection->sectionEnd = signature.sectionLength + signature.sectionLocation;
@@ -376,7 +381,7 @@ int VBIN::getSceneNodeTree(){
             fileData->currentPosition = signature.sectionLocation + signature.sectionLength; //just skipping the cell data itself, for now*/
 
 
-            unknown4Byte1 = parent->fileData.readInt(); //appears to be a version number of some kind
+            unknown4Byte1 = fileData->readInt(); //appears to be a version number of some kind
             cellSection->readModifications();
             currentBranch->sectionList.push_back(cellSection);
             possibleBranch = cellSection;
@@ -385,11 +390,11 @@ int VBIN::getSceneNodeTree(){
         if(signature.type == "vlLODSwitcher"){
             vlLodSwitcher *lodSwitcher = new vlLodSwitcher();
             lodSwitcher->file = this;
-            lodSwitcher->fileData = &parent->fileData;
+            lodSwitcher->fileData = fileData;
             lodSwitcher->parent = currentBranch;
             lodSwitcher->headerData = signature;
             lodSwitcher->sectionEnd = signature.sectionLength + signature.sectionLocation;
-            parent->log("vlLODSwitcher found in file. Export will not be accurate. Section name: " + signature.name + " | " + QString(Q_FUNC_INFO));
+            m_Debug->Log("vlLODSwitcher found in file. Export will not be accurate. Section name: " + signature.name + " | " + QString(Q_FUNC_INFO));
             fileData->signature(&signature); //gets data for LODSwitcher section
             fileData->currentPosition += 4;
             qDebug() << Q_FUNC_INFO << "vllodswitcher 1" << signature.name << "of type" << signature.type <<"is" << signature.sectionLength << "bytes long at" << signature.sectionLocation;
@@ -401,14 +406,14 @@ int VBIN::getSceneNodeTree(){
             }*/
             //skip to end of section
             fileData->currentPosition = signature.sectionLength + signature.sectionLocation;
-            unknown4Byte1 = parent->fileData.readInt(); //appears to be a version number of some kind
+            unknown4Byte1 = fileData->readInt(); //appears to be a version number of some kind
             lodSwitcher->readModifications();
             currentBranch->sectionList.push_back(lodSwitcher);
         }
 
         if(signature.type == "anAnimationPrototype"){
             readAnimationPrototype();
-            unknown4Byte1 = parent->fileData.readInt();
+            unknown4Byte1 = fileData->readInt();
             readModifications();
         }
 
@@ -466,10 +471,10 @@ int VBIN::getSceneNodeTree(){
                 ecoGlobePatch
             
             */
-            parent->log("Found section of " + signature.type + " at " + QString::number(parent->fileData.currentPosition) + ". These are not currently handled. Data will be skipped. Length:" + QString::number(signature.sectionLength) + " | " + QString(Q_FUNC_INFO));
-            //qDebug() << Q_FUNC_INFO << "Found" << signature.type << "at" << parent->fileData.currentPosition << "- skipping for now";
-            parent->fileData.currentPosition = signature.sectionLength + signature.sectionLocation;
-            qDebug() << Q_FUNC_INFO << " position after skip " << parent->fileData.currentPosition;
+            m_Debug->Log("Found section of " + signature.type + " at " + QString::number(fileData->currentPosition) + ". These are not currently handled. Data will be skipped. Length:" + QString::number(signature.sectionLength) + " | " + QString(Q_FUNC_INFO));
+            //qDebug() << Q_FUNC_INFO << "Found" << signature.type << "at" << fileData->currentPosition << "- skipping for now";
+            fileData->currentPosition = signature.sectionLength + signature.sectionLocation;
+            qDebug() << Q_FUNC_INFO << " position after skip " << fileData->currentPosition;
             continue;
         }
 
@@ -478,22 +483,22 @@ int VBIN::getSceneNodeTree(){
             //qDebug() << Q_FUNC_INFO << "End of tree located - leaving at Animation Data";
             //break;
 //            animationSet.file = this;
-//            animationSet.fileLocation = parent->fileData.currentPosition-4;
+//            animationSet.fileLocation = fileData->currentPosition-4;
 //            animationSet.sectionLength = signature.sectionLength;
 //            animationSet.sectionEnd = animationSet.fileLocation + signature.sectionLength;
 //            animationSet.name =signature.name;
 //            animationSet.readAnimationSet();
-            qDebug() << Q_FUNC_INFO << "Found animation data at " << parent->fileData.currentPosition << "- skipping for now";
-            parent->fileData.currentPosition = signature.sectionLength + signature.sectionLocation;
-            qDebug() << Q_FUNC_INFO << "position after skip" << parent->fileData.currentPosition;
+            qDebug() << Q_FUNC_INFO << "Found animation data at " << fileData->currentPosition << "- skipping for now";
+            fileData->currentPosition = signature.sectionLength + signature.sectionLocation;
+            qDebug() << Q_FUNC_INFO << "position after skip" << fileData->currentPosition;
             continue; //continuing after reading animation, the bounding volume is contained in them.
         }
 
         //readModifications();
-        unknown4Byte2 = parent->fileData.readInt();
+        unknown4Byte2 = fileData->readInt();
         if (unknown4Byte1 > 3) {
-            parent->fileData.currentPosition += 8;
-            unknown4Byte3 = parent->fileData.readInt(); //this should take us to the end
+            fileData->currentPosition += 8;
+            unknown4Byte3 = fileData->readInt(); //this should take us to the end
         }
 
         fileData->signature(&signature);
@@ -501,16 +506,16 @@ int VBIN::getSceneNodeTree(){
         if(signature.type == "BoundingVolume"){
             readBoundingVolume(&signature);
         }
-        //qDebug() << Q_FUNC_INFO << "Expected end of section at location: " << parent->fileData.currentPosition << "with loops" << loopBreaker;
+        //qDebug() << Q_FUNC_INFO << "Expected end of section at location: " << fileData->currentPosition << "with loops" << loopBreaker;
 
         loopBreaker++;
-        if (loopBreaker > 5000 or parent->fileData.currentPosition > base.sectionEnd){
-            qDebug() << Q_FUNC_INFO << "Excessive looping detected or node tree exceeded. loopbreaker:" << loopBreaker << "current position:" << parent->fileData.currentPosition;
-            parent->messageError("Excessive looping detected or node tree exceeded for file " + fileName);
+        if (loopBreaker > 5000 or fileData->currentPosition > base.sectionEnd){
+            qDebug() << Q_FUNC_INFO << "Excessive looping detected or node tree exceeded. loopbreaker:" << loopBreaker << "current position:" << fileData->currentPosition;
+            m_Debug->MessageError("Excessive looping detected or node tree exceeded for file " + fileName);
             return 1;
         }
 
-        if (parent->fileData.currentPosition == base.sectionEnd){
+        if (fileData->currentPosition == base.sectionEnd){
             qDebug() << Q_FUNC_INFO << "Reached end of tree. Exiting now.";
             qDebug() << Q_FUNC_INFO << "file contans" << meshCount << "meshes";
             qDebug() << Q_FUNC_INFO << "texture list contains" << textureNameList.size() << "textures";
@@ -525,7 +530,7 @@ int VBIN::getSceneNodeTree(){
 }
 
 void VBIN::updateCenter(){
-    QComboBox* ListLods = new QComboBox(parent->centralContainer);
+    QComboBox* ListLods = new QComboBox(m_UI->m_centralContainer);
     ListLods -> setGeometry(QRect(QPoint(250,150), QSize(150,30)));
     if (highestLOD <= 0){
         ListLods->insertItem(0, "1");
@@ -536,26 +541,26 @@ void VBIN::updateCenter(){
         }
     }
 
-    QComboBox::connect(ListLods, &QComboBox::currentIndexChanged, parent, [ListLods, this] {setLevel(ListLods->currentIndex());});
+    QComboBox::connect(ListLods, &QComboBox::currentIndexChanged, m_UI, [ListLods, this] {setLevel(ListLods->currentIndex());});
     //QAbstractButton::connect(ListLods, &QComboBox::currentIndexChanged, parent, [parent = this->parent]() {parent->levelSelectChange();});
     ListLods->show();
-    parent->currentModeWidgets.push_back(ListLods);
+    m_UI->m_currentModeWidgets.push_back(ListLods);
     ListLods->setCurrentIndex(highestLOD-1);
 
-    QRadioButton* radioSingle = new QRadioButton("Single file output", parent->centralContainer);
+    QRadioButton* radioSingle = new QRadioButton("Single file output", m_UI->m_centralContainer);
     radioSingle->setGeometry(QRect(QPoint(340,120), QSize(200,30)));
     radioSingle->setStyleSheet("color: rgb(255, 255, 255); background-color: rgba(255, 255, 255, 0)");
-    QAbstractButton::connect(radioSingle, &QRadioButton::toggled, parent, [radioSingle, this] {setOutput(radioSingle->isChecked());});
+    QAbstractButton::connect(radioSingle, &QRadioButton::toggled, m_UI, [radioSingle, this] {setOutput(radioSingle->isChecked());});
     radioSingle->toggle();
     radioSingle->show();
-    parent->currentModeWidgets.push_back(radioSingle);
+    m_UI->m_currentModeWidgets.push_back(radioSingle);
 
 
-    QRadioButton* radioMultiple = new QRadioButton("Multi-file output", parent->centralContainer);
+    QRadioButton* radioMultiple = new QRadioButton("Multi-file output", m_UI->m_centralContainer);
     radioMultiple->setGeometry(QRect(QPoint(540,120), QSize(120,30)));
     radioMultiple->setStyleSheet("color: rgb(255, 255, 255); background-color: rgba(255, 255, 255, 0)");
     radioMultiple->show();
-    parent->currentModeWidgets.push_back(radioMultiple);
+    m_UI->m_currentModeWidgets.push_back(radioMultiple);
 
 }
 
@@ -599,7 +604,7 @@ void VBIN::load(QString fromType){
         failedRead = 1;
     }
     if(failedRead){
-        parent->messageError("There was an error reading " + fileName);
+        m_Debug->MessageError("There was an error reading " + fileName);
         return;
     }
 }
@@ -694,14 +699,14 @@ void VBIN::outputDataSTL(){
         base.writeSectionListSTL(stream);
         stream << "endsolid Default" << Qt::endl;
     } else {
-        QString fileOut = QFileDialog::getExistingDirectory(parent, parent->tr("Select Output STL"), QDir::currentPath() + "/STL/", QFileDialog::ShowDirsOnly);
+        QString fileOut = QFileDialog::getExistingDirectory(m_UI, m_UI->tr("Select Output STL"), QDir::currentPath() + "/STL/", QFileDialog::ShowDirsOnly);
         if(fileOut.isEmpty()){
-            parent->messageError("STL export cancelled.");
+            m_Debug->MessageError("STL export cancelled.");
         }
         base.writeSectionListSTL(fileOut);
     }
 
-    parent->messageSuccess("STL file saved.");
+    m_Debug->MessageSuccess("STL file saved.");
     qDebug() << Q_FUNC_INFO << "STL output complete.";
 
     return;
@@ -717,12 +722,12 @@ void VBIN::outputDataDAE(){
 //        parent->messageError("DAE export cancelled.");
 //        return;
 //    }
-    std::shared_ptr<TFFile> testLoaded;
-    std::vector<std::shared_ptr<TFFile>> loadedInstances;
+    std::shared_ptr<taFile> testLoaded;
+    std::vector<std::shared_ptr<taFile>> loadedInstances;
     for(int i = 0; i < instanceNameList.size(); i++){
         /*This should probably be moved to the loading side of things*/
-        parent->loadRequiredFile(this, instanceNameList[i], "VBIN");
-        testLoaded = parent->matchFile(instanceNameList[i] + ".VBIN");
+        m_zlManager->loadRequiredFile(this, instanceNameList[i], "VBIN");
+        testLoaded = m_zlManager->matchFile(instanceNameList[i] + ".VBIN");
         /*if(testLoaded == nullptr){
             //putting this separate from the while - don't want to run this check multiple times if it won't do anything
             QFileInfo dir(inputPath);
@@ -760,7 +765,7 @@ void VBIN::outputDataDAE(){
     file.close();
 
     if(!daeOut.open(QIODevice::ReadWrite)){
-        parent->messageError("DAE export failed, could not open output file.");
+        m_Debug->MessageError("DAE export failed, could not open output file.");
         return;
     }
     QTextStream stream(&daeOut);
@@ -771,8 +776,8 @@ void VBIN::outputDataDAE(){
 
     stream << "  <asset>" << Qt::endl;
     stream << "    <contributor>" << Qt::endl;
-    stream << "      <author>PrincessTrevor</author>" << Qt::endl;
-    stream << "      <authoring_tool>Exodus v" << QString::number(parent->version) << "</authoring_tool>" << Qt::endl;
+    stream << "      <author>Everett Darling</author>" << Qt::endl;
+    stream << "      <authoring_tool>Exodus v" << version << "</authoring_tool>" << Qt::endl;
     stream << "    </contributor>" << Qt::endl;
     stream << "    <created>" << QDateTime::currentDateTime().toString("yyyy-MM-dd") + "T" + QDateTime::currentDateTime().toString("hh:mm:ss") << "</created>" << Qt::endl;
     stream << "    <modified>" << QDateTime::currentDateTime().toString("yyyy-MM-dd") + "T" + QDateTime::currentDateTime().toString("hh:mm:ss") << "</modified>" << Qt::endl;
@@ -877,21 +882,21 @@ void VBIN::writeNodeListDAE(QTextStream &stream){
 }
 
 void VBIN::applyKeyframe(){
-    qDebug() << Q_FUNC_INFO << "current animation index" << parent->ListAnimation->currentIndex() << "with current frame index" << parent->ListFrame->currentIndex();
+    qDebug() << Q_FUNC_INFO << "current animation index" << animationSet.m_selectedAnimation << "with current frame index" << animationSet.m_selectedFrame;
     QString chosenType;
 
     QVector3D translation;
     QQuaternion rotation;
     QString channelName;
-    for (int channel = 0; channel < animationSet.streamArray[parent->ListAnimation->currentIndex()]->channelArray.size(); channel++) {
-        chosenType = animationSet.streamArray[parent->ListAnimation->currentIndex()]->channelArray[channel]->animationType;
+    for (int channel = 0; channel < animationSet.streamArray[animationSet.m_selectedAnimation]->channelArray.size(); channel++) {
+        chosenType = animationSet.streamArray[animationSet.m_selectedAnimation]->channelArray[channel]->animationType;
         if(chosenType == "~anAnimationTranslation"){
-            translation = animationSet.streamArray[parent->ListAnimation->currentIndex()]->channelArray[channel]->vectorList[parent->ListFrame->currentIndex()];
-            channelName = animationSet.streamArray[parent->ListAnimation->currentIndex()]->channelArray[channel]->name;
+            translation = animationSet.streamArray[animationSet.m_selectedAnimation]->channelArray[channel]->vectorList[animationSet.m_selectedFrame];
+            channelName = animationSet.streamArray[animationSet.m_selectedAnimation]->channelArray[channel]->name;
             base.sendKeyframe(translation, channelName);
         } else if (chosenType == "~anAnimationOrientation"){
-            rotation = animationSet.streamArray[parent->ListAnimation->currentIndex()]->channelArray[channel]->rotationList[parent->ListFrame->currentIndex()];
-            channelName = animationSet.streamArray[parent->ListAnimation->currentIndex()]->channelArray[channel]->name;
+            rotation = animationSet.streamArray[animationSet.m_selectedAnimation]->channelArray[channel]->rotationList[animationSet.m_selectedFrame];
+            channelName = animationSet.streamArray[animationSet.m_selectedAnimation]->channelArray[channel]->name;
             base.sendKeyframe(rotation, channelName);
         }
         qDebug() << Q_FUNC_INFO << "animation type" << chosenType << "is not currently supported";

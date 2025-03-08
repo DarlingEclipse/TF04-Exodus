@@ -8,11 +8,15 @@
 class ProgWindow;
 class DatabaseFile;
 
+/*Randomizer will need, at minimum, the file manager and data handler*/
 class Randomizer{
 public:
-    Randomizer(ProgWindow *parentPass);
+    Randomizer(zlManager *fileManager, DataHandler *dataSystem);
 
-    ProgWindow* parent;
+    exWindow *m_UI;
+    zlManager *m_zlManager;
+    DataHandler *m_DataHandler;
+    exDebugger *m_Debug;
     //std::vector<std::shared_ptr<DatabaseFile>> databaseLevels;
     //std::vector<Level> levelList;
     //std::vector<FileReplacement> replacementList;

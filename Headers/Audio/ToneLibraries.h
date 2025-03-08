@@ -4,11 +4,11 @@
 //https://sites.google.com/site/musicgapi/technical-documents/wav-file-format
 
 #include <QString>
-#include "Headers/Main/BinChanger.h"
+#include "Headers/FileManagement/taFileSystemObject.h"
 
 class ProgWindow;
 
-class VACFile : public TFFile {
+class VACFile : public taFile {
   public:
 //    const QStringList validOutputs(){
 //        return QStringList{"TMD", "BMD"};

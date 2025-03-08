@@ -1,8 +1,18 @@
-#include "Headers/Main/mainwindow.h"
+#include <QPushButton>
+#include <QCoreApplication>
 
-ModHandler::ModHandler(ProgWindow* passParent){
+#include "Headers/FileManagement/Zebrafish.h"
+#include "Headers/ISOManager/ModHandler.h"
+#include "Headers/ISOManager/IsoBuilder.h"
+#include "Headers/UI/exWindow.h"
+#include "Headers/Main/exDebugger.h"
+#include "Headers/UI/exSettings.h"
 
-    parent = passParent;
+ModHandler::ModHandler(zlManager *fileManager){
+
+    m_UI = &exWindow::GetInstance();
+    m_zlManager = fileManager;
+    m_Debug = &exDebugger::GetInstance();
 
     loadMods();
     loadFileReplacements();
@@ -13,38 +23,38 @@ ModHandler::ModHandler(ProgWindow* passParent){
     for(int i = 0; i < folderList.size(); i++){
 
 
-        FolderOption nextFolder;
-        nextFolder.folderName = folderList[i];
-        nextFolder.moddedSource = false;
+        taFolder nextFolder;
+        nextFolder.m_name = folderList[i];
+        nextFolder.m_modded = false;
         if(uncompressed.contains(folderList[i])){
-            nextFolder.zipped = false;
+            nextFolder.m_folderType = taFolderUncompressed;
         } else {
-            nextFolder.zipped = true;
+            nextFolder.m_folderType = taFolderCompressed;
         }
-        nextFolder.checkOption = nullptr;
+        nextFolder.m_checkOption = nullptr;
         folderOptions.push_back(nextFolder);
 
     }
 }
 
 void ModHandler::updateCenter(){
-    parent->isoBuilder->setCopyPath("ModdedISO");
+    m_zlManager->m_IsoBuilder->setCopyPath("ModdedISO");
 
-    parent->centralContainer->setStyleSheet("QGroupBox{color: rgb(255, 255, 255); background-color: rgba(255, 255, 255, 0);} "
+    m_UI->m_centralContainer->setStyleSheet("QGroupBox{color: rgb(255, 255, 255); background-color: rgba(255, 255, 255, 0);} "
                                             "QCheckBox{color: rgb(255, 255, 255); background-color: rgba(255, 255, 255, 0);} "
                                             "QLabel{color: rgb(255, 255, 255); background-color: rgba(255, 255, 255, 0);} "
                                             "QToolTip{color: rgb(0,0,0);}");
 
-    QGroupBox *groupModOptions = new QGroupBox("Mod Options", parent->centralContainer);
+    QGroupBox *groupModOptions = new QGroupBox("Mod Options", m_UI->m_centralContainer);
     groupModOptions->setGeometry(QRect(QPoint(250,100), QSize(200,300)));
-    parent->currentModeWidgets.push_back(groupModOptions);
+    m_UI->m_currentModeWidgets.push_back(groupModOptions);
 
     for(int i = 0; i < modList.size(); i++){
         //this will need to be edited later for when we have more mods than will fit in the box to move to the next column. or scroll?
         QCheckBox *modCheck = new QCheckBox(modList[i].name, groupModOptions);
         modCheck->setGeometry(QRect(QPoint(20,20 + (40*i)), QSize(200,30)));
         //modCheck->setStyleSheet("color: rgb(255, 255, 255); background-color: rgba(255, 255, 255, 0);}");
-        QAbstractButton::connect(modCheck, &QCheckBox::stateChanged, parent, [i, modCheck, this] {modList[i].enabled = modCheck->isChecked();});
+        QAbstractButton::connect(modCheck, &QCheckBox::checkStateChanged, m_UI, [i, modCheck, this] {modList[i].enabled = modCheck->isChecked();});
         modCheck->setToolTip(modList[i].description);
         modCheck->show();
         //parent->currentModeWidgets.push_back(modCheck);
@@ -52,19 +62,19 @@ void ModHandler::updateCenter(){
 
     groupModOptions->show();
 
-    QGroupBox *groupReplacements = new QGroupBox("File Replacements", parent->centralContainer);
+    QGroupBox *groupReplacements = new QGroupBox("File Replacements", m_UI->m_centralContainer);
     groupReplacements->setGeometry(QRect(QPoint(600,100), QSize(200,300)));
     /*groupReplacements->setStyleSheet("QGroupBox{color: rgb(255, 255, 255); background-color: rgba(255, 255, 255, 0);} "
                                    "QCheckBox{color: rgb(255, 255, 255); background-color: rgba(255, 255, 255, 0);} "
                                    "QToolTip{color: rgb(0,0,0);}");*/
-    parent->currentModeWidgets.push_back(groupReplacements);
+    m_UI->m_currentModeWidgets.push_back(groupReplacements);
 
     for(int i = 0; i < replacementList.size(); i++){
         //this will need to be edited later for when we have more mods than will fit in the box to move to the next column. or scroll?
         QCheckBox *replacementCheck = new QCheckBox(replacementList[i].name, groupReplacements);
         replacementCheck->setGeometry(QRect(QPoint(20,20 + (40*i)), QSize(200,30)));
         //replacementCheck->setStyleSheet("color: rgb(255, 255, 255); background-color: rgba(255, 255, 255, 0);}");
-        QAbstractButton::connect(replacementCheck, &QCheckBox::stateChanged, parent, [i, replacementCheck, this]
+        QAbstractButton::connect(replacementCheck, &QCheckBox::checkStateChanged, m_UI, [i, replacementCheck, this]
             {replacementList[i].enabled = replacementCheck->isChecked();
             setModdedFolders();
         });
@@ -75,25 +85,25 @@ void ModHandler::updateCenter(){
 
     groupReplacements->show();
 
-    QGroupBox *groupFolders = new QGroupBox("Folder to Use", parent->centralContainer);
+    QGroupBox *groupFolders = new QGroupBox("Folder to Use", m_UI->m_centralContainer);
     groupFolders->setGeometry(QRect(QPoint(850,100), QSize(200,300)));
     /*groupReplacements->setStyleSheet("QGroupBox{color: rgb(255, 255, 255); background-color: rgba(255, 255, 255, 0);} "
                                    "QCheckBox{color: rgb(255, 255, 255); background-color: rgba(255, 255, 255, 0);} "
                                    "QToolTip{color: rgb(0,0,0);}");*/
-    parent->currentModeWidgets.push_back(groupFolders);
+    m_UI->m_currentModeWidgets.push_back(groupFolders);
     for(int i = 0; i < folderOptions.size(); i++){
-        QCheckBox *folderCheck = new QCheckBox(folderOptions[i].folderName, groupFolders);
+        QCheckBox *folderCheck = new QCheckBox(folderOptions[i].m_name, groupFolders);
         folderCheck->setGeometry(QRect(QPoint(20,20 + (40*i)), QSize(200,30)));
-        folderOptions[i].checkOption = folderCheck;
-        QAbstractButton::connect(folderCheck, &QCheckBox::stateChanged, parent, [i, folderCheck, this]
-        {   if(checkNeededFolder(folderOptions[i].folderName)){
-                folderOptions[i].moddedSource = true;
+        folderOptions[i].m_checkOption = folderCheck;
+        QAbstractButton::connect(folderCheck, &QCheckBox::checkStateChanged, m_UI, [i, folderCheck, this]
+        {   if(checkNeededFolder(folderOptions[i].m_name)){
+                folderOptions[i].m_modded = true;
                 if(!folderCheck->isChecked()){
                     folderCheck->setChecked(true);
-                    parent->log("Cannot disable folder " + folderOptions[i].folderName + ". An active file replacement needs it.");
+                    m_Debug->Log("Cannot disable folder " + folderOptions[i].m_name + ". An active file replacement needs it.");
                 }
             } else {
-                folderOptions[i].moddedSource = folderCheck->isChecked();
+                folderOptions[i].m_modded = folderCheck->isChecked();
             }
         });
         folderCheck->show();
@@ -101,21 +111,21 @@ void ModHandler::updateCenter(){
 
     groupFolders->show();
 
-    QPushButton* buttonApply = new QPushButton("Apply Changes", parent->centralContainer);
+    QPushButton* buttonApply = new QPushButton("Apply Changes", m_UI->m_centralContainer);
     buttonApply->setGeometry(QRect(QPoint(50,320), QSize(150,30)));
-    QAbstractButton::connect(buttonApply, &QPushButton::released, parent, [this] {setChanges();});
-    parent->currentModeWidgets.push_back(buttonApply);
+    QAbstractButton::connect(buttonApply, &QPushButton::released, m_UI, [this] {setChanges();});
+    m_UI->m_currentModeWidgets.push_back(buttonApply);
     buttonApply->show();
 }
 
 void ModHandler::setModdedFolders(){
 
     for(int i = 0; i < folderOptions.size(); i++){
-        if(checkNeededFolder(folderOptions[i].folderName)){
-            if(folderOptions[i].checkOption != nullptr){
-                folderOptions[i].checkOption->setChecked(true);
+        if(checkNeededFolder(folderOptions[i].m_name)){
+            if(folderOptions[i].m_checkOption != nullptr){
+                folderOptions[i].m_checkOption->setChecked(true);
             } else {
-                folderOptions[i].moddedSource = true;
+                folderOptions[i].m_modded = true;
             }
         }
     }
@@ -147,14 +157,14 @@ void ModHandler::setChanges(){
     Copy the replacement files and ELF (like what is done with the Randomzier)
     Save the new path as the "rebuild" path*/
 
-    parent->isoBuilder->setCopyPath("Modded");
+    m_zlManager->m_IsoBuilder->setCopyPath("Modded");
     for(int i = 0; i < replacementList.size(); i++){
         if(replacementList[i].enabled){
             replaceFile(replacementList[i]);
         }
     }
     applyModifications();
-    parent->isoBuilder->packModded("Rebuild");
+    m_zlManager->m_IsoBuilder->packModded("Rebuild");
 
 }
 
@@ -246,7 +256,7 @@ void ModHandler::replaceFile(QString fileName, QString destinationPath){
     QFile fileReplacement(fileInputDirectory);
     qDebug() << Q_FUNC_INFO << "checking if replacement image exists:" << fileReplacement.exists() << "at directory:" << fileInputDirectory;
 
-    QString fileOutputDirectory = parent->isoBuilder->copyOutputPath + destinationPath;
+    QString fileOutputDirectory = m_zlManager->copyOutputPath + destinationPath;
 
     qDebug() << Q_FUNC_INFO << "creating directory" << fileOutputDirectory;
     QDir createFile(fileOutputDirectory);
@@ -263,7 +273,7 @@ void ModHandler::replaceFile(QString fileName, QString destinationPath){
         didItWork = QFile::copy(fileInputDirectory, fileOutputDirectory);
         qDebug() << Q_FUNC_INFO << "did it work?" << didItWork;
     } else {
-        parent->log("File " + fileName + " could not be replaced.");
+        m_Debug->Log("File " + fileName + " could not be replaced.");
     }
 }
 
@@ -274,11 +284,11 @@ void ModHandler::replaceFile(FileReplacement fileToReplace){
     }
 
     for(int i = 0; i < folderOptions.size(); i++){
-        if(checkNeededFolder(folderOptions[i].folderName)){
-            if(folderOptions[i].checkOption != nullptr){
-                folderOptions[i].checkOption->setChecked(true);
+        if(checkNeededFolder(folderOptions[i].m_name)){
+            if(folderOptions[i].m_checkOption != nullptr){
+                folderOptions[i].m_checkOption->setChecked(true);
             } else {
-                folderOptions[i].moddedSource = true;
+                folderOptions[i].m_modded = true;
             }
         }
     }
@@ -347,13 +357,13 @@ void ModHandler::applyModifications(){
     qDebug() << Q_FUNC_INFO << mipsEditorPath;
 
     QStringList args;
-    QString gamePath = parent->setW->getValue("Game extract path") + "/SLUS_206.68";
+    QString gamePath = m_zlManager->m_Settings->GetValue("Game extract path") + "/SLUS_206.68";
     QString modPath = QCoreApplication::applicationDirPath() + "/Mods/";
     if(gamePath == ""){
         qDebug() << Q_FUNC_INFO << "Process cancelled.";
         return;
     }
-    parent->log("Modifying ELF from: " + gamePath);
+    m_Debug->Log("Modifying ELF from: " + gamePath);
     args.append(gamePath);
     args.append(modPath);
 
@@ -369,12 +379,12 @@ void ModHandler::applyModifications(){
     qDebug() << Q_FUNC_INFO << "mod file list:" << modFiles;
     args.append(modFiles);
 
-    QString randomizerPath = parent->isoBuilder->copyOutputPath + "/SLUS_206.68";
+    QString randomizerPath = m_zlManager->copyOutputPath + "/SLUS_206.68";
 
     args.append(randomizerPath);
 
     if(modFiles != ""){
-        parent->log("Putting modified ELF in " + randomizerPath);
+        m_Debug->Log("Putting modified ELF in " + randomizerPath);
         QProcess *mipsEditor = new QProcess();
         QObject::connect(mipsEditor, &QProcess::readyReadStandardOutput, [mipsEditor]() {
             QString debugOutput = mipsEditor->readAllStandardOutput();
@@ -397,7 +407,7 @@ void ModHandler::applyModifications(){
                 break;
             }
         });
-        parent->log("Modding ELF.");
+        m_Debug->Log("Modding ELF.");
         mipsEditor->start(mipsEditorPath, args);
     }
 

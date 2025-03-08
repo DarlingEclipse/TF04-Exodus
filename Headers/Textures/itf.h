@@ -8,13 +8,11 @@
 #include <QPainter>
 #include <QImageReader>
 #include <QImageWriter>
+#include <QFile>
 
 #include <vector>
-#include <algorithm>
 
-#include "Headers/Main/BinChanger.h"
-
-class ProgWindow;
+#include "Headers/FileManagement/taFileSystemObject.h"
 
 class Color{
 public:
@@ -27,7 +25,7 @@ public:
     const void operator=(Color input);
 };
 
-class ITF : public TFFile {
+class ITF : public taFile {
 public:
     const QStringList validOutputs(){
         QStringList outputs = QStringList{"ITF"};

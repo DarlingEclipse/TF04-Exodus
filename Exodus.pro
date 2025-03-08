@@ -12,8 +12,12 @@ SOURCES += \
     Source/Databases/DataHandler.cpp \
     Source/Databases/DatabaseModel.cpp \
     Source/Databases/DistanceCalculator.cpp \
+    Source/FileManagement/Zebrafish.cpp \
+    Source/FileManagement/taFileSystemObject.cpp \
     Source/ISOManager/IsoBuilder.cpp \
     Source/ISOManager/ModHandler.cpp \
+    Source/Main/exDebugger.cpp \
+    Source/Main/exUpdater.cpp \
     Source/Models/Antioch2.cpp \
     Source/Main/BinChanger.cpp \
     Source/Databases/Database.cpp \
@@ -25,15 +29,20 @@ SOURCES += \
     Source/Audio/ToneLibrary.cpp \
     Source/Models/VBIN.cpp \
     Source/Main/main.cpp \
-    Source/Main/mainwindow.cpp \
-    Source/Main/openfile.cpp \
+    Source/UI/exCustomQT.cpp \
+    Source/UI/exSettings.cpp \
+    Source/UI/exWindow.cpp
 
 HEADERS += \
     Headers/Databases/DataHandler.h \
     Headers/Databases/DistanceCalculator.h \
+    Headers/FileManagement/Zebrafish.h \
+    Headers/FileManagement/taFileSystemObject.h \
     Headers/ISOManager/IsoBuilder.h \
     Headers/ISOManager/ModHandler.h \
     Headers/Main/CustomQT.h \
+    Headers/Main/exDebugger.h \
+    Headers/Main/exUpdater.h \
     Headers/Models/Antioch2.h \
     Headers/Main/BinChanger.h \
     Headers/Databases/Database.h \
@@ -42,8 +51,9 @@ HEADERS += \
     Headers/Audio/ToneLibraries.h \
     Headers/Randomizer/Randomizer.h \
     Headers/Textures/itf.h \
-    Headers/Main/mainwindow.h \
     Headers/Models/vbin.h \
+    Headers/UI/exSettings.h \
+    Headers/UI/exWindow.h \
     winsparkle.h
 
 FORMS += \

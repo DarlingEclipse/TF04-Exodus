@@ -7,8 +7,10 @@
 #include <QDebug>
 #include <QMatrix3x3>
 #include <QVector3D>
-class ProgWindow;
+class zlManager;
 class FileVisitor;
+class exDebugger;
+class exWindow;
 
 class SectionHeader{
 public:
@@ -54,7 +56,7 @@ class BinChanger{
 class FileData{
   public:
     QByteArray dataBytes;
-    ProgWindow *parent;
+    exDebugger *m_Debug;
     long currentPosition = 0;
     bool input;
     int line = 0;
@@ -88,44 +90,6 @@ class FileData{
     QString nextLine(); //skips to next line and returns all text between cursor and next line
     TextProperty readProperty();
     int skipLine(bool checkEmpty = false);
-};
-
-class TFFile{
-  public:
-    QString inputPath;
-    QString outputPath;
-    ProgWindow *parent;
-    FileData *fileData;
-    QString fileName;
-    QString fileExtension;
-    int duplicateFileCount = 0; //defaults to 0, incremented by 1 for each file with a matching name
-    bool binary; //0 for text file, 1 for binary
-
-    TFFile();
-
-    virtual const QStringList validOutputs(){
-        qDebug() << Q_FUNC_INFO << "The chosen file does not have a valid output list.";
-        return QStringList("");
-    };
-
-    virtual const QString fileCategory(){
-        qDebug() << Q_FUNC_INFO << "The chosen file does not have a valid category;";
-        return "";
-    };
-
-    virtual const QString fullFileName(){
-        if(duplicateFileCount > 0){
-            return fileName + "." + fileExtension + "(" + QString::number(duplicateFileCount) + ")";
-        } else {
-            return fileName + "." + fileExtension;
-        }
-    }
-
-    virtual void save(QString toType);
-    virtual void save(QString toType, QTextStream &stream);
-    virtual void load(QString fromType);
-    virtual void acceptVisitor(ProgWindow& visitor);
-    virtual void updateCenter();
 };
 
 #endif // BINCHANGER_H
