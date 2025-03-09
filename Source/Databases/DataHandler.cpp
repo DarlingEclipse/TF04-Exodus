@@ -1,4 +1,11 @@
-#include "Headers/Main/mainwindow.h"
+#include <QDir>
+#include <QDirIterator>
+#include <QCoreApplication>
+
+#include "Headers/Databases/DataHandler.h"
+#include "Headers/UI/exWindow.h"
+#include "Headers/Main/exDebugger.h"
+#include "Headers/FileManagement/Zebrafish.h"
 
 /*std::vector<Pickup> convertPickups(std::vector<dictItem> itemList){
 
@@ -23,14 +30,16 @@ std::vector<Warpgate> convertWarpgates(std::vector<dictItem> itemList){
 //     qDebug() << Q_FUNC_INFO << "Base DataHandler intialization called. This shouldn't happen";
 // }
 
-DataHandler::DataHandler(ProgWindow* passParent){
-    parent = passParent;
+DataHandler::DataHandler(zlManager *fileManager){
+    m_UI = &exWindow::GetInstance();
+    m_Debug = &exDebugger::GetInstance();
+    m_zlManager = fileManager;
 
-    parent->openFile("TDB", QDir::currentPath() + "/DATA/EXODUS_MAIN.TDB");
-    for(int i = 0; i < parent->databaseList.size(); i++){
-        qDebug() << Q_FUNC_INFO << "checking file name" << parent->databaseList[i]->fileName;
-        if(parent->databaseList[i]->fileName == "DATA-EXODUS_MAIN"){
-            exodusData.dataFile = parent->databaseList[i];
+    m_zlManager->openFile("TDB", QDir::currentPath() + "/DATA/EXODUS_MAIN.TDB");
+    for(int i = 0; i < m_zlManager->databaseList.size(); i++){
+        qDebug() << Q_FUNC_INFO << "checking file name" << m_zlManager->databaseList[i]->fileName;
+        if(m_zlManager->databaseList[i]->fileName == "DATA-EXODUS_MAIN"){
+            exodusData.dataFile = m_zlManager->databaseList[i];
         }
     }
 
@@ -41,6 +50,28 @@ DataHandler::DataHandler(ProgWindow* passParent){
     }
 
     return;
+}
+
+void DataHandler::LoadAll(){
+    loadLevels();
+    loadMinicons();
+    loadDatacons();
+    loadAutobots();
+    loadCustomLocations();
+    loadTricks();
+
+    qDebug() << Q_FUNC_INFO << "Exodus data:";
+    qDebug() << Q_FUNC_INFO << "Loaded levels:" << exodusData.loadedLevels.size();
+    qDebug() << Q_FUNC_INFO << "Minicon list:" << exodusData.miniconList.size();
+    qDebug() << Q_FUNC_INFO << "Custom locations:" << exodusData.customLocationList.size();
+    qDebug() << Q_FUNC_INFO << "Tricks:" << exodusData.trickList.size();
+
+    qDebug() << Q_FUNC_INFO << "Game data:";
+    qDebug() << Q_FUNC_INFO << "Level list:" << gameData.levelList.size();
+    qDebug() << Q_FUNC_INFO << "Autobot list:" << gameData.autobotList.size();
+    qDebug() << Q_FUNC_INFO << "Minicon list:" << gameData.miniconList.size();
+    qDebug() << Q_FUNC_INFO << "Pickup list:" << gameData.pickupList.size();
+    qDebug() << Q_FUNC_INFO << "Datacon list:" << gameData.dataconList.size();
 }
 
 Pickup::Pickup(dictItem copyItem){
@@ -437,10 +468,10 @@ void DataHandler::addCustomLocations(){
 
 void DataHandler::loadLevels(){
 
-    for(int i = 0; i < parent->databaseList.size(); i++){
-        qDebug() << Q_FUNC_INFO << "checking file name" << parent->databaseList[i]->fileName;
-        if(parent->databaseList[i]->fileName == "TFA-METAGAME"){
-            gameData.metagameFile = parent->databaseList[i];
+    for(int i = 0; i < m_zlManager->databaseList.size(); i++){
+        qDebug() << Q_FUNC_INFO << "checking file name" << m_zlManager->databaseList[i]->fileName;
+        if(m_zlManager->databaseList[i]->fileName == "TFA-METAGAME"){
+            gameData.metagameFile = m_zlManager->databaseList[i];
         }
     }
 
@@ -456,11 +487,11 @@ void DataHandler::loadLevels(){
             alternateCheck = "DEFEATED";
         }
         QString nameCheck = "0" + QString::number(exodusData.loadedLevels[i].originalEpisode+1) + "_" + currentEpisode->name.toUpper() + alternateCheck + "-CREATURE";
-        for(int j = 0; j < parent->databaseList.size(); j++){
-            qDebug() << Q_FUNC_INFO << "Checking for file name:" << nameCheck << "vs" << parent->databaseList[j]->fileName;
-            if(parent->databaseList[j]->fileName == nameCheck){
+        for(int j = 0; j < m_zlManager->databaseList.size(); j++){
+            qDebug() << Q_FUNC_INFO << "Checking for file name:" << nameCheck << "vs" << m_zlManager->databaseList[j]->fileName;
+            if(m_zlManager->databaseList[j]->fileName == nameCheck){
                 qDebug() << Q_FUNC_INFO << "Setting level file.";
-                exodusData.loadedLevels[i].levelFile = parent->databaseList[j];
+                exodusData.loadedLevels[i].levelFile = m_zlManager->databaseList[j];
             }
         }
     }
@@ -607,15 +638,15 @@ void DataHandler::loadMinicons(){
 
 
     /*Move the metagame and exodusmain file searches to datahandler initialization*/
-    for(int i = 0; i < parent->databaseList.size(); i++){
-        qDebug() << Q_FUNC_INFO << "checking file name" << parent->databaseList[i]->fileName;
-        if(parent->databaseList[i]->fileName == "TFA-METAGAME"){
-            gameData.metagameFile = parent->databaseList[i];
+    for(int i = 0; i < m_zlManager->databaseList.size(); i++){
+        qDebug() << Q_FUNC_INFO << "checking file name" << m_zlManager->databaseList[i]->fileName;
+        if(m_zlManager->databaseList[i]->fileName == "TFA-METAGAME"){
+            gameData.metagameFile = m_zlManager->databaseList[i];
         }
     }
 
     if(gameData.metagameFile == nullptr){
-        parent->log("Unable to find file METAGAME.TDB. Minicon metadata was not loaded.");
+        m_Debug->Log("Unable to find file METAGAME.TDB. Minicon metadata was not loaded.");
     }
 
     QStringList miniconTypes = {"Minicon", "MiniconDamageBonus", "MiniconArmor", "MiniconEmergencyWarpgate", "MiniconRangeBonus", "MiniconRegeneration"};
@@ -668,10 +699,10 @@ void DataHandler::loadMinicons(){
 
 void DataHandler::loadAutobots(){
     std::shared_ptr<DatabaseFile> metagameFile;
-    for(int i = 0; i < parent->databaseList.size(); i++){
-        qDebug() << Q_FUNC_INFO << "checking file name" << parent->databaseList[i]->fileName;
-        if(parent->databaseList[i]->fileName == "TFA-METAGAME"){
-            metagameFile = parent->databaseList[i];
+    for(int i = 0; i < m_zlManager->databaseList.size(); i++){
+        qDebug() << Q_FUNC_INFO << "checking file name" << m_zlManager->databaseList[i]->fileName;
+        if(m_zlManager->databaseList[i]->fileName == "TFA-METAGAME"){
+            metagameFile = m_zlManager->databaseList[i];
         }
     }
 

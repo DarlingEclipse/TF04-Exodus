@@ -1,5 +1,12 @@
-#include "Headers/Main/mainwindow.h"
 #include <QTimer>
+#include <QLineEdit>
+#include <QPushButton>
+
+#include "Headers/Databases/Database.h"
+#include "Headers/UI/exWindow.h"
+#include "Headers/Main/exDebugger.h"
+#include "Headers/Main/CustomQT.h"
+#include "Headers/Main/BinChanger.h"
 
 /*template <typename ValueType>
 ValueType dictItem::searchAttributes(QString itemName){
@@ -124,7 +131,7 @@ std::shared_ptr<taData> DefinitionFile::createItem(QString itemType){
         colorItem->file = this;
         return colorItem;
     } else {
-        parent->log("Data type " + itemType + " hasn't been implemented yet. | " + QString(Q_FUNC_INFO));
+        m_Debug->Log("Data type " + itemType + " hasn't been implemented yet. | " + QString(Q_FUNC_INFO));
         qDebug() << Q_FUNC_INFO << "Data type" << itemType << "hasn't been implemented yet.";
         return nullptr;
     }
@@ -204,7 +211,7 @@ void taData::setValue(QString changedValue){
 }
 
 std::shared_ptr<taData> taData::clone(){
-    file->parent->log("Data type " + type + " doesn't have a clone operation yet. | " + QString(Q_FUNC_INFO));
+    file->m_Debug->Log("Data type " + type + " doesn't have a clone operation yet. | " + QString(Q_FUNC_INFO));
     return nullptr;
 }
 
@@ -283,7 +290,7 @@ void taDataBool<valueType>::read(){
 
 template <class valueType>
 void taDataBool<valueType>::write(QFile& file){
-    this->file->parent->binChanger.byteWrite(file, this->value);
+    BinChanger::byteWrite(file, this->value);
 }
 
 /*---------- Float ----------*/
@@ -320,8 +327,8 @@ void taDataFloat<valueType>::read(){
 
 template <class valueType>
 void taDataFloat<valueType>::write(QFile& file){
-    QByteArray hexFloat = this->file->parent->binChanger.float_to_hex(this->value);
-    this->file->parent->binChanger.hexWrite(file, hexFloat);
+    QByteArray hexFloat = BinChanger::float_to_hex(this->value);
+    BinChanger::hexWrite(file, hexFloat);
 }
 
 template <class valueType>
@@ -366,8 +373,8 @@ void taDataString<valueType>::read(){
 
 template <class valueType>
 void taDataString<valueType>::write(QFile& file){
-    this->file->parent->binChanger.intWrite(file, this->value.length());
-    this->file->parent->binChanger.hexWrite(file, this->value.toUtf8());
+    BinChanger::intWrite(file, this->value.length());
+    BinChanger::hexWrite(file, this->value.toUtf8());
 }
 
 template <class valueType>
@@ -402,7 +409,7 @@ void taDataInteger<valueType>::read(){
 
 template <class valueType>
 void taDataInteger<valueType>::write(QFile& file){
-    this->file->parent->binChanger.intWrite(file, this->value);
+    BinChanger::intWrite(file, this->value);
 }
 
 /*---------- Link ----------*/
@@ -431,7 +438,7 @@ void taDataLink<valueType>::read(){
 
 template <class valueType>
 void taDataLink<valueType>::write(QFile& file){
-    this->file->parent->binChanger.shortWrite(file, this->value);
+    BinChanger::shortWrite(file, this->value);
 }
 
 /*---------- Flag ----------*/
@@ -460,7 +467,7 @@ void taDataFlag<valueType>::read(){
 
 template <class valueType>
 void taDataFlag<valueType>::write(QFile& file){
-    this->file->parent->binChanger.intWrite(file, this->value);
+    BinChanger::intWrite(file, this->value);
 }
 
 /*---------- Point ----------*/
@@ -500,12 +507,12 @@ void taDataPoint<valueType>::read(){
 template <class valueType>
 void taDataPoint<valueType>::write(QFile& file){
     QByteArray hexFloat;
-    hexFloat = this->file->parent->binChanger.float_to_hex(this->value.x());
-    this->file->parent->binChanger.hexWrite(file, hexFloat);
-    hexFloat = this->file->parent->binChanger.float_to_hex(this->value.y());
-    this->file->parent->binChanger.hexWrite(file, hexFloat);
-    hexFloat = this->file->parent->binChanger.float_to_hex(this->value.z());
-    this->file->parent->binChanger.hexWrite(file, hexFloat);
+    hexFloat = BinChanger::float_to_hex(this->value.x());
+    BinChanger::hexWrite(file, hexFloat);
+    hexFloat = BinChanger::float_to_hex(this->value.y());
+    BinChanger::hexWrite(file, hexFloat);
+    hexFloat = BinChanger::float_to_hex(this->value.z());
+    BinChanger::hexWrite(file, hexFloat);
 }
 
 template <class valueType>
@@ -563,10 +570,10 @@ void taDataColor<valueType>::read(){
 
 template <class valueType>
 void taDataColor<valueType>::write(QFile& file){
-    this->file->parent->binChanger.intWrite(file, this->value.red());
-    this->file->parent->binChanger.intWrite(file, this->value.green());
-    this->file->parent->binChanger.intWrite(file, this->value.blue());
-    this->file->parent->binChanger.intWrite(file, this->value.alpha());
+    BinChanger::intWrite(file, this->value.red());
+    BinChanger::intWrite(file, this->value.green());
+    BinChanger::intWrite(file, this->value.blue());
+    BinChanger::intWrite(file, this->value.alpha());
 }
 
 template <class valueType>
@@ -633,14 +640,14 @@ void taDataQuaternion<valueType>::read(){
 template <class valueType>
 void taDataQuaternion<valueType>::write(QFile& file){
     QByteArray hexFloat;
-    hexFloat = this->file->parent->binChanger.float_to_hex(this->value.x());
-    this->file->parent->binChanger.hexWrite(file, hexFloat);
-    hexFloat = this->file->parent->binChanger.float_to_hex(this->value.y());
-    this->file->parent->binChanger.hexWrite(file, hexFloat);
-    hexFloat = this->file->parent->binChanger.float_to_hex(this->value.z());
-    this->file->parent->binChanger.hexWrite(file, hexFloat);
-    hexFloat = this->file->parent->binChanger.float_to_hex(this->value.scalar());
-    this->file->parent->binChanger.hexWrite(file, hexFloat);
+    hexFloat = BinChanger::float_to_hex(this->value.x());
+    BinChanger::hexWrite(file, hexFloat);
+    hexFloat = BinChanger::float_to_hex(this->value.y());
+    BinChanger::hexWrite(file, hexFloat);
+    hexFloat = BinChanger::float_to_hex(this->value.z());
+    BinChanger::hexWrite(file, hexFloat);
+    hexFloat = BinChanger::float_to_hex(this->value.scalar());
+    BinChanger::hexWrite(file, hexFloat);
 }
 
 template <class valueType>
@@ -729,9 +736,9 @@ void taDataIntArray<valueType>::read(){
 
 template <class valueType>
 void taDataIntArray<valueType>::write(QFile& file){
-    this->file->parent->binChanger.intWrite(file, this->values.size());
+    BinChanger::intWrite(file, this->values.size());
     for(int i = 0; i < this->values.size(); i++){
-        this->file->parent->binChanger.intWrite(file, this->values[i]);
+        BinChanger::intWrite(file, this->values[i]);
     }
 }
 
@@ -767,10 +774,10 @@ void taDataFloatArray<valueType>::read(){
 
 template <class valueType>
 void taDataFloatArray<valueType>::write(QFile& file){
-    this->file->parent->binChanger.intWrite(file, this->values.size());
+    BinChanger::intWrite(file, this->values.size());
     for(int i = 0; i < this->values.size(); i++){
-        QByteArray hexFloat = this->file->parent->binChanger.float_to_hex(this->values[i]);
-        this->file->parent->binChanger.hexWrite(file, hexFloat);
+        QByteArray hexFloat = BinChanger::float_to_hex(this->values[i]);
+        BinChanger::hexWrite(file, hexFloat);
     }
 }
 
@@ -806,9 +813,9 @@ void taDataLinkArray<valueType>::read(){
 
 template <class valueType>
 void taDataLinkArray<valueType>::write(QFile& file){
-    this->file->parent->binChanger.intWrite(file, this->values.size());
+    BinChanger::intWrite(file, this->values.size());
     for(int i = 0; i < this->values.size(); i++){
-        this->file->parent->binChanger.shortWrite(file, this->values[i]);
+        BinChanger::shortWrite(file, this->values[i]);
     }
 }
 
@@ -860,10 +867,10 @@ void taDataStringArray<valueType>::read(){
 
 template <class valueType>
 void taDataStringArray<valueType>::write(QFile& file){
-    this->file->parent->binChanger.intWrite(file, this->values.size());
+    BinChanger::intWrite(file, this->values.size());
     for(int i = 0; i < this->values.size(); i++){
-        this->file->parent->binChanger.intWrite(file, this->values[i].length());
-        this->file->parent->binChanger.hexWrite(file, this->values[i].toUtf8());
+        BinChanger::intWrite(file, this->values[i].length());
+        BinChanger::hexWrite(file, this->values[i].toUtf8());
     }
 }
 
@@ -909,15 +916,15 @@ void taDataVectorArray<valueType>::read(){
 
 template <class valueType>
 void taDataVectorArray<valueType>::write(QFile& file){
-    this->file->parent->binChanger.intWrite(file, this->values.size());
+    BinChanger::intWrite(file, this->values.size());
     QByteArray hexFloat;
     for(int i = 0; i < this->values.size(); i++){
-        hexFloat = this->file->parent->binChanger.float_to_hex(this->values[i].x());
-        this->file->parent->binChanger.hexWrite(file, hexFloat);
-        hexFloat = this->file->parent->binChanger.float_to_hex(this->values[i].y());
-        this->file->parent->binChanger.hexWrite(file, hexFloat);
-        hexFloat = this->file->parent->binChanger.float_to_hex(this->values[i].z());
-        this->file->parent->binChanger.hexWrite(file, hexFloat);
+        hexFloat = BinChanger::float_to_hex(this->values[i].x());
+        BinChanger::hexWrite(file, hexFloat);
+        hexFloat = BinChanger::float_to_hex(this->values[i].y());
+        BinChanger::hexWrite(file, hexFloat);
+        hexFloat = BinChanger::float_to_hex(this->values[i].z());
+        BinChanger::hexWrite(file, hexFloat);
     }
 }
 
@@ -1007,7 +1014,7 @@ void taDataEnum::read(){
 
 void taDataEnum::write(QFile& file){
     //this->file->parent->log("Enum values cannot be written to binary Definition (BMD) files. Incompatible item: " + this->name);
-    this->file->parent->binChanger.intWrite(file, this->defaultValue);
+    BinChanger::intWrite(file, this->defaultValue);
 }
 
 std::shared_ptr<taData> dictItem::editAttributeValue(QString itemType, std::shared_ptr<taData> itemToEdit){
@@ -1017,19 +1024,19 @@ std::shared_ptr<taData> dictItem::editAttributeValue(QString itemType, std::shar
     QStringList listWindows = {"StringArray", "IntegerArray", "FloatArray", "LinkArray"};
 
     if(itemType == "Bool"){
-        dialogGetValue = ProgWindow::makeSpecificPopup(isDialogOpen, {"checkbox"}, {""});
+        dialogGetValue = exWindow::MakeSpecificPopup(isDialogOpen, {"checkbox"}, {""});
         dialogGetValue->checkOption->setText("Set value to true?");
     } else if(itemType == "String"){
-        dialogGetValue = ProgWindow::makeSpecificPopup(isDialogOpen, {"lineedit"}, {"Value:"});
+        dialogGetValue = exWindow::MakeSpecificPopup(isDialogOpen, {"lineedit"}, {"Value:"});
         QTimer::singleShot(0, dialogGetValue, [dialogGetValue]{dialogGetValue->lineOption->setFocus();});
     } else if(itemType == "Float"){
-        dialogGetValue = ProgWindow::makeSpecificPopup(isDialogOpen, {"lineedit"}, {"Value:"});
+        dialogGetValue = exWindow::MakeSpecificPopup(isDialogOpen, {"lineedit"}, {"Value:"});
         /*Need to find the actual maximum and minimum*/
         QValidator *validator = new QDoubleValidator(-4000, 4000, 3, dialogGetValue);
         dialogGetValue->lineOption->setValidator(validator);
         QTimer::singleShot(0, dialogGetValue, [dialogGetValue]{dialogGetValue->lineOption->setFocus();});
     } else if(itemType == "Quaternion"){
-        dialogGetValue = ProgWindow::makeSpecificPopup(isDialogOpen, {"boxset", "4"}, {"x:", "y:", "z:", "scalar:"});
+        dialogGetValue = exWindow::MakeSpecificPopup(isDialogOpen, {"boxset", "4"}, {"x:", "y:", "z:", "scalar:"});
         /*Need to find the actual maximum and minimum*/
         QValidator *validator = new QDoubleValidator(-4000, 4000, 3, dialogGetValue);
         for(int i = 0; i < dialogGetValue->boxList.size(); i++){
@@ -1037,7 +1044,7 @@ std::shared_ptr<taData> dictItem::editAttributeValue(QString itemType, std::shar
         }
         QTimer::singleShot(0, dialogGetValue, [dialogGetValue]{dialogGetValue->boxList[0]->setFocus();});
     } else if(itemType == "Integer"){
-        dialogGetValue = ProgWindow::makeSpecificPopup(isDialogOpen, {"lineedit"}, {"Value:"});
+        dialogGetValue = exWindow::MakeSpecificPopup(isDialogOpen, {"lineedit"}, {"Value:"});
         /*Need to find the actual maximum and minimum*/
         QValidator *validator = new QIntValidator(-4000, 4000, dialogGetValue);
         dialogGetValue->lineOption->setValidator(validator);
@@ -1045,7 +1052,7 @@ std::shared_ptr<taData> dictItem::editAttributeValue(QString itemType, std::shar
     } else if(itemType == "Link" || itemType == "Flag"){
         /*Currently only limits to short, so this accommodates both Link and Flag. Later, having link pull from
          the list of available Instances would be convenient*/
-        dialogGetValue = ProgWindow::makeSpecificPopup(isDialogOpen, {"lineedit"}, {"Value:"});
+        dialogGetValue = exWindow::MakeSpecificPopup(isDialogOpen, {"lineedit"}, {"Value:"});
         QValidator *validator = new QIntValidator(0, 65535, dialogGetValue);
         dialogGetValue->lineOption->setValidator(validator);
         QTimer::singleShot(0, dialogGetValue, [dialogGetValue]{dialogGetValue->lineOption->setFocus();});
@@ -1054,7 +1061,7 @@ std::shared_ptr<taData> dictItem::editAttributeValue(QString itemType, std::shar
         QValidator *validator = new QIntValidator(0, 65535, dialogGetValue);
         dialogGetValue->lineOption->setValidator(validator);
     }*/else if(itemType == "Point"){
-        dialogGetValue = ProgWindow::makeSpecificPopup(isDialogOpen, {"boxset", "3"}, {"x:", "y:", "z:"});
+        dialogGetValue = exWindow::MakeSpecificPopup(isDialogOpen, {"boxset", "3"}, {"x:", "y:", "z:"});
         /*Need to find the actual maximum and minimum*/
         QValidator *validator = new QDoubleValidator(-4000, 4000, 3, dialogGetValue);
         for(int i = 0; i < dialogGetValue->boxList.size(); i++){
@@ -1063,7 +1070,7 @@ std::shared_ptr<taData> dictItem::editAttributeValue(QString itemType, std::shar
         //dialogGetValue->setFocusProxy(dialogGetValue->boxList[0]); //this does nothing, not sure why
         QTimer::singleShot(0, dialogGetValue, [dialogGetValue]{dialogGetValue->boxList[0]->setFocus();});
     } else if(itemType == "Enum"){
-        dialogGetValue = ProgWindow::makeSpecificPopup(isDialogOpen, {"button","combobox"}, {"Add option", "Value options"});
+        dialogGetValue = exWindow::MakeSpecificPopup(isDialogOpen, {"button","combobox"}, {"Add option", "Value options"});
         for(int i = 0; i < itemToEdit->options().size(); i++){
             dialogGetValue->comboOption->addItem(itemToEdit->options()[i]);
         }
@@ -1077,7 +1084,7 @@ std::shared_ptr<taData> dictItem::editAttributeValue(QString itemType, std::shar
     } else if(listWindows.contains(itemType)){
         //Array values will be unsupported on the initial update.
         //need to look into the different options and see which one will be easiest for these
-        dialogGetValue = ProgWindow::makeSpecificPopup(isDialogOpen, {"list"}, {itemType + " values:"});
+        dialogGetValue = exWindow::MakeSpecificPopup(isDialogOpen, {"list"}, {itemType + " values:"});
         CustomPopup::connect(dialogGetValue->listOption->itemDelegate(), &QAbstractItemDelegate::commitData, dialogGetValue, [dialogGetValue]() {
             if(dialogGetValue->listOption->itemAt(0, dialogGetValue->listOption->count())->text() != ""){
                 dialogGetValue->addBlankItem();
@@ -1087,7 +1094,7 @@ std::shared_ptr<taData> dictItem::editAttributeValue(QString itemType, std::shar
     } /*else if(itemType == "VectorArray"){
     }*/ else if(itemType == "Color"){
         //there is a color select dialog - implement this at some point
-        dialogGetValue = ProgWindow::makeSpecificPopup(isDialogOpen, {"boxset", "4"}, {"r:", "g:", "b:", "a:"});
+        dialogGetValue = exWindow::MakeSpecificPopup(isDialogOpen, {"boxset", "4"}, {"r:", "g:", "b:", "a:"});
         QValidator *validator = new QIntValidator(0, 255, dialogGetValue);
         for(int i = 0; i < dialogGetValue->boxList.size(); i++){
             dialogGetValue->boxList[i]->setValidator(validator);
@@ -1108,7 +1115,7 @@ std::shared_ptr<taData> dictItem::editAttributeValue(QString itemType, std::shar
 
     dialogGetValue->open();
     while(isDialogOpen){
-        ProgWindow::forceProcessEvents();
+        exWindow::ForceProcessEvents();
     }
     int resultDialog = dialogGetValue->result();
 
@@ -1191,7 +1198,7 @@ std::shared_ptr<taData> dictItem::editAttributeValue(QString itemType, std::shar
 
 std::shared_ptr<taData> dictItem::editEnumDefinition(std::shared_ptr<taData> itemToEdit){
     bool isDialogOpen = true;
-    CustomPopup* dialogGetValue = ProgWindow::makeSpecificPopup(isDialogOpen, {"combobox"}, {""});
+    CustomPopup* dialogGetValue = exWindow::MakeSpecificPopup(isDialogOpen, {"combobox"}, {""});
     dialogGetValue->setWindowTitle("Select edit type.");
     QStringList editOptions = {"Change default value", "Add new value"};
 
@@ -1201,7 +1208,7 @@ std::shared_ptr<taData> dictItem::editEnumDefinition(std::shared_ptr<taData> ite
 
     dialogGetValue->open();
     while(isDialogOpen){
-        ProgWindow::forceProcessEvents();
+        exWindow::ForceProcessEvents();
     }
     int resultDialog = dialogGetValue->result();
 
@@ -1214,14 +1221,14 @@ std::shared_ptr<taData> dictItem::editEnumDefinition(std::shared_ptr<taData> ite
 
     switch(selectedEdit){
     case 0: //change value
-        dialogGetValue = ProgWindow::makeSpecificPopup(isDialogOpen, {"combobox"}, {"Value options:"});
+        dialogGetValue = exWindow::MakeSpecificPopup(isDialogOpen, {"combobox"}, {"Value options:"});
         for(int i = 0; i < itemToEdit->options().size(); i++){
             dialogGetValue->comboOption->addItem(itemToEdit->options()[i]);
         }
         dialogGetValue->setWindowTitle("Select value");
         break;
     case 1: //add value
-        dialogGetValue = ProgWindow::makeSpecificPopup(isDialogOpen, {"lineedit"}, {"New value:"});
+        dialogGetValue = exWindow::MakeSpecificPopup(isDialogOpen, {"lineedit"}, {"New value:"});
         dialogGetValue->setWindowTitle("Add value");
         break;
     default: //unknown option
@@ -1233,7 +1240,7 @@ std::shared_ptr<taData> dictItem::editEnumDefinition(std::shared_ptr<taData> ite
     isDialogOpen = true;
     dialogGetValue->open();
     while(isDialogOpen){
-        ProgWindow::forceProcessEvents();
+        exWindow::ForceProcessEvents();
     }
     resultDialog = dialogGetValue->result();
 
@@ -1277,7 +1284,7 @@ int dictItem::addAttribute(QString itemType){
 
     bool isDialogOpen = true;
 
-    CustomPopup* dialogCreateAttribute = ProgWindow::makeSpecificPopup(isDialogOpen, {"combobox", "lineedit"}, {"Attribute type:", "Attribute Name:"});
+    CustomPopup* dialogCreateAttribute = exWindow::MakeSpecificPopup(isDialogOpen, {"combobox", "lineedit"}, {"Attribute type:", "Attribute Name:"});
     dialogCreateAttribute->setWindowTitle("Create New Attribute");
 
     for(int i = 0; i < valueTypes.size(); i++){
@@ -1286,7 +1293,7 @@ int dictItem::addAttribute(QString itemType){
 
     dialogCreateAttribute->open();
     while(isDialogOpen){
-        ProgWindow::forceProcessEvents();
+        exWindow::ForceProcessEvents();
     }
     int resultDialog = dialogCreateAttribute->result();
 

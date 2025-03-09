@@ -1,11 +1,9 @@
 #ifndef MODHANDLER_H
 #define MODHANDLER_H
 
+/*The only thing we need from datahandler is ExodusOption, this could be rearranged a bit better*/
 #include "Headers/Databases/DataHandler.h"
 #include <QCheckBox>
-
-class ProgWindow;
-
 
 class RandomizerMod : public ExodusOption{
 public:
@@ -21,23 +19,16 @@ public:
     QStringList affectedFolders;
 };
 
-class FolderOption{
-public:
-    QString folderName;
-    bool moddedSource; //0 for unmodded
-    bool zipped; //0 for uncompressed
-    QCheckBox *checkOption;
-};
-
 class ModHandler{
 public:
-    ProgWindow* parent;
+    exWindow* m_UI;
+    zlManager* m_zlManager;
+    exDebugger* m_Debug;
     std::vector<FileReplacement> replacementList;
     std::vector<RandomizerMod> modList;
-    std::vector<FolderOption> folderOptions;
+    std::vector<taFolder> folderOptions;
 
-    ModHandler(ProgWindow* passParent);
-    ModHandler();
+    ModHandler(zlManager *fileManager);
 
     void updateCenter();
     void setChanges();

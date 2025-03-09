@@ -3,33 +3,20 @@
 
 #include <QQuaternion>
 #include <QString>
-#include <map>
 #include <QFile>
 #include <QTreeView>
 #include <QStandardItemModel>
 
-#include "Headers/Main/BinChanger.h"
+#include "Headers/FileManagement/taFileSystemObject.h"
 
 
-/*Someone should do something with this at some point - I feel like it could cut down on all the switch statements later on.
-
-template <class dictTest>
-class dictItem2{
-public:
-    dictTest value;
-
-    dictTest parseFloat();
-};
-
-std::map<QString, std::function<std::variant<dictItem2<float>, dictItem2<int>>>> parsers;
-*/
-
-class ProgWindow;
+class zlManager;
 //class TMDFile;
 class DefinitionFile;
 class FileData;
 class taDataEnum;
 class FileVisitor;
+class SectionHeader;
 
 class taData{
 public:
@@ -40,7 +27,7 @@ public:
     bool inherited;
     QString name;
     QString comment;
-    TFFile *file;
+    taFile *file;
 
     taData(){};
     taData(taData *copyData){
@@ -351,7 +338,7 @@ public:
     }
 };
 
-class DictionaryFile : public TFFile {
+class DictionaryFile : public taFile {
 public:
     virtual const QString fileCategory(){
         return "Database";
@@ -483,7 +470,7 @@ public:
     void removeTreeInstance(QModelIndex item);
     void removeAttribute(int instanceIndex, int itemIndex);
     void removeInstance(int instanceIndex);
-    void acceptVisitor(ProgWindow& visitor);
+    void acceptVisitor(zlManager& visitor);
 };
 
 #endif // DATABASE_H

@@ -2,13 +2,13 @@
 #define VBIN_H
 
 #include <QVector>
-#include <QQuaternion>
 #include <QByteArrayMatcher>
 #include <QTransform>
 #include <QBuffer>
 
 #include "Antioch2.h"
-#include "Headers/Main/BinChanger.h"
+#include "Headers/FileManagement/taFileSystemObject.h"
+#include "Headers/Models/Mesh.h"
 
 //just change over to this.
 //https://doc.qt.io/qt-5/qt3drender-qattribute.html
@@ -17,36 +17,8 @@
 
 class ProgWindow;
 
-class VBIN;
-class Mesh;
-class SceneNode;
 class MeshVBIN;
-
-class Triangle{
-  public:
-    QVector3D vertex1;
-    QVector3D vertex2;
-    QVector3D vertex3;
-};
-
-class TriangleStrip{
-public:
-    std::vector<int> stripIndecies;
-};
-
-class BoundingVolume{
-public:
-    SectionHeader headerData;
-    int version;
-    bool hasVolume;
-    int type;
-    QVector3D center;
-    float radius;
-    FileData *fileData;
-
-    void populateData();
-    const void operator=(BoundingVolume input);
-};
+class SectionHeader;
 
 //something like this can be used to improve Normal, Color, and Position arrays
 template <typename T> class binArray {
@@ -57,43 +29,6 @@ public:
     QVector3D valueList[];
 };
 
-class NormalArray{
-public:
-  int arrayID;
-  long arrayLength;
-  QString meshName;
-  FileData *fileData;
-  std::vector<QVector3D> positionList;
-};
-
-class ColorArray{
-public:
-  int arrayID;
-  long arrayLength;
-  QString meshName;
-  FileData *fileData;
-  std::vector<QColor> positionList;
-};
-
-class TextureCoords{
-public:
-  int arrayID;
-  long arrayLength;
-  QString meshName;
-  FileData *fileData;
-  std::vector<QVector2D> positionList;
-};
-
-class Modifications{
-public:
-    int modByte;
-    QVector3D offset;
-    QQuaternion rotation;
-    float scale;
-
-    void clear();
-};
-
 class Portal{
   public:
     int dataLength; //appears to always be 92
@@ -102,47 +37,6 @@ class Portal{
     QVector3D unknownPoint;
     std::vector<QVector3D> pointList;
     float unknownValue;
-};
-
-class FileSection{
-public:
-    VBIN *file;
-    FileData *fileData;
-    FileSection *parent;
-    SectionHeader headerData;
-    long sectionEnd;
-    BoundingVolume boundVol;
-
-    Modifications mods;
-
-    QStringList sectionTypes;
-    std::vector<FileSection*> sectionList;
-    std::vector<Mesh*> meshList;
-
-    void getSceneNodeTree(long searchStart, long searchEnd, int depth);
-    void readNode();
-    void sendKeyframe(QVector3D keyOffset, QString channelName);
-    void sendKeyframe(QQuaternion keyRotation, QString channelName);
-    void readModifications();
-    //void getModifications();
-    //void modifyPosArrays(std::vector<Modifications> addedMods);
-    void printInfo(int depth); // for debugging
-    const void operator=(FileSection input);
-    void writeSectionListSTL(QTextStream &file);
-    void writeSectionListSTL(QString path);
-    bool meshListContains(QString checkName);
-    void modify(std::vector<Modifications> addedMods);
-    // void modifyPosArrays(); //this might go somewhere else, just
-    // commenting out for now
-
-    void searchListsWriteDAE(QTextStream &fileOut, void (Mesh::*)(QTextStream&));
-    void writeNodes(QTextStream &fileOut);
-    virtual void writeNodesDAE(QTextStream &fileOut);
-
-    //template<typename WriteType>
-    //void searchListsWriteDAE(QString path, WriteType *write);
-
-    void clear();
 };
 
 class vlLodSwitcher : public FileSection{
@@ -214,7 +108,7 @@ public:
     BoundingVolume boundingVolume2;
 };
 
-class VBIN : public TFFile {
+class VBIN : public taFile {
 public:
     const QStringList knownSections = {"SceneNode", "Mesh", "anAnimationPrototype", "BoundingVolume", "vlLODSwitcher", "anAnimationSourceSet", "LevelMasks", "Instance","vlCellManager"
                                       "CellManager", "Portals", "vlCell", "Cell"};
@@ -224,6 +118,8 @@ public:
     virtual const QString fileCategory(){
         return "Model";
     };
+
+    static inline QString version = "1.0";
     AnimationSourceSet animationSet;
     int highestLOD;
     long currentLocation;

@@ -1,4 +1,9 @@
-#include "Headers/Main/mainwindow.h"
+#include <QDateTime>
+
+#include "Headers/Main/exDebugger.h"
+#include "Headers/Models/vbin.h"
+#include "Headers/Databases/Database.h"
+#include "Headers/FileManagement/Zebrafish.h"
 
 /*This file handles the exporting of Database files to DAE format*/
 
@@ -28,14 +33,14 @@ void DatabaseFile::writeDAE(){
         }
     }
 
-    std::shared_ptr<TFFile> testLoaded;
-    std::vector<std::shared_ptr<TFFile>> loadedModels;
+    std::shared_ptr<taFile> testLoaded;
+    std::vector<std::shared_ptr<taFile>> loadedModels;
     for(int i = 0; i < uniquePrototypes.size(); i++){
-        testLoaded = parent->matchFile(uniquePrototypes[i] + ".VBIN");
+        testLoaded = m_zlManager->matchFile(uniquePrototypes[i] + ".VBIN");
         while(testLoaded == nullptr){
-            parent->messageError("Please load a file " + uniquePrototypes[i]+".VBIN");
-            parent->openFile("VBIN");
-            testLoaded = parent->matchFile(uniquePrototypes[i] + ".VBIN");
+            m_Debug->MessageError("Please load a file " + uniquePrototypes[i]+".VBIN");
+            m_zlManager->openFile("VBIN");
+            testLoaded = m_zlManager->matchFile(uniquePrototypes[i] + ".VBIN");
         }
         testLoaded->outputPath = outputPath;
         loadedModels.push_back(testLoaded);
@@ -48,7 +53,7 @@ void DatabaseFile::writeDAE(){
     file.close();
 
     if(!stlOut.open(QIODevice::ReadWrite)){
-        parent->messageError("DAE export failed, could not open output file.");
+        m_Debug->MessageError("DAE export failed, could not open output file.");
         return;
     }
     QTextStream stream(&stlOut);
@@ -59,8 +64,8 @@ void DatabaseFile::writeDAE(){
 
     stream << "  <asset>" << Qt::endl;
     stream << "    <contributor>" << Qt::endl;
-    stream << "      <author>PrincessTrevor</author>" << Qt::endl;
-    stream << "      <authoring_tool>Exodus v" << QString::number(parent->version) << "</authoring_tool>" << Qt::endl;
+    stream << "      <author>Everett Darling</author>" << Qt::endl;
+    stream << "      <authoring_tool>ExodusVBIN v" << VBIN::version << "</authoring_tool>" << Qt::endl;
     stream << "    </contributor>" << Qt::endl;
     stream << "    <created>" << QDateTime::currentDateTime().toString("yyyy-MM-dd") + "T" + QDateTime::currentDateTime().toString("hh:mm:ss") << "</created>" << Qt::endl;
     stream << "    <modified>" << QDateTime::currentDateTime().toString("yyyy-MM-dd") + "T" + QDateTime::currentDateTime().toString("hh:mm:ss") << "</modified>" << Qt::endl;

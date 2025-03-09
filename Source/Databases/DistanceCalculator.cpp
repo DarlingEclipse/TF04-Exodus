@@ -1,52 +1,57 @@
-#include "Headers/Main/mainwindow.h"
+#include <QPushButton>
+#include "Headers/Databases/DistanceCalculator.h"
+#include "Headers/UI/exWindow.h"
+#include "Headers/Main/exDebugger.h"
+#include "Headers/FileManagement/Zebrafish.h"
 
 void DistanceCalculator::userSelectLevel(int selectedLevel){
     //called when user makes a selection on the level list dropdown
     currentLevel = selectedLevel;
-    std::vector<dictItem> warpgateListRaw = parent->databaseList[currentLevel]->sendInstances("Warpgate");
+    std::vector<dictItem> warpgateListRaw = m_zlManager->databaseList[currentLevel]->sendInstances("Warpgate");
     //warpgateList = parent->databaseList[currentLevel]->sendWarpgates();
     //then currentlevel is used below to calculate the closest warpgate
 }
 
-DistanceCalculator::DistanceCalculator(ProgWindow *parentPass){
-    parent = parentPass;
-    qDebug() << Q_FUNC_INFO << "parent value properly passed, window width is" << parent->hSize;
-    if(parent->loadDatabases() != 0){
-        parent->log("Could not load databases. Warpgate calculator was not loaded.");
+DistanceCalculator::DistanceCalculator(zlManager *fileManager){
+    m_UI = &exWindow::GetInstance();
+    m_Debug = &exDebugger::GetInstance();
+    m_zlManager = fileManager;
+    if(m_zlManager->loadDatabases() != 0){
+        m_Debug->Log("Could not load databases. Warpgate calculator was not loaded.");
         return;
     }
-    parent->clearWindow();
-    QPushButton *ButtonCalculate = new QPushButton("Calculate", parent->centralContainer);
+    m_UI->ClearWindow();
+    QPushButton *ButtonCalculate = new QPushButton("Calculate", m_UI->m_centralContainer);
     ButtonCalculate->setGeometry(QRect(QPoint(50,320), QSize(150,30)));
-    QAbstractButton::connect(ButtonCalculate, &QPushButton::released, parent, [this] {calculateWarpgateDistance();});
-    parent->currentModeWidgets.push_back(ButtonCalculate);
+    QAbstractButton::connect(ButtonCalculate, &QPushButton::released, m_UI, [this] {calculateWarpgateDistance();});
+    m_UI->m_currentModeWidgets.push_back(ButtonCalculate);
     ButtonCalculate->show();
 
-    inputXValue = new QLineEdit("X Value", parent->centralContainer);
+    inputXValue = new QLineEdit("X Value", m_UI->m_centralContainer);
     inputXValue->setGeometry(QRect(QPoint(200,320), QSize(150,30)));
-    parent->currentModeWidgets.push_back(inputXValue);
+    m_UI->m_currentModeWidgets.push_back(inputXValue);
     inputXValue->show();
 
-    inputYValue = new QLineEdit("Y Value", parent->centralContainer);
+    inputYValue = new QLineEdit("Y Value", m_UI->m_centralContainer);
     inputYValue->setGeometry(QRect(QPoint(350,320), QSize(150,30)));
-    parent->currentModeWidgets.push_back(inputYValue);
+    m_UI->m_currentModeWidgets.push_back(inputYValue);
     inputYValue->show();
 
-    inputZValue = new QLineEdit("Z Value", parent->centralContainer);
+    inputZValue = new QLineEdit("Z Value", m_UI->m_centralContainer);
     inputZValue->setGeometry(QRect(QPoint(500,320), QSize(150,30)));
-    parent->currentModeWidgets.push_back(inputZValue);
+    m_UI->m_currentModeWidgets.push_back(inputZValue);
     inputZValue->show();
 
-    QComboBox* ListLevels = new QComboBox(parent->centralContainer);
+    QComboBox* ListLevels = new QComboBox(m_UI->m_centralContainer);
     ListLevels -> setGeometry(QRect(QPoint(250,150), QSize(200,30)));
 
-    for(int i=0; i<parent->databaseList.size(); ++i){
-        ListLevels->insertItem(i, parent->databaseList[i]->fileName);
+    for(int i=0; i<m_zlManager->databaseList.size(); ++i){
+        ListLevels->insertItem(i, m_zlManager->databaseList[i]->fileName);
     }
 
-    QComboBox::connect(ListLevels, &QComboBox::currentIndexChanged, parent, [ListLevels, this] {userSelectLevel(ListLevels->currentIndex());});
+    QComboBox::connect(ListLevels, &QComboBox::currentIndexChanged, m_UI, [ListLevels, this] {userSelectLevel(ListLevels->currentIndex());});
     ListLevels->show();
-    parent->currentModeWidgets.push_back(ListLevels);
+    m_UI->m_currentModeWidgets.push_back(ListLevels);
     ListLevels->setCurrentIndex(0);
 }
 
@@ -74,13 +79,13 @@ void DistanceCalculator::calculateWarpgateDistance(){
 
     qDebug() << Q_FUNC_INFO << "Closest warpgate: " << closestGate.name;
 
-    if(parent->ClosestWarpgate == nullptr){
-        parent->ClosestWarpgate = new QLabel(closestGate.name, parent->centralContainer);
-        parent->ClosestWarpgate->setGeometry(QRect(QPoint(650,320), QSize(450,30)));
-        parent->ClosestWarpgate->setStyleSheet("QLabel { background-color: rgb(105,140,187) }");
-        parent->ClosestWarpgate->show();
+    if(m_closestWarpgate == nullptr){
+        m_closestWarpgate = new QLabel(closestGate.name, m_UI->m_centralContainer);
+        m_closestWarpgate->setGeometry(QRect(QPoint(650,320), QSize(450,30)));
+        m_closestWarpgate->setStyleSheet("QLabel { background-color: rgb(105,140,187) }");
+        m_closestWarpgate->show();
     } else {
-        parent->ClosestWarpgate->setText(closestGate.name);
+        m_closestWarpgate->setText(closestGate.name);
     }
 }
 

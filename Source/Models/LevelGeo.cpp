@@ -1,4 +1,9 @@
-#include "Headers/Main/mainwindow.h"
+#include <QDateTime>
+
+#include "Headers/Models/LevelGeo.h"
+#include "Headers/Models/vbin.h" //only included for the version number in the export, this could be improved
+#include "Headers/Models/Mesh.h"
+#include "Headers/Main/exDebugger.h"
 
 void MeshVBIN::save(QString toType){
     if(toType == "STL"){
@@ -17,7 +22,7 @@ void MeshVBIN::load(QString fromType){
         failedRead = 1;
     }
     if(failedRead){
-        parent->messageError("There was an error reading " + fileName);
+        m_Debug->MessageError("There was an error reading " + fileName);
         return;
     }
 }
@@ -263,7 +268,7 @@ void GeometrySet::getVerticies(){
         }
 
         if (!recognizedSection) {
-            file->parent->log("Unrecognized section type " + QString::number(properties, 16) + " at " + QString::number(fileData->currentPosition) + " | " + QString(Q_FUNC_INFO));
+            file->m_Debug->Log("Unrecognized section type " + QString::number(properties, 16) + " at " + QString::number(fileData->currentPosition) + " | " + QString(Q_FUNC_INFO));
             fileData->currentPosition = headerData.sectionLocation + headerData.sectionLength;
             return;
         }
@@ -291,21 +296,21 @@ void GeometrySet::getVerticies(){
 }
 
 int MeshVBIN::readData(){
-    parent->fileData.currentPosition = 4;
+    fileData->currentPosition = 4;
     int geoSetCount = 0;
     int totalVerts = 0;
 
     SectionHeader signature;
-    parent->fileData.input = true;
+    fileData->input = true;
 
     //only reading the first geo set for now
-    parent->fileData.signature(&signature);
+    fileData->signature(&signature);
     qDebug() << Q_FUNC_INFO << "starting signature:" << signature.type;
     while(signature.type == "GeometrySet"){
         GeometrySet geoSet;
         geoSet.file = this;
         geoSet.headerData = signature;
-        geoSet.fileData = &parent->fileData;
+        geoSet.fileData = fileData;
         geoSet.geoSetID = geoSetCount;
         /*if(geoSetCount <= graphFile->textureNameList.size()-1){
             geoSet.textureName = graphFile->textureNameList[geoSetCount];
@@ -320,9 +325,9 @@ int MeshVBIN::readData(){
         geoSetCount++;
 
         //qDebug() << Q_FUNC_INFO << "starting next geo set at" << parent->fileData.currentPosition;
-        parent->fileData.signature(&signature);
+        fileData->signature(&signature);
     }
-   parent->log("total geo sets: " + QString::number(geoSets.size()) + " | " + QString(Q_FUNC_INFO));
+    m_Debug->Log("total geo sets: " + QString::number(geoSets.size()) + " | " + QString(Q_FUNC_INFO));
     qDebug() << Q_FUNC_INFO << "total geo set verts:" << totalVerts;
 
     qDebug() << Q_FUNC_INFO << "next signature:" << signature.type;
@@ -557,7 +562,7 @@ int MeshVBIN::outputDataSTL(){
     }
     stream << "endsolid Default" << Qt::endl;
 
-    parent->messageSuccess("STL file saved.");
+    m_Debug->MessageSuccess("STL file saved.");
     qDebug() << Q_FUNC_INFO << "STL output complete.";
 
     return 0;
@@ -570,7 +575,7 @@ int MeshVBIN::outputDataDAE(){
     file.close();
 
     if(!stlOut.open(QIODevice::ReadWrite)){
-        parent->messageError("DAE export failed, could not open output file.");
+        m_Debug->MessageError("DAE export failed, could not open output file.");
         return 1;
     }
     QTextStream stream(&stlOut);
@@ -581,8 +586,8 @@ int MeshVBIN::outputDataDAE(){
 
     stream << "  <asset>" << Qt::endl;
     stream << "    <contributor>" << Qt::endl;
-    stream << "      <author>PrincessTrevor</author>" << Qt::endl;
-    stream << "      <authoring_tool>Exodus v" << QString::number(parent->version) << "</authoring_tool>" << Qt::endl;
+    stream << "      <author>Everett Darling</author>" << Qt::endl;
+    stream << "      <authoring_tool>Exodus v" << VBIN::version << "</authoring_tool>" << Qt::endl;
     stream << "    </contributor>" << Qt::endl;
     stream << "    <created>" << QDateTime::currentDateTime().toString("yyyy-MM-dd") + "T" + QDateTime::currentDateTime().toString("hh:mm:ss") << "</created>" << Qt::endl;
     stream << "    <modified>" << QDateTime::currentDateTime().toString("yyyy-MM-dd") + "T" + QDateTime::currentDateTime().toString("hh:mm:ss") << "</modified>" << Qt::endl;
@@ -629,7 +634,7 @@ int MeshVBIN::outputDataDAE(){
 
     stream << "</COLLADA>" << Qt::endl;
 
-    parent->messageSuccess("DAE file saved.");
+    m_Debug->MessageSuccess("DAE file saved.");
     qDebug() << Q_FUNC_INFO << "DAE output complete.";
     return 0;
 }

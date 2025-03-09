@@ -1,5 +1,13 @@
+#include <QFileInfo>
+#include <QPushButton>
+#include <QInputDialog>
+#include <QHeaderView>
+#include <QDir>
 
-#include "Headers/Main/mainwindow.h"
+#include "Headers/Databases/Database.h"
+#include "Headers/FileManagement/Zebrafish.h"
+#include "Headers/UI/exWindow.h"
+#include "Headers/Main/exDebugger.h"
 
 /*Reads through a dictionary file to populate data. This data can be edited
 and re-exported or simply obeserved.
@@ -73,7 +81,7 @@ void DictionaryFile::load(QString fromType){
         failedRead = 1;
     }
     if(failedRead){
-        parent->messageError("There was an error reading " + fileName);
+        m_Debug->MessageError("There was an error reading " + fileName);
         return;
     }
     if(fromType == "BDB" || fromType == "TDB"){
@@ -86,15 +94,15 @@ void DictionaryFile::load(QString fromType){
 
 void DefinitionFile::updateCenter(){
     qDebug() << Q_FUNC_INFO << "updating center view for file" << fileName << "." << fileExtension;
-    parent->setUpdatesEnabled(false);
-    parent->clearWindow();
+    m_UI->setUpdatesEnabled(false);
+    m_UI->ClearWindow();
     createDBTree();
-    parent->setUpdatesEnabled(true);
+    m_UI->setUpdatesEnabled(true);
 }
 
 void DatabaseFile::updateCenter(){
     qDebug() << Q_FUNC_INFO << "updating center view for file" << fileName << "." << fileExtension;
-    parent->setUpdatesEnabled(false);
+    m_UI->setUpdatesEnabled(false);
     bool treeExisted = false;
     int selectedInstance = 0;
     if(dataModel != nullptr && dataTree != nullptr){
@@ -104,24 +112,24 @@ void DatabaseFile::updateCenter(){
         treeExisted = true;
         dataModel->clear();
     }
-    parent->clearWindow();
+    m_UI->ClearWindow();
     createDBTree();
 
     if(treeExisted){
         dataTree->setCurrentIndex(getInstanceToSelect(selectedInstance));
     }
-    QPushButton* ButtonFilterTree = new QPushButton("Filter Instances", parent->centralContainer);
+    QPushButton* ButtonFilterTree = new QPushButton("Filter Instances", m_UI->m_centralContainer);
     ButtonFilterTree->setGeometry(QRect(QPoint(50,370), QSize(150,30)));
-    QAbstractButton::connect(ButtonFilterTree, &QPushButton::released, parent, [this]{filterInstances();});
+    QAbstractButton::connect(ButtonFilterTree, &QPushButton::released, m_UI, [this]{filterInstances();});
     ButtonFilterTree->show();
-    parent->currentModeWidgets.push_back(ButtonFilterTree);
-    parent->setUpdatesEnabled(true);
+    m_UI->m_currentModeWidgets.push_back(ButtonFilterTree);
+    m_UI->setUpdatesEnabled(true);
 
 }
 
 void DefinitionFile::createDBTree(){
 
-    dataTree = new QTreeView(parent->centralContainer);
+    dataTree = new QTreeView(m_UI->m_centralContainer);
     dataModel = new QStandardItemModel;
 
     dataTree->setGeometry(QRect(QPoint(250,50), QSize(1000,750)));
@@ -174,12 +182,12 @@ void DefinitionFile::createDBTree(){
 
     //dataTree->expandAll();
     dataTree->expand(dataTree->model()->index(0, 0));
-    QTreeView::connect(dataTree, &QTreeView::expanded, parent, [this](QModelIndex index){setItemExpansion(index, true);});
-    QTreeView::connect(dataTree, &QTreeView::collapsed, parent, [this](QModelIndex index){setItemExpansion(index, false);});
+    QTreeView::connect(dataTree, &QTreeView::expanded, m_UI, [this](QModelIndex index){setItemExpansion(index, true);});
+    QTreeView::connect(dataTree, &QTreeView::collapsed, m_UI, [this](QModelIndex index){setItemExpansion(index, false);});
     dataTree->show();
     dataTree->resizeColumnToContents(0);
-    QAbstractButton::connect(dataTree, &QAbstractItemView::doubleClicked, parent, [this](QModelIndex selected){editRow(selected);});
-    parent->currentModeWidgets.push_back(dataTree);
+    QAbstractButton::connect(dataTree, &QAbstractItemView::doubleClicked, m_UI, [this](QModelIndex selected){editRow(selected);});
+    m_UI->m_currentModeWidgets.push_back(dataTree);
 }
 
 int DatabaseFile::addInstance(dictItem itemToAdd){
@@ -246,7 +254,7 @@ void DatabaseFile::filterInstances(){
         filterOptions.push_back(dictionary[i].name);
     }
 
-    QString filterChoice = QInputDialog::getItem(parent, parent->tr("Filter Instances"), parent->tr("Select instance type:")
+    QString filterChoice = QInputDialog::getItem(m_UI, m_UI->tr("Filter Instances"), m_UI->tr("Select instance type:")
                                                            ,filterOptions, 0, false);
     //clear dataTree, or at least the instances section
     QStandardItem *item = dataModel->invisibleRootItem();
@@ -311,8 +319,8 @@ QList<QStandardItem *> DatabaseFile::createInstanceRow(std::shared_ptr<taData> d
 
 void DatabaseFile::createDBTree(){
 
-    dataTree = new QTreeView(parent->centralContainer);
-    parent->currentModeWidgets.push_back(dataTree);
+    dataTree = new QTreeView(m_UI->m_centralContainer);
+    m_UI->m_currentModeWidgets.push_back(dataTree);
     dataModel = new QStandardItemModel;
 
     QHeaderView *headers = dataTree->header();
@@ -377,14 +385,14 @@ void DatabaseFile::createDBTree(){
 
     //dataTree->setSortingEnabled(true);
     //dataTree->expandAll();
-    QTreeView::connect(dataTree, &QTreeView::expanded, parent, [this](QModelIndex index){setItemExpansion(index, true);});
-    QTreeView::connect(dataTree, &QTreeView::collapsed, parent, [this](QModelIndex index){setItemExpansion(index, false);});
-    QTreeView::connect(dataTree, &QTreeView::destroyed, parent, [this](){dataTree = nullptr;});
+    QTreeView::connect(dataTree, &QTreeView::expanded, m_UI, [this](QModelIndex index){setItemExpansion(index, true);});
+    QTreeView::connect(dataTree, &QTreeView::collapsed, m_UI, [this](QModelIndex index){setItemExpansion(index, false);});
+    QTreeView::connect(dataTree, &QTreeView::destroyed, m_UI, [this](){dataTree = nullptr;});
     dataTree->expand(dataTree->model()->index(1, 0));
     dataTree->expand(dataTree->model()->index(0, 0));
     dataTree->show();
     dataTree->resizeColumnToContents(0);
-    QAbstractButton::connect(dataTree, &QAbstractItemView::doubleClicked, parent, [this](QModelIndex selected){editRow(selected);});
+    QAbstractButton::connect(dataTree, &QAbstractItemView::doubleClicked, m_UI, [this](QModelIndex selected){editRow(selected);});
 }
 
 void DatabaseFile::removeTreeInstance(QModelIndex item){
@@ -437,7 +445,7 @@ int DefinitionFile::dictItemIndex(int dictIndex, QString searchName){
             return i;
         }
     }
-    parent->log("Item " + searchName + " not found in " + dictionary[dictIndex].name + "| " + QString(Q_FUNC_INFO));
+    m_Debug->Log("Item " + searchName + " not found in " + dictionary[dictIndex].name + "| " + QString(Q_FUNC_INFO));
     return -1;
 }
 
@@ -660,12 +668,12 @@ int DictionaryFile::readBinary(){
      Ideally I'd like to get this out of a while loop but this works well enough for now.
     */
     SectionHeader majorSignature;
-    qDebug() << Q_FUNC_INFO << "THE FUNCTION RUNS. file length" << parent->fileData.dataBytes.size() << "binary?" << binary;
+    qDebug() << Q_FUNC_INFO << "THE FUNCTION RUNS. file length" << fileData->dataBytes.size() << "binary?" << binary;
 
-    parent->fileData.currentPosition = 4;
-    versionNumber = parent->fileData.readUInt();
+    fileData->currentPosition = 4;
+    versionNumber = fileData->readUInt();
     fileData->signature(&majorSignature);
-    //qDebug() << Q_FUNC_INFO << "section type: " << majorSignature.type << "current position" << parent->fileData.currentPosition << "section end:" << endSection;
+    //qDebug() << Q_FUNC_INFO << "section type: " << majorSignature.type << "current position" << fileData->currentPosition << "section end:" << endSection;
     while (fileData->currentPosition != -1 and fileData->currentPosition < fileData->dataBytes.size()){
         //majorSections.push_back(majorSignature.type);
         endSection = majorSignature.sectionLocation + majorSignature.sectionLength;
@@ -694,18 +702,18 @@ int DictionaryFile::readBinary(){
         }
 
         if (knownSections.indexOf(majorSignature.type) == -1) {
-            parent->log("unrecognized section name: " + majorSignature.type + "| " + QString(Q_FUNC_INFO));
+            m_Debug->Log("unrecognized section name: " + majorSignature.type + "| " + QString(Q_FUNC_INFO));
             failed = 1;
         }
 
         if(failed){
-            parent->messageError("There was an error while reading the Dictionary section.");
+            m_Debug->MessageError("There was an error while reading the Dictionary section.");
             return 1;
         }
 
         //qDebug() << Q_FUNC_INFO << "temp read position" << tempRead.currentPosition << "databytes length" << tempRead.dataBytes.length();
         fileData->signature(&majorSignature);
-        //qDebug() << Q_FUNC_INFO << "section type: " << majorSignature.type << "current position" << parent->fileData.currentPosition << "section end:" << endSection;
+        //qDebug() << Q_FUNC_INFO << "section type: " << majorSignature.type << "current position" << fileData->currentPosition << "section end:" << endSection;
     }
 
     for(int i = 0; i < dictionary.size();i++){
@@ -733,18 +741,18 @@ int DictionaryFile::readIncludedFiles(QString fullRead){
 
     if(fullRead.contains(":")){
         failed = 1;
-        parent->log("Included file references a different drive - we don't have the required file.");
+        m_Debug->Log("Included file references a different drive - we don't have the required file.");
         return failed;
     }
 
     QString extension = fullRead.right(3).toUpper();
-    parent->loadRequiredFile(this, fullRead, extension);
+    m_zlManager->loadRequiredFile(this, fullRead, extension);
 
     static QRegularExpression pathRemover = QRegularExpression("../");
     inheritedFileRelativePath = fullRead;
     inheritedFileName = fullRead.remove(pathRemover);
     inheritedFileRelativePath = inheritedFileRelativePath.remove(inheritedFileName);
-    inheritedFile = std::static_pointer_cast<DefinitionFile>(parent->matchFile(inheritedFileName));
+    inheritedFile = std::static_pointer_cast<DefinitionFile>(m_zlManager->matchFile(inheritedFileName));
 
     if(inheritedFile != nullptr){
         //qDebug() << Q_FUNC_INFO << "The Database file includes the loaded Definition file. We can continue.";
@@ -752,7 +760,7 @@ int DictionaryFile::readIncludedFiles(QString fullRead){
     }
 
     if(failed){
-        parent->messageError("The file does not include a loaded TMD/BMD file. Please verify that the correct files are loaded."
+        m_Debug->MessageError("The file does not include a loaded TMD/BMD file. Please verify that the correct files are loaded."
                              "TDB/BDB file includes:" + fullRead);
     }
     return failed;
@@ -842,7 +850,7 @@ int DefinitionFile::readDictionary(){
 
             std::shared_ptr<taData> itemDetails = createItem(dataType);
             if(itemDetails == nullptr){
-                parent->messageError("Unknown item type encountered.");
+                m_Debug->MessageError("Unknown item type encountered.");
                 return 1;
             }
             itemDetails->file = this;
@@ -927,7 +935,7 @@ int DatabaseFile::readFileDictionary(){
                 break;
             }
             if(i+1 == inheritedFile->dictionary.size()){
-                parent->log("Section of type " + signature.type + " was not found in " + inheritedFile->fullFileName() + "| " + QString(Q_FUNC_INFO));
+                m_Debug->Log("Section of type " + signature.type + " was not found in " + inheritedFile->fullFileName() + "| " + QString(Q_FUNC_INFO));
                 return 1;
             }
         }
@@ -1141,7 +1149,7 @@ void DatabaseFile::createItem(){
         options.append(dictionary[i].name);
     }
 
-    QString chosenClass = QInputDialog::getItem(parent, parent->tr("Select TDB File:"), parent->tr("File Name:"), options, 0, false, &cancelled);
+    QString chosenClass = QInputDialog::getItem(m_UI, m_UI->tr("Select TDB File:"), m_UI->tr("File Name:"), options, 0, false, &cancelled);
     //then a dialog box for each value in that class prompting for user input
     //give an option for "default"
 }
@@ -1177,7 +1185,7 @@ int DictionaryFile::readText(){
     SectionHeader majorSignature;
     SectionHeader minorSignature;
     //QString majorName;
-    //qDebug() << Q_FUNC_INFO << "THE FUNCTION RUNS. file length" << parent->fileData.dataBytes.size();
+    //qDebug() << Q_FUNC_INFO << "THE FUNCTION RUNS. file length" << fileData->dataBytes.size();
 
     fileData->currentPosition = 0;
     versionNumber = fileData->readHex(4).toInt(nullptr);
@@ -1214,7 +1222,7 @@ int DictionaryFile::readText(){
             failed = readDictionary();
             if(failed){
                 qDebug() << Q_FUNC_INFO << "File name:" << fileName << "and type" << fileExtension;
-                parent->messageError("There was an error while reading the Dictionary section.");
+                m_Debug->MessageError("There was an error while reading the Dictionary section.");
                 return 1;
             }
             fileData->nextLine();
@@ -1224,7 +1232,7 @@ int DictionaryFile::readText(){
             qDebug() << Q_FUNC_INFO << "Reading a filedictionary section - TDB files only.";
             failed = readFileDictionary();
             if(failed){
-                parent->messageError("There was an error while reading the FileDictionary section.");
+                m_Debug->MessageError("There was an error while reading the FileDictionary section.");
                 return 1;
             }
             fileData->nextLine();
@@ -1235,7 +1243,7 @@ int DictionaryFile::readText(){
             qDebug() << Q_FUNC_INFO << "Reading an Instances section - TDB files only.";
             failed = readInstances();
             if(failed){
-                parent->messageError("There was an error while reading the Instance section.");
+                m_Debug->MessageError("There was an error while reading the Instance section.");
                 return 1;
             }
             fileData->nextLine();
@@ -1399,18 +1407,18 @@ void DefinitionFile::writeBinary(){
         //getFileLengths();
 
         bmdOut.write("FISH");
-        parent->binChanger.intWrite(bmdOut, versionNumber);
+        BinChanger::intWrite(bmdOut, versionNumber);
         bmdOut.write("~IncludedFiles");
-        parent->binChanger.shortWrite(bmdOut, 0);
+        BinChanger::shortWrite(bmdOut, 0);
         if(inheritedFile != nullptr){
             qDebug() << Q_FUNC_INFO << "includedFile value" << includedFilePath << "length" << 4+includedFilePath.length();
-            parent->binChanger.intWrite(bmdOut, 4+includedFilePath.length());
+            BinChanger::intWrite(bmdOut, 4+includedFilePath.length());
             bmdOut.write(includedFilePath.toUtf8());
         } else {
-            parent->binChanger.intWrite(bmdOut, 4);
+            BinChanger::intWrite(bmdOut, 4);
         }
         bmdOut.write("~Dictionary");
-        parent->binChanger.shortWrite(bmdOut, 0);
+        BinChanger::shortWrite(bmdOut, 0);
 
         for(int i = 0; i < dictionary.size(); i++){
             sectionLength += 4; //int length for dictItem
@@ -1422,30 +1430,30 @@ void DefinitionFile::writeBinary(){
             sectionLength += dictionary[i].name.length()+3; //2 for spacing, 1 for tilde
         }
 
-        parent->binChanger.intWrite(bmdOut, sectionLength);
+        BinChanger::intWrite(bmdOut, sectionLength);
 
         for(int i = 0; i < dictionary.size(); i++){
             dictionary[i].length = 4; //setting this just to be sure - not sure if this is initialized elsewhere
             bmdOut.write("~" + dictionary[i].name.toUtf8());
-            parent->binChanger.shortWrite(bmdOut, 0);
+            BinChanger::shortWrite(bmdOut, 0);
             for(int j = 0; j < dictionary[i].attributes.size(); j++){
                 checkLength = dictionary[i].attributes[j]->binarySize();
                 //qDebug() << Q_FUNC_INFO << "second pass attribute" << dictionary[i].attributes[j]->name << "is length" << checkLength;
                 dictionary[i].length += checkLength;
             }
-            parent->binChanger.intWrite(bmdOut, dictionary[i].length);
+            BinChanger::intWrite(bmdOut, dictionary[i].length);
             for(int j = 0; j < dictionary[i].attributes.size(); j++){
                 qDebug() << Q_FUNC_INFO << "class" << dictionary[i].name << "item" << j << "is type" << dictionary[i].attributes[j]->type;
-                parent->binChanger.intWrite(bmdOut, dictionary[i].attributes[j]->type.length());
+                BinChanger::intWrite(bmdOut, dictionary[i].attributes[j]->type.length());
                 bmdOut.write(dictionary[i].attributes[j]->type.toUtf8());
                 if(dictionary[i].attributes[j]->active){
-                    parent->binChanger.intWrite(bmdOut, 4);
+                    BinChanger::intWrite(bmdOut, 4);
                     bmdOut.write("True");
                 } else {
-                    parent->binChanger.intWrite(bmdOut, 5);
+                    BinChanger::intWrite(bmdOut, 5);
                     bmdOut.write("False");
                 }
-                parent->binChanger.intWrite(bmdOut, dictionary[i].attributes[j]->name.length());
+                BinChanger::intWrite(bmdOut, dictionary[i].attributes[j]->name.length());
                 bmdOut.write(dictionary[i].attributes[j]->name.toUtf8());
                 dictionary[i].attributes[j]->write(bmdOut);
                 //binaryOutput(bmdOut, dictionary[i].attributes[j]);
@@ -1469,19 +1477,19 @@ void DatabaseFile::writeBinary(){
         //getFileLengths();
 
         bmdOut.write("FISH");
-        parent->binChanger.intWrite(bmdOut, versionNumber);
+        BinChanger::intWrite(bmdOut, versionNumber);
         bmdOut.write("~IncludedFiles");
-        parent->binChanger.shortWrite(bmdOut, 0);
+        BinChanger::shortWrite(bmdOut, 0);
         if(inheritedFile != nullptr){
             qDebug() << Q_FUNC_INFO << "includedFile value" << includedFilePath.toUtf8() << "length" << 4+includedFilePath.length();
-            parent->binChanger.intWrite(bmdOut, 8+includedFilePath.length());
-            parent->binChanger.intWrite(bmdOut, includedFilePath.length());
+            BinChanger::intWrite(bmdOut, 8+includedFilePath.length());
+            BinChanger::intWrite(bmdOut, includedFilePath.length());
             bmdOut.write(includedFilePath.toUtf8());
         } else {
-            parent->binChanger.intWrite(bmdOut, 4);
+            BinChanger::intWrite(bmdOut, 4);
         }
         bmdOut.write("~FileDictionary");
-        parent->binChanger.shortWrite(bmdOut, 0);
+        BinChanger::shortWrite(bmdOut, 0);
 
         for(int i = 0; i < dictionary.size(); i++){
             sectionLength += 4; //int length for dictItem
@@ -1493,7 +1501,7 @@ void DatabaseFile::writeBinary(){
             sectionLength += dictionary[i].name.length()+3; //2 for spacing, 1 for tilde
         }
 
-        parent->binChanger.intWrite(bmdOut, sectionLength);
+        BinChanger::intWrite(bmdOut, sectionLength);
 
         for(int i = 0; i < dictionary.size(); i++){
             dictionary[i].length = 4;
@@ -1503,16 +1511,16 @@ void DatabaseFile::writeBinary(){
                 dictionary[i].length += checkLength;
             }
             bmdOut.write("~" + dictionary[i].name.toUtf8());
-            parent->binChanger.shortWrite(bmdOut, 0);
-            parent->binChanger.intWrite(bmdOut, dictionary[i].length);
+            BinChanger::shortWrite(bmdOut, 0);
+            BinChanger::intWrite(bmdOut, dictionary[i].length);
             for(int j = 0; j < dictionary[i].attributes.size(); j++){
-                parent->binChanger.intWrite(bmdOut, dictionary[i].attributes[j]->name.length());
+                BinChanger::intWrite(bmdOut, dictionary[i].attributes[j]->name.length());
                 bmdOut.write(dictionary[i].attributes[j]->name.toUtf8());
             }
         }
 
         bmdOut.write("~Instances");
-        parent->binChanger.shortWrite(bmdOut, 0);
+        BinChanger::shortWrite(bmdOut, 0);
         sectionLength = 4;
 
         for(int i = 0; i < instances.size(); i++){
@@ -1529,7 +1537,7 @@ void DatabaseFile::writeBinary(){
             }
         }
 
-        parent->binChanger.intWrite(bmdOut, sectionLength);
+        BinChanger::intWrite(bmdOut, sectionLength);
 
         for(int i = 0; i < instances.size(); i++){
             instances[i].length += 6;
@@ -1542,14 +1550,14 @@ void DatabaseFile::writeBinary(){
                 instances[i].length += checkLength;
             }
             bmdOut.write("~" + instances[i].name.toUtf8());
-            parent->binChanger.shortWrite(bmdOut, 0);
-            parent->binChanger.intWrite(bmdOut, instances[i].length);
-            parent->binChanger.shortWrite(bmdOut, instances[i].instanceIndex);
+            BinChanger::shortWrite(bmdOut, 0);
+            BinChanger::intWrite(bmdOut, instances[i].length);
+            BinChanger::shortWrite(bmdOut, instances[i].instanceIndex);
             for(int j = 0; j < instances[i].attributes.size(); j++){
                 if(instances[i].attributes[j]->isDefault){
-                    parent->binChanger.byteWrite(bmdOut, 1);
+                    BinChanger::byteWrite(bmdOut, 1);
                 } else {
-                    parent->binChanger.byteWrite(bmdOut, 0);
+                    BinChanger::byteWrite(bmdOut, 0);
                     instances[i].attributes[j]->write(bmdOut);
                 }
             }
@@ -1557,7 +1565,7 @@ void DatabaseFile::writeBinary(){
     }
 }
 
-void DatabaseFile::acceptVisitor(ProgWindow& visitor){
+void DatabaseFile::acceptVisitor(zlManager& visitor){
     visitor.visit(*this);
 }
 
@@ -1604,7 +1612,7 @@ int DefinitionFile::createClass(){
     bool isDialogOpen = true;
 
     QStringList neededItems = {"lineedit", "combobox"};
-    CustomPopup* dialogCreateClass = parent->makeSpecificPopup(isDialogOpen, neededItems, {"Class Name:", "Inherited Class:"});
+    CustomPopup* dialogCreateClass = m_UI->MakeSpecificPopup(isDialogOpen, neededItems, {"Class Name:", "Inherited Class:"});
     dialogCreateClass->setWindowTitle("Create Database Definition");
 
     QLineEdit::connect(dialogCreateClass->lineOption, &QLineEdit::textEdited, [=, &customClass](QString text){customClass.name = text;});
@@ -1631,7 +1639,7 @@ int DefinitionFile::createClass(){
 
     dialogCreateClass->open();
     while(isDialogOpen){
-        parent->forceProcessEvents();
+        m_UI->ForceProcessEvents();
     }
     resultDialog = dialogCreateClass->result();
 
@@ -1666,7 +1674,7 @@ int DatabaseFile::createInstance(){
         line edit for names. should only need one
         combo box for selection from a list. should only need one?
         multi line edit for enum options. definitely only need one.*/
-    QDialog* dialogAddInstance = parent->makePopup(isDialogOpen);
+    QDialog* dialogAddInstance = m_UI->MakeYesNoPopup(isDialogOpen);
     dialogAddInstance->setWindowTitle("Chose Class of Item to Add");
 
     QComboBox* comboInstanceOptions = new QComboBox(dialogAddInstance);
@@ -1680,7 +1688,7 @@ int DatabaseFile::createInstance(){
 
     dialogAddInstance->open();
     while(isDialogOpen){
-        parent->forceProcessEvents();
+        m_UI->ForceProcessEvents();
     }
     int resultDialog = dialogAddInstance->result();
 
@@ -1776,14 +1784,14 @@ void DefinitionFile::editRow(QModelIndex selected){
                 editedData = dictItem::editEnumDefinition(dictionary[selectedClassIndex].attributes[i]);
                 if(editedData == nullptr){
                     /*this one should never happen - editEnumDefinition always returns the fed item on failure*/
-                    parent->log("Type " + secondColumn + " is not currently supported by the database edit system.");
+                    m_Debug->Log("Type " + secondColumn + " is not currently supported by the database edit system.");
                     return;
                 }
                 dictionary[selectedClassIndex].attributes[i] = editedData;
             } else if(firstColumn == dictionary[selectedClassIndex].attributes[i]->name){
                 editedData = dictItem::editAttributeValue(secondColumn, dictionary[selectedClassIndex].attributes[i]);
                 if(editedData == nullptr){
-                    parent->log("Type " + secondColumn + " is not currently supported by the database edit system.");
+                    m_Debug->Log("Type " + secondColumn + " is not currently supported by the database edit system.");
                     return;
                 }
                 dictionary[selectedClassIndex].attributes[i] = editedData;
@@ -1922,7 +1930,7 @@ void DatabaseFile::editRow(QModelIndex selected){
         }
         if(selected.parent().parent().data().toString() == "File Dictionary"){
             //user wants to edit the file dictionary. Can't do that, should edit the definition file directly.
-            parent->messageError("The attributes in the File Dictionary cannot be edited from the Database file. Edit these from the related Definition file instead.");
+            m_Debug->MessageError("The attributes in the File Dictionary cannot be edited from the Database file. Edit these from the related Definition file instead.");
         }
     }
 
@@ -1932,14 +1940,14 @@ void DatabaseFile::editRow(QModelIndex selected){
 
 void DatabaseFile::copyOrDeleteInstance(QModelIndex selected){
     bool isDialogOpen = true;
-    CustomPopup* dialogCopyDelete = ProgWindow::makeSpecificPopup(isDialogOpen, {"combobox"}, {""});
+    CustomPopup* dialogCopyDelete = exWindow::MakeSpecificPopup(isDialogOpen, {"combobox"}, {""});
 
     dialogCopyDelete->comboOption->addItem("Create copy");
     dialogCopyDelete->comboOption->addItem("Delete instance");
 
     dialogCopyDelete->open();
     while(isDialogOpen){
-        ProgWindow::forceProcessEvents();
+        exWindow::ForceProcessEvents();
     }
     int resultDialog = dialogCopyDelete->result();
 
@@ -1987,12 +1995,12 @@ void DatabaseFile::editAttributeValue(int selectedInstanceID, QString instanceNa
     instanceData = instances[indexToEdit].getAttribute(attributeName);
     bool userSetDefault = false;
     if(!instanceData->isDefault){
-        CustomPopup* dialogGetDefault = ProgWindow::makeSpecificPopup(isDialogOpen, {"checkbox"}, {""});
+        CustomPopup* dialogGetDefault = exWindow::MakeSpecificPopup(isDialogOpen, {"checkbox"}, {""});
         dialogGetDefault->setWindowTitle("Set to Default?");
         dialogGetDefault->checkOption->setText("Check to set value to default.");
         dialogGetDefault->open();
         while(isDialogOpen){
-            ProgWindow::forceProcessEvents();
+            exWindow::ForceProcessEvents();
         }
         int resultDialog = dialogGetDefault->result();
 
@@ -2020,7 +2028,7 @@ void DatabaseFile::editAttributeValue(int selectedInstanceID, QString instanceNa
 
 void DatabaseFile::addFileDictionaryClass(){
     bool isDialogOpen = true;
-    CustomPopup* dialogGetClassName = ProgWindow::makeSpecificPopup(isDialogOpen, {"combobox"}, {"Class:"});
+    CustomPopup* dialogGetClassName = exWindow::MakeSpecificPopup(isDialogOpen, {"combobox"}, {"Class:"});
     dialogGetClassName->setWindowTitle("Choose class to add");
 
     bool alreadyIncluded = false;
@@ -2038,7 +2046,7 @@ void DatabaseFile::addFileDictionaryClass(){
 
     dialogGetClassName->open();
     while(isDialogOpen){
-        ProgWindow::forceProcessEvents();
+        exWindow::ForceProcessEvents();
     }
     int resultDialog = dialogGetClassName->result();
 
@@ -2077,7 +2085,7 @@ void DatabaseFile::addFileDictionaryAttributes(QString chosenClassName){
     }
 
     bool isDialogOpen = true;
-    CustomPopup *dialogGetClassName = ProgWindow::makeSpecificPopup(isDialogOpen, {"list"}, {"Select Attributes:"});
+    CustomPopup *dialogGetClassName = exWindow::MakeSpecificPopup(isDialogOpen, {"list"}, {"Select Attributes:"});
     dialogGetClassName->setWindowTitle("Choose attributes to use");
     bool alreadyIncluded = false;
     for(int i = 0; i < inheritClass->attributes.size(); i++){
@@ -2101,7 +2109,7 @@ void DatabaseFile::addFileDictionaryAttributes(QString chosenClassName){
     isDialogOpen = true;
     dialogGetClassName->open();
     while(isDialogOpen){
-        ProgWindow::forceProcessEvents();
+        exWindow::ForceProcessEvents();
     }
     int resultDialog = dialogGetClassName->result();
 
@@ -2122,7 +2130,7 @@ void DatabaseFile::addFileDictionaryAttributes(QString chosenClassName){
 
 void DatabaseFile::addNewInstance(){
     bool isDialogOpen = true;
-    CustomPopup* dialogGetClassName = ProgWindow::makeSpecificPopup(isDialogOpen, {"combobox"}, {"Instance:"});
+    CustomPopup* dialogGetClassName = exWindow::MakeSpecificPopup(isDialogOpen, {"combobox"}, {"Instance:"});
     dialogGetClassName->setWindowTitle("Choose instance type to add");
 
     for(int i = 0; i < dictionary.size(); i++){
@@ -2131,7 +2139,7 @@ void DatabaseFile::addNewInstance(){
 
     dialogGetClassName->open();
     while(isDialogOpen){
-        ProgWindow::forceProcessEvents();
+        exWindow::ForceProcessEvents();
     }
     int resultDialog = dialogGetClassName->result();
 

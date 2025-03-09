@@ -3,11 +3,9 @@
 
 #include <QLineEdit>
 #include <QString>
+#include <QLabel>
 
-#include "Headers/Databases/Database.h"
 #include "Headers/Databases/DataHandler.h"
-
-class ProgWindow;
 
 class WarpgateFile : public DatabaseFile{
     std::vector<exWarpgate> warpgateList;
@@ -17,13 +15,17 @@ class WarpgateFile : public DatabaseFile{
 
 class DistanceCalculator{
 public:
-    DistanceCalculator(ProgWindow *parentPass);
+    DistanceCalculator(zlManager *fileManager);
     std::vector<exWarpgate> warpgateList;
-    ProgWindow *parent;
+    exWindow *m_UI;
+    exDebugger *m_Debug;
+    zlManager *m_zlManager;
 
+    /*None of these should be here*/
     QLineEdit *inputXValue;
     QLineEdit *inputYValue;
     QLineEdit *inputZValue;
+    QLabel *m_closestWarpgate;
 
     int currentLevel;
 

@@ -1,4 +1,7 @@
-#include "Headers/Main/mainwindow.h"
+#include "Headers/Models/Antioch2.h"
+#include "Headers/Main/BinChanger.h"
+#include "Headers/Models/vbin.h"
+#include "Headers/Main/exDebugger.h"
 
 AnimationBase *makeAnimation(QString animationSignature){
     if (animationSignature == "anAnimationTranslation") {
@@ -74,7 +77,7 @@ void AnimationStream::readAnimationStream(){
         AnimationBase *animationChannel = makeAnimation(channel.type);
         if (animationChannel == nullptr) {
             qDebug() << Q_FUNC_INFO << "Unsupported channel type" << channel.type << " found at" << file->fileData->currentPosition << ". Skipping for now.";
-            file->parent->fileData.currentPosition = ending;
+            file->fileData->currentPosition = ending;
             continue;
         }
         animationChannel->hasScalar = false;
@@ -124,7 +127,7 @@ void AnimationStream::readAnimationStream(){
 }
 
 void AnimationBase::readScalar(){
-    qDebug() << Q_FUNC_INFO << "reading an animation scalar modifier at" << file->parent->fileData.currentPosition;
+    qDebug() << Q_FUNC_INFO << "reading an animation scalar modifier at" << file->fileData->currentPosition;
     hasScalar = true;
     //sectionLength = file->fileData->readInt();
     version3 = file->fileData->readInt();
@@ -145,7 +148,7 @@ void AnimationTranslation::readLinear(){
     subVersion = file->fileData->readInt();
     qDebug() << Q_FUNC_INFO << "reading" << keyframeCount << "values";
     for (int frameData = 0; frameData < keyframeCount; frameData++) {
-        keyframeTimes.push_back(file->parent->fileData.readFloat());
+        keyframeTimes.push_back(file->fileData->readFloat());
         float x_pos = file->fileData->readFloat();
         float y_pos = file->fileData->readFloat();
         float z_pos = file->fileData->readFloat();
@@ -164,18 +167,18 @@ void AnimationTranslation::readCubic(){
         subVersion = file->fileData->readInt();
         qDebug() << Q_FUNC_INFO << "reading" << keyframeCount << "values at" << file->fileData->currentPosition;
         for (int frameData = 0; frameData < keyframeCount; frameData++) {
-            keyframeTimes.push_back(file->parent->fileData.readFloat());
-            float x_pos = file->parent->fileData.readFloat();
-            float y_pos = file->parent->fileData.readFloat();
-            float z_pos = file->parent->fileData.readFloat();
+            keyframeTimes.push_back(file->fileData->readFloat());
+            float x_pos = file->fileData->readFloat();
+            float y_pos = file->fileData->readFloat();
+            float z_pos = file->fileData->readFloat();
             vectorList.push_back(QVector3D(x_pos, y_pos, z_pos));
         }
     } else {
-        keyframeTimes.push_back(file->parent->fileData.readFloat());
+        keyframeTimes.push_back(file->fileData->readFloat());
         for(int i = 0; i < 3; i++){
-            float x_pos = file->parent->fileData.readFloat();
-            float y_pos = file->parent->fileData.readFloat();
-            float z_pos = file->parent->fileData.readFloat();
+            float x_pos = file->fileData->readFloat();
+            float y_pos = file->fileData->readFloat();
+            float z_pos = file->fileData->readFloat();
             vectorList.push_back(QVector3D(x_pos, y_pos, z_pos));
         }
     }
@@ -189,7 +192,7 @@ void AnimationOrientation::readLinear(){
     subVersion = file->fileData->readInt();
     qDebug() << Q_FUNC_INFO << "reading" << keyframeCount << "values at" << file->fileData->currentPosition;
     for (int frameData = 0; frameData < keyframeCount; frameData++) {
-        keyframeTimes.push_back(file->parent->fileData.readFloat());
+        keyframeTimes.push_back(file->fileData->readFloat());
         if (hasPackedSpline) {
             rotationList.push_back(file->fileData->readMiniQuaternion());
         } else {
@@ -200,40 +203,40 @@ void AnimationOrientation::readLinear(){
 
 void AnimationOrientation::readCubic(){
     //might need to add check for miniquat
-    qDebug() << Q_FUNC_INFO << "reading an orientation animation cubic motion at" << file->parent->fileData.currentPosition;
-    version3 = file->parent->fileData.readInt();
-    keyframeCount = file->parent->fileData.readInt();
-    subVersion = file->parent->fileData.readInt();
+    qDebug() << Q_FUNC_INFO << "reading an orientation animation cubic motion at" << file->fileData->currentPosition;
+    version3 = file->fileData->readInt();
+    keyframeCount = file->fileData->readInt();
+    subVersion = file->fileData->readInt();
     if(hasScalar){
         qDebug() << Q_FUNC_INFO << "animation has a scalar component";
-        //sectionLength = file->parent->fileData.readInt();
+        //sectionLength = file->fileData->readInt();
         for (int frameData = 0; frameData < keyframeCount; frameData++) {
-            keyframeTimes.push_back(file->parent->fileData.readFloat());
+            keyframeTimes.push_back(file->fileData->readFloat());
             rotationList.push_back(file->fileData->readMiniQuaternion());
         }
     } else {
         qDebug() << Q_FUNC_INFO << "animation does not have a scalar component";
         for (int frameData = 0; frameData < keyframeCount; frameData++) {
-            keyframeTimes.push_back(file->parent->fileData.readFloat());
+            keyframeTimes.push_back(file->fileData->readFloat());
             for(int i = 0; i < 3; i++){
                 rotationList.push_back(file->fileData->readMiniQuaternion());
             }
         }
     }
 
-    qDebug() << Q_FUNC_INFO << "finished reading cubic orientation at" << file->parent->fileData.currentPosition;
+    qDebug() << Q_FUNC_INFO << "finished reading cubic orientation at" << file->fileData->currentPosition;
 }
 
 void AnimationOrientation::readCubicC2(){
     //might need to add check for miniquat
     qDebug() << Q_FUNC_INFO << "reading an orientation animation cubic2 motion";
-    //sectionLength = file->parent->fileData.readInt();
-    version3 = file->parent->fileData.readInt();
-    keyframeCount = file->parent->fileData.readInt();
-    subVersion = file->parent->fileData.readInt();
+    //sectionLength = file->fileData->readInt();
+    version3 = file->fileData->readInt();
+    keyframeCount = file->fileData->readInt();
+    subVersion = file->fileData->readInt();
     qDebug() << Q_FUNC_INFO << "reading" << keyframeCount << "values";
     for (int frameData = 0; frameData < keyframeCount; frameData++) {
-        keyframeTimes.push_back(file->parent->fileData.readFloat());
+        keyframeTimes.push_back(file->fileData->readFloat());
         rotationList.push_back(file->fileData->readMiniQuaternion());
         velocityList2.push_back(file->fileData->readMiniQuaternion());
         qDebug() << Q_FUNC_INFO << "keyframe" << keyframeTimes[frameData] << "has rotation" << rotationList[frameData] << "and velocity" << velocityList2[frameData];
@@ -242,13 +245,13 @@ void AnimationOrientation::readCubicC2(){
 
 void AnimationTranslation::readCubicC2(){
     qDebug() << Q_FUNC_INFO << "reading an translation animation cubic2 motion";
-    //sectionLength = file->parent->fileData.readInt();
-    version3 = file->parent->fileData.readInt();
-    keyframeCount = file->parent->fileData.readInt();
-    subVersion = file->parent->fileData.readInt();
+    //sectionLength = file->fileData->readInt();
+    version3 = file->fileData->readInt();
+    keyframeCount = file->fileData->readInt();
+    subVersion = file->fileData->readInt();
     qDebug() << Q_FUNC_INFO << "reading" << keyframeCount << "values";
     for (int frameData = 0; frameData < keyframeCount; frameData++) {
-        keyframeTimes.push_back(file->parent->fileData.readFloat());
+        keyframeTimes.push_back(file->fileData->readFloat());
         vectorList.push_back(file->fileData->read3DVector());
         velocityList.push_back(file->fileData->read3DVector());
         qDebug() << Q_FUNC_INFO << "keyframe" << keyframeTimes[frameData] << "has offset" << vectorList[frameData];
@@ -265,15 +268,15 @@ float AnimationBase::findSplineAtTime(float time){
 }
 
 void AnimationBase::readLinear(){
-    file->parent->messageError("THIS SHOULD NOT RUN");
+    file->m_Debug->MessageError("THIS SHOULD NOT RUN");
 }
 
 void AnimationBase::readCubic(){
-    file->parent->messageError("THIS SHOULD NOT RUN");
+    file->m_Debug->MessageError("THIS SHOULD NOT RUN");
 }
 
 void AnimationBase::readCubicC2(){
-    file->parent->messageError("THIS SHOULD NOT RUN");
+    file->m_Debug->MessageError("THIS SHOULD NOT RUN");
 }
 
 void AnimationSourceSet::writeAnimationsDAE(QTextStream &fileOut){

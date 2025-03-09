@@ -8,12 +8,16 @@
 /*This will interface with 7zip, ImgBurn, and the python TF04 ISO Manager to unpack and repack modded versions of the game
 This will require that the settings system is set up so users only have to find their 7zip and imgburn installations once*/
 
-class ProgWindow;
+class exWindow;
+class zlManager;
+class exDebugger;
+class exSettings;
 
 class IsoBuilder {
 public:
-    ProgWindow *parent;
-    QString copyOutputPath;
+    exWindow *m_UI;
+    exDebugger *m_Debug;
+    zlManager *m_zlManager;
     QString sevenZipPath;
     QString imgBurnPath;
     QString inputISOPath;
@@ -21,6 +25,8 @@ public:
     QString moddedInput = "";
     QString moddedOutput = "";
     bool buildingRandomizer;
+
+    IsoBuilder(zlManager *fileManager);
 
     void setCopyPath(QString folderName = "Exodus2004Output");
     int unpackISO(); //calls TF04 ISO Manager to unpack and attempt to unzip TFA etc

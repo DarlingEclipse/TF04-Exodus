@@ -4,6 +4,7 @@
 #include <QVector3D>
 #include <QColor>
 #include "Headers/Main/BinChanger.h"
+#include "Headers/FileManagement/taFileSystemObject.h"
 
 class ProgWindow;
 class MeshVBIN;
@@ -52,7 +53,7 @@ public:
     void writeMaterialsDAE(QTextStream &fileOut);
 };
 
-class MeshVBIN : public TFFile {
+class MeshVBIN : public taFile {
   public:
     const QStringList validOutputs(){
         return QStringList{"STL", "DAE"};

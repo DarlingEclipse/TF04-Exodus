@@ -1,40 +1,32 @@
-#include "Headers/Main/mainwindow.h"
-#include "Headers/Databases/DistanceCalculator.h"
+#include <QFileInfo>
+#include <QQuaternion>
+#include <QByteArrayMatcher>
 
-TFFile::TFFile(){
-    parent = nullptr;
-    duplicateFileCount = 0;
-    fileName = "";
-    fileExtension = "";
-    this->fileData = nullptr;
-}
-
-void TFFile::acceptVisitor(ProgWindow& visitor){
-    visitor.visit(*this);
-}
+#include "Headers/Main/BinChanger.h"
+#include "Headers/Main/exDebugger.h"
 
 uint32_t FileData::readSpecial(int length, long location){
-    uint32_t readValue = parent->binChanger.reverse_input(parent->binChanger.reverse_input(dataBytes.mid(currentPosition + location, length).toHex(),2), 1).toUInt(nullptr, 16);
+    uint32_t readValue = BinChanger::reverse_input(BinChanger::reverse_input(dataBytes.mid(currentPosition + location, length).toHex(),2), 1).toUInt(nullptr, 16);
     currentPosition += length;
     return readValue;
 }
 
 long FileData::readLong(int length, long location){
-    long readValue = parent->binChanger.reverse_input(dataBytes.mid(currentPosition + location, length).toHex(),2).toLong(nullptr, 16);
+    long readValue = BinChanger::reverse_input(dataBytes.mid(currentPosition + location, length).toHex(),2).toLong(nullptr, 16);
     currentPosition += length;
     return readValue;
 }
 
 int FileData::readInt(int length, long location){
-    QString readBin = parent->binChanger.reverse_input(parent->binChanger.hex_to_bin(dataBytes.mid(currentPosition + location, length)), 8);
-    int twoscompread = parent->binChanger.twosCompConv(readBin, 8);
+    QString readBin = BinChanger::reverse_input(BinChanger::hex_to_bin(dataBytes.mid(currentPosition + location, length)), 8);
+    int twoscompread = BinChanger::twosCompConv(readBin, 8);
     //qDebug() << Q_FUNC_INFO << "hex read:" << dataBytes.mid(currentPosition + location, length).toHex() << "read as" << readBin << "then" << twoscompread;
     currentPosition += length;
     return twoscompread;
 }
 
 int FileData::readUInt(int length, long location){
-    int readValue = parent->binChanger.reverse_input(dataBytes.mid(currentPosition + location, length).toHex(),2).toUInt(nullptr, 16);
+    int readValue = BinChanger::reverse_input(dataBytes.mid(currentPosition + location, length).toHex(),2).toUInt(nullptr, 16);
     currentPosition += length;
     return readValue;
 }
@@ -48,7 +40,7 @@ bool FileData::readBool(int length, long location){
 float FileData::readFloat(int length, long location){
     //qDebug() << Q_FUNC_INFO << "full read" << dataBytes;
     //qDebug() << Q_FUNC_INFO << "current position" << currentPosition << "hex read:" << dataBytes.mid(currentPosition + location, length);
-    float readValue = parent->binChanger.hex_to_float(parent->binChanger.reverse_input(dataBytes.mid(currentPosition + location, length).toHex(), 2));
+    float readValue = BinChanger::hex_to_float(BinChanger::reverse_input(dataBytes.mid(currentPosition + location, length).toHex(), 2));
     if(readValue < 0.00001 and readValue > -0.00001){ //also turbohack
         readValue = 0;
     }
@@ -57,8 +49,8 @@ float FileData::readFloat(int length, long location){
 }
 
 float FileData::readMiniFloat(int length, long location){
-    QString readBin = parent->binChanger.reverse_input(parent->binChanger.hex_to_bin(dataBytes.mid(currentPosition + location, length)), 8);
-    int twoscompread = parent->binChanger.twosCompConv(readBin, 8);
+    QString readBin = BinChanger::reverse_input(BinChanger::hex_to_bin(dataBytes.mid(currentPosition + location, length)), 8);
+    int twoscompread = BinChanger::twosCompConv(readBin, 8);
     float reduceInt = float(twoscompread) / 30000;
     //qDebug() << Q_FUNC_INFO << "int read:" << float(twoscompread) << "then becomes" << reduceInt;
     currentPosition += length;
@@ -139,7 +131,7 @@ QQuaternion FileData::readMiniQuaternion(){
 //        float z_value = readFloat();
 //        *value = QVector3D(x_value, y_value, z_value);
 //    } else {
-//        parent->messageError("This is not currently supported. It shouldn't even be called. How did you do that? Let Trevor know. " + QString(Q_FUNC_INFO));
+//        parent->messageError("This is not currently supported. It shouldn't even be called. How did you do that? Let Everett know. " + QString(Q_FUNC_INFO));
 //    }
 //}
 
@@ -151,7 +143,7 @@ QQuaternion FileData::readMiniQuaternion(){
 //        float w_value = readFloat();
 //        *value = QVector4D(x_value, y_value, z_value, w_value);
 //    } else {
-//        parent->messageError("This is not currently supported. It shouldn't even be called. How did you do that? Let Trevor know. " + QString(Q_FUNC_INFO));
+//        parent->messageError("This is not currently supported. It shouldn't even be called. How did you do that? Let Everett know. " + QString(Q_FUNC_INFO));
 //    }
 //}
 
@@ -163,7 +155,7 @@ QQuaternion FileData::readMiniQuaternion(){
 //        float m_value = readFloat();
 //        *value = QQuaternion(m_value, x_value, y_value, z_value);
 //    } else {
-//        parent->messageError("This is not currently supported. It shouldn't even be called. How did you do that? Let Trevor know. " + QString(Q_FUNC_INFO));
+//        parent->messageError("This is not currently supported. It shouldn't even be called. How did you do that? Let Everett know. " + QString(Q_FUNC_INFO));
 //    }
 //}
 
@@ -175,7 +167,7 @@ QQuaternion FileData::readMiniQuaternion(){
 //        float m_value = readMiniFloat();
 //        *value = QQuaternion(m_value, x_value, y_value, z_value);
 //    } else {
-//        parent->messageError("This is not currently supported. It shouldn't even be called. How did you do that? Let Trevor know. " + QString(Q_FUNC_INFO));
+//        parent->messageError("This is not currently supported. It shouldn't even be called. How did you do that? Let Everett know. " + QString(Q_FUNC_INFO));
 //    }
 //}
 
@@ -190,7 +182,7 @@ void FileData::hexValue(QString* value, int length, long location){
         *value = QString(dataBytes.mid(currentPosition + location, length));
         currentPosition += length;
     } else {
-        parent->messageError("Writing hex strings is not currently supported. It shouldn't even be called. How did you do that? Let Trevor know. " + QString(Q_FUNC_INFO));
+        m_Debug->MessageError("Writing hex strings is not currently supported. It shouldn't even be called. How did you do that? Let Everett know. " + QString(Q_FUNC_INFO));
     }
 }
 
@@ -199,7 +191,7 @@ void FileData::hexValue(QByteArray* value, int length, long location){
         *value = dataBytes.mid(currentPosition + location, length);
         currentPosition += length;
     } else {
-        parent->messageError("Writing hex byte arrays is not currently supported. It shouldn't even be called. How did you do that? Let Trevor know. " + QString(Q_FUNC_INFO));
+        m_Debug->MessageError("Writing hex byte arrays is not currently supported. It shouldn't even be called. How did you do that? Let Everett know. " + QString(Q_FUNC_INFO));
     }
 }
 
@@ -258,7 +250,7 @@ QString FileData::textWord(){
         wordEnd = findWordEnd.indexIn(dataBytes, wordStart);
 
         if(wordEnd < wordStart){
-            parent->log("Word end was found earier than word start. Search started at " + QString::number(wordStart) + " | " + QString(Q_FUNC_INFO));
+            m_Debug->Log("Word end was found earier than word start. Search started at " + QString::number(wordStart) + " | " + QString(Q_FUNC_INFO));
             wordEnd = wordStart;
         }
         expectedWord = mid(wordStart, wordEnd-wordStart);
@@ -273,7 +265,7 @@ QString FileData::textWord(){
         word = expectedWord;
         currentPosition = wordEnd+1; //+1 to skip the space, otherwise the next word find will fail.
     } else {
-        parent->messageError("Writing wordss is not currently supported. It shouldn't even be called. How did you do that? Let Trevor know. " + QString(Q_FUNC_INFO));
+        m_Debug->MessageError("Writing wordss is not currently supported. It shouldn't even be called. How did you do that? Let Everett know. " + QString(Q_FUNC_INFO));
         return "";
     }
     return word.trimmed();
@@ -375,7 +367,7 @@ void FileData::textSignature(SectionHeader *signature){
             return;
         }
     } else {
-        parent->messageError("Writing signatures is not currently supported. It shouldn't even be called. How did you do that? Let Trevor know. " + QString(Q_FUNC_INFO));
+        m_Debug->MessageError("Writing signatures is not currently supported. It shouldn't even be called. How did you do that? Let Everett know. " + QString(Q_FUNC_INFO));
     }
 }
 
@@ -411,7 +403,7 @@ void FileData::signature(SectionHeader *signature){
 
         //qDebug() << Q_FUNC_INFO << "position after signature read:" << currentPosition <<". last data read as" << signature->sectionLength << "at" << signature->sectionLocation;
     } else {
-        parent->messageError("Writing signatures is not currently supported. It shouldn't even be called. How did you do that? Let Trevor know. " + QString(Q_FUNC_INFO));
+        m_Debug->MessageError("Writing signatures is not currently supported. It shouldn't even be called. How did you do that? Let Everett know. " + QString(Q_FUNC_INFO));
     }
 }
 
@@ -694,20 +686,4 @@ qint64 BinChanger::longWrite( QFile& file, int64_t var ) {
   }
    //qDebug () << "out: " << written;
   return written;
-}
-
-void TFFile::save(QString toType){
-    qDebug() << Q_FUNC_INFO << "The class you tried to save doesn't have a valid save function.";
-}
-
-void TFFile::save(QString toType, QTextStream &stream){
-    qDebug() << Q_FUNC_INFO << "The class you tried to save doesn't have a valid save function (textstream version).";
-}
-
-void TFFile::load(QString fromType){
-    qDebug() << Q_FUNC_INFO << "The class you tried to load doesn't have a valid load function yet.";
-}
-
-void TFFile::updateCenter(){
-    qDebug() << Q_FUNC_INFO << "The class you selected doesn't have a valid central layout yet.";
 }

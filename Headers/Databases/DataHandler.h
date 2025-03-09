@@ -427,7 +427,9 @@ public:
     inline const static QList<int> weaponList {4, 5, 6, 7, 8, 9, 10, 11, 12, 14, 15, 18, 19, 20, 21, 22, 23, 24, 25, 27, 30, 36, 41, 46, 51};
     inline const static QList<int> bunkerList {137,140,141,142,143,144,145};
 
-    ProgWindow* parent;
+    exWindow* m_UI;
+    zlManager* m_zlManager;
+    exDebugger* m_Debug;
 
     //std::vector<dictItem> itemList;
 
@@ -444,8 +446,7 @@ public:
         return convertedList;
     };
 
-    //DataHandler();
-    DataHandler(ProgWindow* passParent);
+    DataHandler(zlManager *fileManager);
 
     /*Used for converting processed location data into a database file. Should rarely need to be used.*/
     void createExodusLocationDatabase();
@@ -453,6 +454,7 @@ public:
 
     dictItem createGamePickupPlaced(const exPickupLocation* location);
     dictItem createMetagameMinicon(taMinicon minicon);
+    void LoadAll();
     void loadMinicons();
     void loadDatacons();
     void loadLevels();

@@ -1,15 +1,26 @@
-#include "Headers/Main/mainwindow.h"
+#include <QCoreApplication>
+#include <QFileDialog>
+
+#include "Headers/ISOManager/IsoBuilder.h"
+#include "Headers/FileManagement/Zebrafish.h"
+#include "Headers/UI/exWindow.h"
+#include "Headers/Main/exDebugger.h"
+#include "Headers/UI/exSettings.h"
 
 //https://doc.qt.io/qt-6/qprocess.html
 
+IsoBuilder::IsoBuilder(zlManager *fileManager){
+    m_zlManager = fileManager;
+}
+
 void IsoBuilder::setCopyPath(QString folderName){
-    QDir gameParent(parent->setW->getValue("Game extract path"));
+    QDir gameParent(m_zlManager->m_Settings->GetValue("Game extract path"));
     gameParent.cdUp();
-    copyOutputPath = gameParent.absolutePath() + "/" + folderName;
+    m_zlManager->copyOutputPath = gameParent.absolutePath() + "/" + folderName;
     //get containing directory
     //create Randomizer folder in that directory
-    qDebug() << Q_FUNC_INFO << "path being checked:" << copyOutputPath << "based on " << gameParent.absolutePath();
-    QDir checkDir(copyOutputPath);
+    qDebug() << Q_FUNC_INFO << "path being checked:" << m_zlManager->copyOutputPath << "based on " << gameParent.absolutePath();
+    QDir checkDir(m_zlManager->copyOutputPath);
     if(!checkDir.exists()){
         checkDir.mkpath(".");
     }
@@ -23,12 +34,12 @@ int IsoBuilder::unpackISO(){
 
     QStringList args;
     args.append("Unpack");
-    QString isoPath = QFileDialog::getOpenFileName(parent, parent->tr("Choose game ISO"), QDir::currentPath(), parent->tr("*.iso"));
+    QString isoPath = QFileDialog::getOpenFileName(m_UI, m_UI->tr("Choose game ISO"), QDir::currentPath(), m_UI->tr("*.iso"));
     if(isoPath == ""){
         qDebug() << Q_FUNC_INFO << "Process cancelled.";
         return 1;
     }
-    parent->log("Unpacking ISO from: " + isoPath);
+    m_Debug->Log("Unpacking ISO from: " + isoPath);
     args.append(isoPath);
 
     QProcess *isoManager = new QProcess();
@@ -51,7 +62,7 @@ int IsoBuilder::unpackISO(){
             break;
         case 1:
             //ISOManager was unable to unzip the archives. Call 7zip unzipper
-            parent->log("ISO Manager was not able to extract ZIP files. Calling 7zip.");
+            m_Debug->Log("ISO Manager was not able to extract ZIP files. Calling 7zip.");
             unzipSpecial();
             break;
         case 2:
@@ -59,8 +70,8 @@ int IsoBuilder::unpackISO(){
             debugOutput = debugOutput.right(debugOutput.length() - 5).trimmed();
             dirCorrection.setPath(debugOutput);
             //qDebug() << Q_FUNC_INFO << "current path" << debugOutput << "Corrected game path" << dirCorrection.absolutePath();
-            parent->setW->setValue("Game extract path", dirCorrection.absolutePath());
-            parent->setW->setValue("Modded game path", dirCorrection.absolutePath());
+            m_zlManager->m_Settings->SetValue("Game extract path", dirCorrection.absolutePath());
+            m_zlManager->m_Settings->SetValue("Modded game path", dirCorrection.absolutePath());
             break;
         default:
             //either nothing to worry about or something we haven't handled yet. output it.
@@ -69,7 +80,7 @@ int IsoBuilder::unpackISO(){
         }
     });
     isoManager->start(isoManagerPath, args);
-    parent->log("Calling ISO Manager.");
+    m_Debug->Log("Calling ISO Manager.");
 
     return 0;
 }
@@ -84,17 +95,17 @@ void IsoBuilder::handleOutputCode(QString output){
 
 int IsoBuilder::unzipSpecial(){
     //calls 7zip to unzip TFA if the ISO Manager was unable to
-    parent->setW->loadSettings();
-    QString sevenZipPath = parent->setW->getValue("7Zip EXE path");
+    m_zlManager->m_Settings->LoadSettings();
+    QString sevenZipPath = m_zlManager->m_Settings->GetValue("7Zip EXE path");
     if(sevenZipPath == ""){
         //prompt user for 7zip location
-        parent->log("7Zip executable path is not set. Please locate 7z.exe.");
-        sevenZipPath = QFileDialog::getOpenFileName(parent, parent->tr("Locate 7Zip EXE"), QDir::currentPath(), parent->tr("7z.exe"));
+        m_Debug->Log("7Zip executable path is not set. Please locate 7z.exe.");
+        sevenZipPath = QFileDialog::getOpenFileName(m_UI, m_UI->tr("Locate 7Zip EXE"), QDir::currentPath(), m_UI->tr("7z.exe"));
         QDir dirCorrection(sevenZipPath);
-        parent->setW->setValue("7Zip EXE path", dirCorrection.absolutePath());
+        m_zlManager->m_Settings->SetValue("7Zip EXE path", dirCorrection.absolutePath());
     }
 
-    QString outputPath = parent->setW->getValue("Game extract path");
+    QString outputPath = m_zlManager->m_Settings->GetValue("Game extract path");
 
     qDebug() << Q_FUNC_INFO << "Loading 7zip from:" << sevenZipPath;
     qDebug() << Q_FUNC_INFO <<"Targetting directory:" << outputPath;
@@ -108,7 +119,7 @@ int IsoBuilder::unzipSpecial(){
     qDebug() << Q_FUNC_INFO << "args:" << args;
 
     QProcess *sevenZip = new QProcess();
-    parent->updateLoadingBar(0,4);
+    m_UI->UpdateLoadingBar(0,4);
     QObject::connect(sevenZip, &QProcess::readyReadStandardOutput, [this, sevenZip]() {
         QString debugOutput = sevenZip->readAllStandardOutput();
         qDebug() << debugOutput;
@@ -133,13 +144,13 @@ int IsoBuilder::unzipSpecial(){
         case 1006:
             //One extraction has been completed
             qDebug() << Q_FUNC_INFO << "Extraction for file has completed";
-            parent->updateLoadingBar();
+            m_UI->UpdateLoadingBar();
             break;
         case 1007:
             //Files are already extracted
             qDebug() << Q_FUNC_INFO << "Extraction already completed.";
             sevenZip->close();
-            parent->updateLoadingBar(4);
+            m_UI->UpdateLoadingBar(4);
             break;
         default:
             //either nothing to worry about or something we haven't handled yet. output it.
@@ -159,9 +170,9 @@ int IsoBuilder::rezipTFA_isoManager(bool removeFiles){
 
     QStringList args;
     args.append("Build");
-    QString extractPath = parent->setW->getValue("Modded game path");
+    QString extractPath = m_zlManager->m_Settings->GetValue("Modded game path");
     if(extractPath == ""){
-        parent->log("Process cancelled. Extract path is not set.");
+        m_Debug->Log("Process cancelled. Extract path is not set.");
         return 1;
     }
     args.append(extractPath);
@@ -185,7 +196,7 @@ int IsoBuilder::rezipTFA_isoManager(bool removeFiles){
             break;
         case 3:
             //ISOManager is unable to build a bootable ISO. Call ImgBurn
-            parent->log("ISOManager is unable to make a bootable ISO. Calling ImgBurn.");
+            m_Debug->Log("ISOManager is unable to make a bootable ISO. Calling ImgBurn.");
             repackISO(removeFiles);
         default:
             //either nothing to worry about or something we haven't handled yet. output it.
@@ -193,7 +204,7 @@ int IsoBuilder::rezipTFA_isoManager(bool removeFiles){
             break;
         }
     });
-    parent->log("Starting ISOManager to rezip archives.");
+    m_Debug->Log("Starting ISOManager to rezip archives.");
     isoManager->start(isoManagerPath, args);
 
     return 0;
@@ -202,24 +213,24 @@ int IsoBuilder::rezipTFA_isoManager(bool removeFiles){
 int IsoBuilder::rezipTFA_sevenZip(bool removeFiles){
     //calls 7zip to repack TFA etc
     //removeFiles currently does nothing in this function - only in the ISO rebuild
-    parent->setW->loadSettings();
-    QString sevenZipPath = parent->setW->getValue("7Zip EXE path");
+    m_zlManager->m_Settings->LoadSettings();
+    QString sevenZipPath = m_zlManager->m_Settings->GetValue("7Zip EXE path");
     if(sevenZipPath == ""){
         //prompt user for 7zip location
-        parent->log("7Zip executable path is not set. Please locate 7z.exe.");
-        sevenZipPath = QFileDialog::getOpenFileName(parent, parent->tr("Locate 7Zip EXE"), QDir::currentPath(), parent->tr("7z.exe"));
+        m_Debug->Log("7Zip executable path is not set. Please locate 7z.exe.");
+        sevenZipPath = QFileDialog::getOpenFileName(m_UI, m_UI->tr("Locate 7Zip EXE"), QDir::currentPath(), m_UI->tr("7z.exe"));
         if(sevenZipPath == ""){
-            parent->messageError("7zip was not located. Build process cancelled.");
+            m_Debug->MessageError("7zip was not located. Build process cancelled.");
             return 0;
         }
         QDir dirCorrection(sevenZipPath);
-        parent->setW->setValue("7Zip EXE path", dirCorrection.absolutePath());
+        m_zlManager->m_Settings->SetValue("7Zip EXE path", dirCorrection.absolutePath());
     }
 
-    QString inputPath = parent->setW->getValue("Game extract path");
+    QString inputPath = m_zlManager->m_Settings->GetValue("Game extract path");
     QString outputPath;
     if(moddedOutput == ""){
-        outputPath = parent->setW->getValue("Modded game path");
+        outputPath = m_zlManager->m_Settings->GetValue("Modded game path");
     } else {
         outputPath = moddedOutput;
     }
@@ -233,13 +244,7 @@ int IsoBuilder::rezipTFA_sevenZip(bool removeFiles){
     const static QStringList buildArchivesStore = {"SOUNDE"};
     QStringList archiveList = {};
 
-    std::vector<FolderOption> folderList = parent->modHandler->folderOptions;
-    for(int i = 0; i < folderList.size(); i++){
-        qDebug() << Q_FUNC_INFO << "folder" << folderList[i].folderName << "is zipped?" << folderList[i].zipped << "is modded?" << folderList[i].moddedSource;
-        if(folderList[i].zipped && folderList[i].moddedSource){
-            archiveList.push_back(folderList[i].folderName);
-        }
-    }
+    archiveList = m_zlManager->ZippedFolders(true);
 
     QProcess *sevenZip = new QProcess();
     QObject::connect(sevenZip, &QProcess::readyReadStandardOutput, [this,sevenZip, &removeFiles]() {
@@ -262,7 +267,7 @@ int IsoBuilder::rezipTFA_sevenZip(bool removeFiles){
             break;
         case 3:
             //ISOManager is unable to build a bootable ISO. Call ImgBurn
-            parent->log("ISOManager is unable to make a bootable ISO. Calling ImgBurn.");
+            m_Debug->Log("ISOManager is unable to make a bootable ISO. Calling ImgBurn.");
             repackISO(removeFiles);
         default:
             //either nothing to worry about or something we haven't handled yet. output it.
@@ -270,7 +275,7 @@ int IsoBuilder::rezipTFA_sevenZip(bool removeFiles){
             break;
         }
     });
-    parent->log("Starting 7Zip to rezip archives.");
+    m_Debug->Log("Starting 7Zip to rezip archives.");
 
     for(int i = 0; i < archiveList.size(); i++){
         /*The zips resulting from this are still way smaller than the original - this is probably contributing to the long load times. See if anything can be done about that.
@@ -283,7 +288,7 @@ int IsoBuilder::rezipTFA_sevenZip(bool removeFiles){
         QString zipFileExclude = QCoreApplication::applicationDirPath() + "/excludezip.txt";
         QFileInfo excludeFile(zipFileExclude);
         if(!excludeFile.isFile()){
-            parent->messageError("excludezip.txt was not found. The rebuild will have the BDB files. If this is a Randomizer build, that will break the randomization.");
+            m_Debug->MessageError("excludezip.txt was not found. The rebuild will have the BDB files. If this is a Randomizer build, that will break the randomization.");
         }
         QFile zipTextFile(zipFileOut);
         zipTextFile.open(QIODevice::WriteOnly);
@@ -384,7 +389,7 @@ int IsoBuilder::rezipTFA_sevenZip(bool removeFiles){
         //sevenZip->start(sevenZipPath, args);
         sevenZip->waitForFinished();
     }*/
-    parent->log("All archives zipped.");
+    m_Debug->Log("All archives zipped.");
     repackISO(removeFiles);
 
     return 0;
@@ -394,27 +399,27 @@ int IsoBuilder::repackISO(bool removeFiles){
     //calls imgburn to rebuild a new ISO
     static QStringList elfVersions = {"SLUS_206.68","SLES_523.88","SLES_533.09","SLKA_251.75"};
     int currentELF = 0;
-    parent->setW->loadSettings();
-    QString imgBurnPath = parent->setW->getValue("ImgBurn EXE path");
+    m_zlManager->m_Settings->LoadSettings();
+    QString imgBurnPath = m_zlManager->m_Settings->GetValue("ImgBurn EXE path");
     if(imgBurnPath == ""){
         //prompt user for imgBurn location
-        parent->log("ImgBurn executable path is not set. Please locate ImgBurn.exe.");
-        imgBurnPath = QFileDialog::getOpenFileName(parent, parent->tr("Locate ImgBurn EXE"), QDir::currentPath(), parent->tr("*.exe"));
+        m_Debug->Log("ImgBurn executable path is not set. Please locate ImgBurn.exe.");
+        imgBurnPath = QFileDialog::getOpenFileName(m_UI, m_UI->tr("Locate ImgBurn EXE"), QDir::currentPath(), m_UI->tr("*.exe"));
         if(imgBurnPath == ""){
-            parent->messageError("ImgBurn was not located. Build process cancelled.");
+            m_Debug->MessageError("ImgBurn was not located. Build process cancelled.");
             return 0;
         }
         QDir dirCorrection(imgBurnPath);
-        parent->setW->setValue("ImgBurn EXE path", dirCorrection.absolutePath());
+        m_zlManager->m_Settings->SetValue("ImgBurn EXE path", dirCorrection.absolutePath());
     }
 
     QString outputPath;
     if(moddedOutput == ""){
-        outputPath = parent->setW->getValue("Modded game path");
+        outputPath = m_zlManager->m_Settings->GetValue("Modded game path");
     } else {
         outputPath = moddedOutput;
     }
-    QString inputPath = parent->setW->getValue("Game extract path");
+    QString inputPath = m_zlManager->m_Settings->GetValue("Game extract path");
     QDir outputDir(outputPath);
     qDebug() << Q_FUNC_INFO << "testing path:" << outputDir.absolutePath() << "vs" << outputPath;
     outputPath = outputDir.absolutePath();
@@ -455,7 +460,7 @@ int IsoBuilder::repackISO(bool removeFiles){
     QStringList args;
     QString fileListArg;
     fileListArg = outputPath + slashType + "SYSTEM.CNF";
-    //parent->log("adding file or path to ISO build list: " + inputPath + slashType + "SYSTEM.CNF");
+    //m_Debug->Log("adding file or path to ISO build list: " + inputPath + slashType + "SYSTEM.CNF");
     QString verification = "|" + outputPath + slashType + elfVersions[currentELF];
     qDebug() << Q_FUNC_INFO << "verifying ELF:" << verification;
     fileListArg += "|" + outputPath + slashType + elfVersions[currentELF];
@@ -469,73 +474,14 @@ int IsoBuilder::repackISO(bool removeFiles){
 
     /*This can be written to a text file just like with 7zip (see readme file, SRCLIST).*/
     //QStringList unpackedfolders = {"FMV", "IOP", "SOUND"};
-    QStringList uneditedFolders = {};
-    QStringList editedFolders = {};
-    QStringList uneditedZips = {};
-    QStringList editedZips = {};
-
-    std::vector<FolderOption> folderList = parent->modHandler->folderOptions;
-    for(int i = 0; i < folderList.size(); i++){
-        if(folderList[i].zipped){
-            if(folderList[i].moddedSource){
-                editedZips.push_back(folderList[i].folderName);
-            } else {
-                uneditedZips.push_back(folderList[i].folderName);
-            }
-            continue;
-        }
-        if(folderList[i].moddedSource){
-            editedFolders.push_back(folderList[i].folderName);
-        } else {
-            uneditedFolders.push_back(folderList[i].folderName);
-        }
-    }
+    QStringList uneditedFolders = m_zlManager->UnzippedFolders(false);
+    QStringList editedFolders = m_zlManager->UnzippedFolders(true);
+    QStringList uneditedZips = m_zlManager->ZippedFolders(false);
+    QStringList editedZips = m_zlManager->ZippedFolders(true);
 
     QString isoTextPath = outputPath + "\\tempiso.txt";
     QFile isoTextFile(isoTextPath);
     isoTextFile.open(QIODevice::WriteOnly);
-    /*for(int i = 0; i < unpackedfolders.size(); i++){
-        //Get the files from the output first
-        QDir outputDirectory(outputPath + "\\" + unpackedfolders[i]);
-        QDirIterator outputIterator(outputPath + "\\" + unpackedfolders[i], QDirIterator::Subdirectories);
-        QStringList existingFiles;
-        while(outputIterator.hasNext()){
-            QFileInfo current(outputIterator.next());
-            QString checkFile = outputDirectory.relativeFilePath(current.absoluteFilePath());
-            if(existingFiles.contains(checkFile) || !current.isFile()){
-                continue;
-            }
-            if(checkFile != ".." && checkFile != "." && checkFile != "../"){
-                existingFiles.push_back(checkFile);
-                isoTextFile.write(current.absoluteFilePath().toUtf8());
-                //isoTextFile.write(checkFile.toUtf8());
-                isoTextFile.write("\n");
-            }
-        }
-        existingFiles.removeDuplicates();
-        qDebug() << Q_FUNC_INFO << "existing files:" << existingFiles;
-    }
-    for(int i = 0; i < unpackedfolders.size(); i++){
-        //Then get the unmodified files
-        QDir inputDirectory(inputPath + "\\" + unpackedfolders[i]);
-        QDirIterator inputIterator(inputPath + "\\" + unpackedfolders[i], QDirIterator::Subdirectories);
-        QStringList existingFiles;
-        while(inputIterator.hasNext()){
-            QFileInfo current(inputIterator.next());
-            QString checkFile = inputDirectory.relativeFilePath(current.absoluteFilePath());
-            if(existingFiles.contains(checkFile) || !current.isFile()){
-                continue;
-            }
-            if(checkFile != ".." && checkFile != "." && checkFile != "../"){
-                existingFiles.push_back(checkFile);
-                isoTextFile.write(current.absoluteFilePath().toUtf8());
-                //isoTextFile.write(checkFile.toUtf8());
-                isoTextFile.write("\n");
-            }
-        }
-        existingFiles.removeDuplicates();
-        qDebug() << Q_FUNC_INFO << "existing files:" << existingFiles;
-    }*/
     for(int i = 0; i < uneditedFolders.size(); i++){
         isoTextFile.write(inputPath.toUtf8() + slashType.toUtf8() + uneditedFolders[i].toUtf8());
         isoTextFile.write("\n");
@@ -562,14 +508,6 @@ int IsoBuilder::repackISO(bool removeFiles){
         isoTextFile.write(outputPath.toUtf8() + slashType.toUtf8() + editedZips[i].toUtf8() + ".zip");
         isoTextFile.write("\n");
     }
-    /*isoTextFile.write(outputPath.toUtf8() + slashType.toUtf8() + "TA_XTRAS.ZIP");
-    isoTextFile.write("\n");
-    isoTextFile.write(outputPath.toUtf8() + slashType.toUtf8() + "TFA.ZIP");
-    isoTextFile.write("\n");
-    isoTextFile.write(outputPath.toUtf8() + slashType.toUtf8() + "TFA2.ZIP");
-    isoTextFile.write("\n");
-    isoTextFile.write(outputPath.toUtf8() + slashType.toUtf8() + "SOUNDE.ZIP");
-    isoTextFile.write("\n");*/
     isoTextFile.close();
 
 
@@ -577,8 +515,6 @@ int IsoBuilder::repackISO(bool removeFiles){
     args.append("BUILD");
     args.append("/OUTPUTMODE");
     args.append("IMAGEFILE");
-    //args.append("/SRC");
-    //args.append(fileListArg);
     args.append("/SRCLIST");
     args.append(isoTextPath);
     args.append("/DEST");
@@ -679,7 +615,7 @@ int IsoBuilder::repackISO(bool removeFiles){
         }
 
     });
-    parent->log("Building ISO." + fileDeleteLog);
+    m_Debug->Log("Building ISO." + fileDeleteLog);
     /*The above needs to be tested again to make sure the correct files get deleted please & thank you*/
     imgBurn->start(imgBurnPath, args);
     return 0;
@@ -711,22 +647,19 @@ void IsoBuilder::copyFiles(QString folderName){
                 QFile::copy(currentFileInfo.absoluteFilePath(), outputPath);
                 fileCount++;
             }
-            parent->updateLoadingBar(fileCount, totalFileCount);
+            m_UI->UpdateLoadingBar(fileCount, totalFileCount);
         }
     }
 }
 
 int IsoBuilder::packModded(QString outputFolder){
-    if(parent->modHandler == nullptr){
-        parent->modHandler = new ModHandler(parent);
-    }
     if(outputFolder == "Randomizer"){
         buildingRandomizer = true;
     }
-    moddedInput = parent->setW->getValue("Modded game path");
+    moddedInput = m_zlManager->m_Settings->GetValue("Modded game path");
     bool manualDirectory = false;
     if(moddedInput == ""){
-        moddedInput = QFileDialog::getExistingDirectory(parent, parent->tr("Choose un-modded source."), QDir::currentPath());
+        moddedInput = QFileDialog::getExistingDirectory(m_UI, m_UI->tr("Choose un-modded source."), QDir::currentPath());
         manualDirectory = true;
     }
     QDir inputDir(moddedInput);
@@ -737,7 +670,7 @@ int IsoBuilder::packModded(QString outputFolder){
     }
     if(moddedInput == moddedOutput){
         //randomizer directory is already the modded game directory - we need the game path instead
-        moddedInput = parent->setW->getValue("Game extract path");
+        moddedInput = m_zlManager->m_Settings->GetValue("Game extract path");
         inputDir.setPath(moddedInput);
     }
     QMessageBox confirmPath;
@@ -751,12 +684,12 @@ int IsoBuilder::packModded(QString outputFolder){
         confirmation = confirmPath.exec();
     }
     if(confirmation == QMessageBox::No){
-        moddedInput = QFileDialog::getExistingDirectory(parent, parent->tr("Choose un-modded source."), QDir::currentPath());
+        moddedInput = QFileDialog::getExistingDirectory(m_UI, m_UI->tr("Choose un-modded source."), QDir::currentPath());
     }
     if(moddedInput == ""){
-        parent->log("Process cancelled.");
+        m_Debug->Log("Process cancelled.");
     } else {
-        parent->setW->setValue("Game extract path", moddedInput);
+        m_zlManager->m_Settings->SetValue("Game extract path", moddedInput);
     }
 
     confirmPath.setText("Is the modified path correct?");
@@ -764,28 +697,20 @@ int IsoBuilder::packModded(QString outputFolder){
 
     confirmation = confirmPath.exec();
     if(confirmation == QMessageBox::No){
-        moddedOutput = QFileDialog::getExistingDirectory(parent, parent->tr("Choose modded source."), QDir::currentPath());
+        moddedOutput = QFileDialog::getExistingDirectory(m_UI, m_UI->tr("Choose modded source."), QDir::currentPath());
     }
     if(moddedOutput == ""){
-        parent->log("Process cancelled.");
+        m_Debug->Log("Process cancelled.");
     }
 
     qDebug() << Q_FUNC_INFO << "input path read as" << moddedInput;
     qDebug() << Q_FUNC_INFO << "Path confirmed?" << confirmation;
 
-    parent->log("Copying files from " + moddedInput + " to " + moddedOutput);
-    parent->log("Copying game files for modified build. (This can take a couple minutes)");
+    m_Debug->Log("Copying files from " + moddedInput + " to " + moddedOutput);
+    m_Debug->Log("Copying game files for modified build. (This can take a couple minutes)");
     //QStringList foldersToCopy = {"FMV", "IOP", "SOUND"};
-    QStringList foldersToCopy = {};
-    std::vector<FolderOption> folderList = parent->modHandler->folderOptions;
-    for(int i = 0; i < folderList.size(); i++){
-        if(folderList[i].zipped){
-            continue;
-        }
-        if(folderList[i].moddedSource){
-            foldersToCopy.push_back(folderList[i].folderName);
-        }
-    }
+    QStringList foldersToCopy = m_zlManager->UnzippedFolders(true);
+
     for(int i = 0; i < foldersToCopy.size(); i++){
         copyFiles(foldersToCopy[i]);
     }
@@ -793,7 +718,7 @@ int IsoBuilder::packModded(QString outputFolder){
     //parent->updateLoadingBar(totalFileCount, totalFileCount);
 
     QDir dirCorrection(moddedOutput);
-    parent->setW->setValue("Modded game path", dirCorrection.absolutePath());
+    m_zlManager->m_Settings->SetValue("Modded game path", dirCorrection.absolutePath());
     rezipTFA_sevenZip(true);
 
     moddedInput = "";
