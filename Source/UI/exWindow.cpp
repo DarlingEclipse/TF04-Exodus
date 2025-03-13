@@ -6,16 +6,11 @@
 #include <QScreen>
 #include <QLineEdit>
 
-exWindow* exWindow::s_instance = nullptr;
-
-exWindow::exWindow(QWidget *parent)
+exWindowBase::exWindowBase(QWidget *parent)
     : QMainWindow(parent)
     , m_ui(new Ui::MainWindow)
 {
-    s_instance = this;
     m_ui->setupUi(this);
-    m_setW = new exSettings(this);
-    //this->setPalette(palette);
 
     m_messagePopup = new QMessageBox(this);
     m_messagePopup->setGeometry(QRect(QPoint(int(m_hSize*0.5),int(m_vSize*0.5)), QSize(120,30)));
@@ -26,10 +21,7 @@ exWindow::exWindow(QWidget *parent)
     m_centralContainer->setGeometry(QRect(QPoint(m_hSize*0.15,0), QSize(m_hSize*0.6,m_vSize)));
     UpdateBackground();
 
-    setWindowTitle("Exodus 0.7.4.0");
-    setGeometry(QRect(QPoint(0,0), QSize(m_hSize,m_vSize)));
-    //w.resize(1200, 600);
-
+    resize(1200, 600);
 
     QMenu *menuVBIN = menuBar()->addMenu("Model");
     QMenu *menuITF = menuBar()->addMenu("Texture");
@@ -39,7 +31,6 @@ exWindow::exWindow(QWidget *parent)
     QMenu *menuRandomizer = menuBar()->addMenu("Randomizer");
     QMenu *menuBuild = menuBar()->addMenu("Build");
     QMenu *menuClear = menuBar()->addMenu("Clear");
-    QMenu *menuSettings = menuBar()->addMenu("Settings");
 
     QAction *actionLoadVBIN = menuVBIN->addAction("Load VBIN");
     QAction *actionLoadMeshVBIN = menuVBIN->addAction("Load Mesh VBIN");
@@ -81,47 +72,57 @@ exWindow::exWindow(QWidget *parent)
 
     QAction *actionClearFiles = menuClear->addAction("Clear Loaded Files");
 
-    QAction *actionSettings = menuSettings -> addAction("Settings");
-
-    //rightSidebar = new QDockWidget(this);
-    //addDockWidget(Qt::RightDockWidgetArea, rightSidebar);
-    //rightSidebar->setFloating(false);
-    //rightSidebar->show();
-
-    /*QDockWidget *bottomLogbar = new QDockWidget(this);
-    addDockWidget(Qt::BottomDockWidgetArea, bottomLogbar);
-    bottomLogbar->setFloating(false);*/
-
-
-    /*hiding SFX menu for this patch since this system is far from ready*/
-    //menuSFX->setVisible(false);
 
     m_loadingBar = nullptr;
-
-    connect(actionSettings, &QAction::triggered, this, &exWindow::HandleSettings);
-
-    setWindowState(Qt::WindowMaximized);
-    /*time_t lastCheck = win_sparkle_get_last_check_time();
-    time(&lastCheck);
-    messageSuccess("Last update check occurred at " + QString(ctime(&lastCheck)));*/
 
     show();
 }
 
-exWindow::~exWindow()
+exWindowMain::exWindowMain(QWidget *parent)
+    : exWindowBase(parent)
+{
+    m_ui->setupUi(this);
+    m_setW = new exSettings(this);
+    //this->setPalette(palette);
+
+    m_messagePopup = new QMessageBox(this);
+    m_messagePopup->setGeometry(QRect(QPoint(int(m_hSize*0.5),int(m_vSize*0.5)), QSize(120,30)));
+    menuBar()->setGeometry(QRect(QPoint(int(m_hSize*0),int(m_vSize*0)), QSize(int(m_hSize*1),25)));
+
+    m_centralContainer = new QWidget(this);
+    setCentralWidget(m_centralContainer);
+    m_centralContainer->setGeometry(QRect(QPoint(m_hSize*0.15,0), QSize(m_hSize*0.6,m_vSize)));
+    UpdateBackground();
+
+    setWindowTitle("Exodus 0.7.4.0");
+    setGeometry(QRect(QPoint(0,0), QSize(m_hSize,m_vSize)));
+    //w.resize(1200, 600);
+
+    QMenu *menuSettings = menuBar()->addMenu("Settings");
+    QAction *actionSettings = menuSettings->addAction("Settings");
+    connect(actionSettings, &QAction::triggered, this, [this]{m_setW->Open();});
+
+    m_loadingBar = nullptr;
+
+    setWindowState(Qt::WindowMaximized);
+
+    show();
+}
+
+exWindowMain::~exWindowMain()
 {
     delete m_ui;
 }
 
-QMenu* exWindow::AddMenu(QString name){
+QMenu* exWindowBase::AddMenu(QString name){
     return menuBar()->addMenu(name);
 }
 
-QAction* exWindow::AddAction(QMenu* targetMenu, QString name){
+QAction* exWindowBase::AddAction(QMenu* targetMenu, QString name){
     return targetMenu->addAction(name);
 }
 
-void exWindow::UpdateLoadingBar(int currentValue, int maxValue){
+void exWindowBase::UpdateLoadingBar(int currentValue, int maxValue){
     if(m_loadingBar == nullptr){
         m_loadingBar = new QProgressBar(m_centralContainer);
         m_loadingBar->setOrientation(Qt::Horizontal);
@@ -138,7 +139,7 @@ void exWindow::UpdateLoadingBar(int currentValue, int maxValue){
     ForceProcessEvents();
 }
 
-void exWindow::UpdateLoadingBar(){
+void exWindowBase::UpdateLoadingBar(){
     if(m_loadingBar == nullptr){
         return;
     }
@@ -151,7 +152,7 @@ void exWindow::UpdateLoadingBar(){
     ForceProcessEvents();
 }
 
-void exWindow::UpdateLoadingBar(int currentValue){
+void exWindowBase::UpdateLoadingBar(int currentValue){
     if(m_loadingBar == nullptr){
         return;
     }
@@ -164,7 +165,7 @@ void exWindow::UpdateLoadingBar(int currentValue){
     ForceProcessEvents();
 }
 
-void exWindow::UpdateBackground(){
+void exWindowBase::UpdateBackground(){
     //background.load(QCoreApplication::applicationDirPath() + "/assets/background.png");
     //background = background.scaled(centralContainer->size());
     m_centralContainer->setAutoFillBackground(true);
@@ -175,19 +176,19 @@ void exWindow::UpdateBackground(){
     m_centralContainer->show();
 }
 
-void exWindow::ClearWindow(){
+void exWindowBase::ClearWindow(){
 
-    for (int i = 0; i < m_currentModeWidgets.size(); i++) {
-        qDebug() << Q_FUNC_INFO << "checking widget" << m_currentModeWidgets[i]->metaObject()->className();
-        m_currentModeWidgets[i]->setVisible(false);
-        delete m_currentModeWidgets[i];
+    for (int i = 0; i < m_currentWidgets.size(); i++) {
+        qDebug() << Q_FUNC_INFO << "checking widget" << m_currentWidgets[i]->metaObject()->className();
+        m_currentWidgets[i]->setVisible(false);
+        delete m_currentWidgets[i];
     }
-    m_currentModeWidgets.clear();
+    m_currentWidgets.clear();
     repaint(); //the buttons will visually remain, despite being set to not visible, until the program is told to repaint.
     //this will only work if the background image is usable
 }
 
-void exWindow::ResizeEvent(QResizeEvent* event){
+void exWindowBase::ResizeEvent(QResizeEvent* event){
     /*Resizes the background to fit the window. Will eventually add element placements so it doesn't look terrible if full-screened.*/
     QMainWindow::resizeEvent(event);
     m_hSize = this->size().width();
@@ -198,33 +199,27 @@ void exWindow::ResizeEvent(QResizeEvent* event){
     //this->setPalette(palette);
 }
 
-void exWindow::MessageError(QString message){
+void exWindowBase::MessageError(QString message){
     m_messagePopup->setText(message);
     m_messagePopup->setWindowTitle("Error!");
     m_messagePopup->exec();
 }
 
-void exWindow::MessageSuccess(QString message){
+void exWindowBase::MessageSuccess(QString message){
     m_messagePopup->setText(message);
     m_messagePopup->setWindowTitle("Success.");
     m_messagePopup->exec();
 }
 
-void exWindow::HandleSettings(){
-    //open a settings window
-    //should probably just make the connection to settingswindow::open but this will do for now
-    m_setW->Open();
-}
-
-QPoint exWindow::ScreenCenter(){
+QPoint exWindowBase::ScreenCenter(){
     return QGuiApplication::primaryScreen()->geometry().center();
 }
 
-void exWindow::ForceProcessEvents(){
+void exWindowBase::ForceProcessEvents(){
     QApplication::processEvents();
 }
 
-QMessageBox* exWindow::MakeOkayPopup(){
+QMessageBox* exWindowBase::MakeOkayPopup(){
     QMessageBox *dialogWindow = new QMessageBox();
     QPushButton *buttonConfirm = new QPushButton("Okay", dialogWindow);
     dialogWindow->setGeometry(QRect(ScreenCenter() - QPoint(125,125), QSize(250,250)));
@@ -235,7 +230,7 @@ QMessageBox* exWindow::MakeOkayPopup(){
     return dialogWindow;
 }
 
-QDialog* exWindow::MakeYesNoPopup(bool &finished){
+QDialog* exWindowBase::MakeYesNoPopup(bool &finished){
     QDialog *dialogWindow = new QDialog();
     QPushButton *buttonConfirm = new QPushButton("Confirm", dialogWindow);
     QPushButton *buttonCancel = new QPushButton("Cancel", dialogWindow);
@@ -250,7 +245,7 @@ QDialog* exWindow::MakeYesNoPopup(bool &finished){
     return dialogWindow;
 }
 
-CustomPopup* exWindow::MakeSpecificPopup(bool &finished, QStringList addons, QStringList labels){
+CustomPopup* exWindowBase::MakeSpecificPopup(bool &finished, QStringList addons, QStringList labels){
     CustomPopup *dialogWindow = new CustomPopup();
     int marginSize = 20;
     int windowHeight = marginSize + (addons.size()+1) * 30 + marginSize;
@@ -363,7 +358,7 @@ CustomPopup* exWindow::MakeSpecificPopup(bool &finished, QStringList addons, QSt
     return dialogWindow;
 }
 
-void exWindow::SetLeftWindow(QWidget* widgetToSet){
+void exWindowMain::SetLeftWindow(QWidget* widgetToSet){
     if(m_leftSidebar == nullptr){
         m_leftSidebar = new QDockWidget(this);
         addDockWidget(Qt::LeftDockWidgetArea, m_leftSidebar);
@@ -373,7 +368,7 @@ void exWindow::SetLeftWindow(QWidget* widgetToSet){
     m_leftSidebar->setWidget(widgetToSet);
 }
 
-void exWindow::SetRightWindow(QWidget* widgetToSet){
+void exWindowMain::SetRightWindow(QWidget* widgetToSet){
     if(m_rightSidebar == nullptr){
         m_rightSidebar = new QDockWidget(this);
         addDockWidget(Qt::RightDockWidgetArea, m_rightSidebar);
@@ -383,7 +378,7 @@ void exWindow::SetRightWindow(QWidget* widgetToSet){
     m_rightSidebar->setWidget(widgetToSet);
 }
 
-void exWindow::SetBottomWindow(QWidget* widgetToSet){
+void exWindowMain::SetBottomWindow(QWidget* widgetToSet){
     if(m_bottomSidebar == nullptr){
         m_bottomSidebar = new QDockWidget(this);
         addDockWidget(Qt::BottomDockWidgetArea, m_bottomSidebar);
@@ -391,4 +386,16 @@ void exWindow::SetBottomWindow(QWidget* widgetToSet){
         m_bottomSidebar->show();
     }
     m_bottomSidebar->setWidget(widgetToSet);
+}
+
+void exWindowBase::SetLeftWindow(QWidget* widgetToSet){
+    qDebug() << Q_FUNC_INFO << "Base function called.";
+}
+
+void exWindowBase::SetRightWindow(QWidget* widgetToSet){
+    qDebug() << Q_FUNC_INFO << "Base function called.";
+}
+
+void exWindowBase::SetBottomWindow(QWidget* widgetToSet){
+    qDebug() << Q_FUNC_INFO << "Base function called.";
 }

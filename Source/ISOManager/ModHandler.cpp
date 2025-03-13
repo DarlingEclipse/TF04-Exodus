@@ -8,9 +8,9 @@
 #include "Headers/Main/exDebugger.h"
 #include "Headers/UI/exSettings.h"
 
-ModHandler::ModHandler(zlManager *fileManager){
+ModHandler::ModHandler(exWindowBase *passUI, zlManager *fileManager){
 
-    m_UI = &exWindow::GetInstance();
+    m_UI = passUI;
     m_zlManager = fileManager;
     m_Debug = &exDebugger::GetInstance();
 
@@ -47,7 +47,7 @@ void ModHandler::updateCenter(){
 
     QGroupBox *groupModOptions = new QGroupBox("Mod Options", m_UI->m_centralContainer);
     groupModOptions->setGeometry(QRect(QPoint(250,100), QSize(200,300)));
-    m_UI->m_currentModeWidgets.push_back(groupModOptions);
+    m_UI->m_currentWidgets.push_back(groupModOptions);
 
     for(int i = 0; i < modList.size(); i++){
         //this will need to be edited later for when we have more mods than will fit in the box to move to the next column. or scroll?
@@ -67,7 +67,7 @@ void ModHandler::updateCenter(){
     /*groupReplacements->setStyleSheet("QGroupBox{color: rgb(255, 255, 255); background-color: rgba(255, 255, 255, 0);} "
                                    "QCheckBox{color: rgb(255, 255, 255); background-color: rgba(255, 255, 255, 0);} "
                                    "QToolTip{color: rgb(0,0,0);}");*/
-    m_UI->m_currentModeWidgets.push_back(groupReplacements);
+    m_UI->m_currentWidgets.push_back(groupReplacements);
 
     for(int i = 0; i < replacementList.size(); i++){
         //this will need to be edited later for when we have more mods than will fit in the box to move to the next column. or scroll?
@@ -90,7 +90,7 @@ void ModHandler::updateCenter(){
     /*groupReplacements->setStyleSheet("QGroupBox{color: rgb(255, 255, 255); background-color: rgba(255, 255, 255, 0);} "
                                    "QCheckBox{color: rgb(255, 255, 255); background-color: rgba(255, 255, 255, 0);} "
                                    "QToolTip{color: rgb(0,0,0);}");*/
-    m_UI->m_currentModeWidgets.push_back(groupFolders);
+    m_UI->m_currentWidgets.push_back(groupFolders);
     for(int i = 0; i < folderOptions.size(); i++){
         QCheckBox *folderCheck = new QCheckBox(folderOptions[i].m_name, groupFolders);
         folderCheck->setGeometry(QRect(QPoint(20,20 + (40*i)), QSize(200,30)));
@@ -114,7 +114,7 @@ void ModHandler::updateCenter(){
     QPushButton* buttonApply = new QPushButton("Apply Changes", m_UI->m_centralContainer);
     buttonApply->setGeometry(QRect(QPoint(50,320), QSize(150,30)));
     QAbstractButton::connect(buttonApply, &QPushButton::released, m_UI, [this] {setChanges();});
-    m_UI->m_currentModeWidgets.push_back(buttonApply);
+    m_UI->m_currentWidgets.push_back(buttonApply);
     buttonApply->show();
 }
 

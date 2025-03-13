@@ -8,14 +8,14 @@
 /*This will interface with 7zip, ImgBurn, and the python TF04 ISO Manager to unpack and repack modded versions of the game
 This will require that the settings system is set up so users only have to find their 7zip and imgburn installations once*/
 
-class exWindow;
+class exWindowBase;
 class zlManager;
 class exDebugger;
 class exSettings;
 
 class IsoBuilder {
 public:
-    exWindow *m_UI;
+    exWindowBase *m_UI;
     exDebugger *m_Debug;
     zlManager *m_zlManager;
     QString sevenZipPath;

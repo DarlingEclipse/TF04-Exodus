@@ -6,7 +6,7 @@
 #include <QTextStream>
 #include <QDebug>
 
-class exWindow;
+class exWindowBase;
 class zlManager;
 class exDebugger;
 class FileData;
@@ -33,7 +33,7 @@ class taFile : public taFilesystemObject{
     int fileStatus = taFileInvalid;
     QString inputPath;
     QString outputPath;
-    exWindow *m_UI;
+    exWindowBase *m_UI;
     zlManager *m_zlManager;
     exDebugger *m_Debug;
     FileData *fileData;

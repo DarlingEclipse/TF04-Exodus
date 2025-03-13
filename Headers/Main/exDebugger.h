@@ -3,19 +3,19 @@
 
 #include <QListWidget>
 
-class exWindow;
+class exWindowBase;
 
 /*3/2/2025 - isolated from mainwindow.h as part of The Great Refactoring (Part 1)
  *This class acts as a universal debugger and logger*/
 
 class exDebugger{
 public:
-    exDebugger();
+    exDebugger(exWindowBase *passUI);
     ~exDebugger();
 
     static exDebugger* s_instance;
 
-    exWindow* m_UI;
+    exWindowBase* m_UI;
 
     QListWidget* m_logPrintout;
 

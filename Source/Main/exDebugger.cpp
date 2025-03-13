@@ -4,10 +4,10 @@
 
 exDebugger* exDebugger::s_instance;
 
-exDebugger::exDebugger()
+exDebugger::exDebugger(exWindowBase *passUI)
 {
     s_instance = this;
-    m_UI = &exWindow::GetInstance();
+    m_UI = passUI;
 
     m_logPrintout = new QListWidget;
     m_UI->SetBottomWindow(m_logPrintout);

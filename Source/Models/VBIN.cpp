@@ -544,7 +544,7 @@ void VBIN::updateCenter(){
     QComboBox::connect(ListLods, &QComboBox::currentIndexChanged, m_UI, [ListLods, this] {setLevel(ListLods->currentIndex());});
     //QAbstractButton::connect(ListLods, &QComboBox::currentIndexChanged, parent, [parent = this->parent]() {parent->levelSelectChange();});
     ListLods->show();
-    m_UI->m_currentModeWidgets.push_back(ListLods);
+    m_UI->m_currentWidgets.push_back(ListLods);
     ListLods->setCurrentIndex(highestLOD-1);
 
     QRadioButton* radioSingle = new QRadioButton("Single file output", m_UI->m_centralContainer);
@@ -553,14 +553,14 @@ void VBIN::updateCenter(){
     QAbstractButton::connect(radioSingle, &QRadioButton::toggled, m_UI, [radioSingle, this] {setOutput(radioSingle->isChecked());});
     radioSingle->toggle();
     radioSingle->show();
-    m_UI->m_currentModeWidgets.push_back(radioSingle);
+    m_UI->m_currentWidgets.push_back(radioSingle);
 
 
     QRadioButton* radioMultiple = new QRadioButton("Multi-file output", m_UI->m_centralContainer);
     radioMultiple->setGeometry(QRect(QPoint(540,120), QSize(120,30)));
     radioMultiple->setStyleSheet("color: rgb(255, 255, 255); background-color: rgba(255, 255, 255, 0)");
     radioMultiple->show();
-    m_UI->m_currentModeWidgets.push_back(radioMultiple);
+    m_UI->m_currentWidgets.push_back(radioMultiple);
 
 }
 

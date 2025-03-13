@@ -30,8 +30,8 @@ std::vector<Warpgate> convertWarpgates(std::vector<dictItem> itemList){
 //     qDebug() << Q_FUNC_INFO << "Base DataHandler intialization called. This shouldn't happen";
 // }
 
-DataHandler::DataHandler(zlManager *fileManager){
-    m_UI = &exWindow::GetInstance();
+DataHandler::DataHandler(exWindowBase *passUI, zlManager *fileManager){
+    m_UI = passUI;
     m_Debug = &exDebugger::GetInstance();
     m_zlManager = fileManager;
 

@@ -1,14 +1,15 @@
 #include "Headers/UI/exSettings.h"
 #include "qcoreapplication.h"
+#include "Headers/UI/exWindow.h"
 
-exSettings::exSettings(QWidget *sentParent){
-
+exSettings::exSettings(QWidget *parent){
     m_savedChanges = true;
     setWindowTitle("Exodus Settings");
     m_sendUpdate = new QPushButton("Save Settings", this);
     m_sendUpdate -> setGeometry(QRect(QPoint(25,25), QSize(200,25)));
 
     connect(m_sendUpdate, &QPushButton::released, this, &exSettings::UpdateSettings);
+
 }
 
 void exSettings::UpdateSettings(){

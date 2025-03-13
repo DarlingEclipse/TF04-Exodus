@@ -122,7 +122,7 @@ void DatabaseFile::updateCenter(){
     ButtonFilterTree->setGeometry(QRect(QPoint(50,370), QSize(150,30)));
     QAbstractButton::connect(ButtonFilterTree, &QPushButton::released, m_UI, [this]{filterInstances();});
     ButtonFilterTree->show();
-    m_UI->m_currentModeWidgets.push_back(ButtonFilterTree);
+    m_UI->m_currentWidgets.push_back(ButtonFilterTree);
     m_UI->setUpdatesEnabled(true);
 
 }
@@ -187,7 +187,7 @@ void DefinitionFile::createDBTree(){
     dataTree->show();
     dataTree->resizeColumnToContents(0);
     QAbstractButton::connect(dataTree, &QAbstractItemView::doubleClicked, m_UI, [this](QModelIndex selected){editRow(selected);});
-    m_UI->m_currentModeWidgets.push_back(dataTree);
+    m_UI->m_currentWidgets.push_back(dataTree);
 }
 
 int DatabaseFile::addInstance(dictItem itemToAdd){
@@ -320,7 +320,7 @@ QList<QStandardItem *> DatabaseFile::createInstanceRow(std::shared_ptr<taData> d
 void DatabaseFile::createDBTree(){
 
     dataTree = new QTreeView(m_UI->m_centralContainer);
-    m_UI->m_currentModeWidgets.push_back(dataTree);
+    m_UI->m_currentWidgets.push_back(dataTree);
     dataModel = new QStandardItemModel;
 
     QHeaderView *headers = dataTree->header();
@@ -1940,14 +1940,14 @@ void DatabaseFile::editRow(QModelIndex selected){
 
 void DatabaseFile::copyOrDeleteInstance(QModelIndex selected){
     bool isDialogOpen = true;
-    CustomPopup* dialogCopyDelete = exWindow::MakeSpecificPopup(isDialogOpen, {"combobox"}, {""});
+    CustomPopup* dialogCopyDelete = exWindowBase::MakeSpecificPopup(isDialogOpen, {"combobox"}, {""});
 
     dialogCopyDelete->comboOption->addItem("Create copy");
     dialogCopyDelete->comboOption->addItem("Delete instance");
 
     dialogCopyDelete->open();
     while(isDialogOpen){
-        exWindow::ForceProcessEvents();
+        exWindowBase::ForceProcessEvents();
     }
     int resultDialog = dialogCopyDelete->result();
 
@@ -1995,12 +1995,12 @@ void DatabaseFile::editAttributeValue(int selectedInstanceID, QString instanceNa
     instanceData = instances[indexToEdit].getAttribute(attributeName);
     bool userSetDefault = false;
     if(!instanceData->isDefault){
-        CustomPopup* dialogGetDefault = exWindow::MakeSpecificPopup(isDialogOpen, {"checkbox"}, {""});
+        CustomPopup* dialogGetDefault = exWindowBase::MakeSpecificPopup(isDialogOpen, {"checkbox"}, {""});
         dialogGetDefault->setWindowTitle("Set to Default?");
         dialogGetDefault->checkOption->setText("Check to set value to default.");
         dialogGetDefault->open();
         while(isDialogOpen){
-            exWindow::ForceProcessEvents();
+            exWindowBase::ForceProcessEvents();
         }
         int resultDialog = dialogGetDefault->result();
 
@@ -2028,7 +2028,7 @@ void DatabaseFile::editAttributeValue(int selectedInstanceID, QString instanceNa
 
 void DatabaseFile::addFileDictionaryClass(){
     bool isDialogOpen = true;
-    CustomPopup* dialogGetClassName = exWindow::MakeSpecificPopup(isDialogOpen, {"combobox"}, {"Class:"});
+    CustomPopup* dialogGetClassName = exWindowBase::MakeSpecificPopup(isDialogOpen, {"combobox"}, {"Class:"});
     dialogGetClassName->setWindowTitle("Choose class to add");
 
     bool alreadyIncluded = false;
@@ -2046,7 +2046,7 @@ void DatabaseFile::addFileDictionaryClass(){
 
     dialogGetClassName->open();
     while(isDialogOpen){
-        exWindow::ForceProcessEvents();
+        exWindowBase::ForceProcessEvents();
     }
     int resultDialog = dialogGetClassName->result();
 
@@ -2085,7 +2085,7 @@ void DatabaseFile::addFileDictionaryAttributes(QString chosenClassName){
     }
 
     bool isDialogOpen = true;
-    CustomPopup *dialogGetClassName = exWindow::MakeSpecificPopup(isDialogOpen, {"list"}, {"Select Attributes:"});
+    CustomPopup *dialogGetClassName = exWindowBase::MakeSpecificPopup(isDialogOpen, {"list"}, {"Select Attributes:"});
     dialogGetClassName->setWindowTitle("Choose attributes to use");
     bool alreadyIncluded = false;
     for(int i = 0; i < inheritClass->attributes.size(); i++){
@@ -2109,7 +2109,7 @@ void DatabaseFile::addFileDictionaryAttributes(QString chosenClassName){
     isDialogOpen = true;
     dialogGetClassName->open();
     while(isDialogOpen){
-        exWindow::ForceProcessEvents();
+        exWindowBase::ForceProcessEvents();
     }
     int resultDialog = dialogGetClassName->result();
 
@@ -2130,7 +2130,7 @@ void DatabaseFile::addFileDictionaryAttributes(QString chosenClassName){
 
 void DatabaseFile::addNewInstance(){
     bool isDialogOpen = true;
-    CustomPopup* dialogGetClassName = exWindow::MakeSpecificPopup(isDialogOpen, {"combobox"}, {"Instance:"});
+    CustomPopup* dialogGetClassName = exWindowBase::MakeSpecificPopup(isDialogOpen, {"combobox"}, {"Instance:"});
     dialogGetClassName->setWindowTitle("Choose instance type to add");
 
     for(int i = 0; i < dictionary.size(); i++){
@@ -2139,7 +2139,7 @@ void DatabaseFile::addNewInstance(){
 
     dialogGetClassName->open();
     while(isDialogOpen){
-        exWindow::ForceProcessEvents();
+        exWindowBase::ForceProcessEvents();
     }
     int resultDialog = dialogGetClassName->result();
 

@@ -12,8 +12,8 @@ void DistanceCalculator::userSelectLevel(int selectedLevel){
     //then currentlevel is used below to calculate the closest warpgate
 }
 
-DistanceCalculator::DistanceCalculator(zlManager *fileManager){
-    m_UI = &exWindow::GetInstance();
+DistanceCalculator::DistanceCalculator(exWindowBase *passUI, zlManager *fileManager){
+    m_UI = passUI;
     m_Debug = &exDebugger::GetInstance();
     m_zlManager = fileManager;
     if(m_zlManager->loadDatabases() != 0){
@@ -24,22 +24,22 @@ DistanceCalculator::DistanceCalculator(zlManager *fileManager){
     QPushButton *ButtonCalculate = new QPushButton("Calculate", m_UI->m_centralContainer);
     ButtonCalculate->setGeometry(QRect(QPoint(50,320), QSize(150,30)));
     QAbstractButton::connect(ButtonCalculate, &QPushButton::released, m_UI, [this] {calculateWarpgateDistance();});
-    m_UI->m_currentModeWidgets.push_back(ButtonCalculate);
+    m_UI->m_currentWidgets.push_back(ButtonCalculate);
     ButtonCalculate->show();
 
     inputXValue = new QLineEdit("X Value", m_UI->m_centralContainer);
     inputXValue->setGeometry(QRect(QPoint(200,320), QSize(150,30)));
-    m_UI->m_currentModeWidgets.push_back(inputXValue);
+    m_UI->m_currentWidgets.push_back(inputXValue);
     inputXValue->show();
 
     inputYValue = new QLineEdit("Y Value", m_UI->m_centralContainer);
     inputYValue->setGeometry(QRect(QPoint(350,320), QSize(150,30)));
-    m_UI->m_currentModeWidgets.push_back(inputYValue);
+    m_UI->m_currentWidgets.push_back(inputYValue);
     inputYValue->show();
 
     inputZValue = new QLineEdit("Z Value", m_UI->m_centralContainer);
     inputZValue->setGeometry(QRect(QPoint(500,320), QSize(150,30)));
-    m_UI->m_currentModeWidgets.push_back(inputZValue);
+    m_UI->m_currentWidgets.push_back(inputZValue);
     inputZValue->show();
 
     QComboBox* ListLevels = new QComboBox(m_UI->m_centralContainer);
@@ -51,7 +51,7 @@ DistanceCalculator::DistanceCalculator(zlManager *fileManager){
 
     QComboBox::connect(ListLevels, &QComboBox::currentIndexChanged, m_UI, [ListLevels, this] {userSelectLevel(ListLevels->currentIndex());});
     ListLevels->show();
-    m_UI->m_currentModeWidgets.push_back(ListLevels);
+    m_UI->m_currentWidgets.push_back(ListLevels);
     ListLevels->setCurrentIndex(0);
 }
 

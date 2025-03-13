@@ -6,6 +6,8 @@
 #include "Headers/Randomizer/Randomizer.h"
 #include "Headers/FileManagement/Zebrafish.h"
 #include "Headers/ISOManager/IsoBuilder.h"
+#include "Headers/Databases/DataHandler.h"
+#include "Headers/ISOManager/ModHandler.h"
 
 /*
 Randomizer class needs to have 3 lists of locations:
@@ -25,9 +27,9 @@ check this out, make a test function with it:
 https://doc.qt.io/qt-6/qbytearray.html#qUncompress-1
 */
 
-Randomizer::Randomizer(zlManager *fileManager, DataHandler *dataSystem){
+Randomizer::Randomizer(exWindowBase *passUI, zlManager *fileManager, DataHandler *dataSystem){
     //load minicons and locations here
-    m_UI = &exWindow::GetInstance();
+    m_UI = passUI;
     /*Modhandler needs to be loaded for the randomizer to have mod options*/
     m_zlManager = fileManager;
     m_DataHandler = dataSystem;
@@ -65,7 +67,7 @@ Randomizer::Randomizer(zlManager *fileManager, DataHandler *dataSystem){
     QPushButton* buttonRandomize = new QPushButton("Randomize", m_UI->m_centralContainer);
     buttonRandomize->setGeometry(QRect(QPoint(50,220), QSize(150,30)));
     QAbstractButton::connect(buttonRandomize, &QPushButton::released, m_UI, [this] {randomize();});
-    m_UI->m_currentModeWidgets.push_back(buttonRandomize);
+    m_UI->m_currentWidgets.push_back(buttonRandomize);
     buttonRandomize->show();
 
     /*since the value of the settings and seed boxes will need to update when the settings/seed do,
@@ -73,32 +75,32 @@ Randomizer::Randomizer(zlManager *fileManager, DataHandler *dataSystem){
     editSeed = new QLineEdit("", m_UI->m_centralContainer);
     editSeed->setGeometry(QRect(QPoint(200,220), QSize(150,30)));
     QLineEdit::connect(editSeed, &QLineEdit::textEdited, m_UI, [this](QString value) {setSeed(value);});
-    m_UI->m_currentModeWidgets.push_back(editSeed);
+    m_UI->m_currentWidgets.push_back(editSeed);
     editSeed->show();
 
     editSettings = new QLineEdit("", m_UI->m_centralContainer);
     editSettings->setGeometry(QRect(QPoint(200,320), QSize(150,30)));
-    m_UI->m_currentModeWidgets.push_back(editSettings);
+    m_UI->m_currentWidgets.push_back(editSettings);
     editSettings->show();
     editSettings->hide();
 
     QPushButton* buttonSetSettings = new QPushButton("Import Settings", m_UI->m_centralContainer);
     buttonSetSettings->setGeometry(QRect(QPoint(50,320), QSize(150,30)));
     QAbstractButton::connect(buttonSetSettings, &QPushButton::released, m_UI, [this] {manualSettings();});
-    m_UI->m_currentModeWidgets.push_back(buttonSetSettings);
+    m_UI->m_currentWidgets.push_back(buttonSetSettings);
     buttonSetSettings->show();
     buttonSetSettings->hide();
 
     QPushButton* buttonGetSettings = new QPushButton("Export Settings", m_UI->m_centralContainer);
     buttonGetSettings->setGeometry(QRect(QPoint(50,350), QSize(150,30)));
     QAbstractButton::connect(buttonGetSettings, &QPushButton::released, m_UI, [this] {exportSettings();});
-    m_UI->m_currentModeWidgets.push_back(buttonGetSettings);
+    m_UI->m_currentWidgets.push_back(buttonGetSettings);
     buttonGetSettings->show();
     buttonGetSettings->hide();
 
     QGroupBox *groupRandomizerOptions = new QGroupBox("Randomizer Options", m_UI->m_centralContainer);
     groupRandomizerOptions->setGeometry(QRect(QPoint(360,100), QSize(200,500)));
-    m_UI->m_currentModeWidgets.push_back(groupRandomizerOptions);
+    m_UI->m_currentWidgets.push_back(groupRandomizerOptions);
 
     QCheckBox *checkDatacon = new QCheckBox("Place Datacons", groupRandomizerOptions);
     checkDatacon->setGeometry(QRect(QPoint(20,20), QSize(200,30)));
@@ -181,7 +183,7 @@ Randomizer::Randomizer(zlManager *fileManager, DataHandler *dataSystem){
 
     groupRandomizerOptions->show();
 
-    /*This should be done somewhere in exWindow*/
+    /*This should be done somewhere in exWindowBase*/
     m_UI->m_centralContainer->setStyleSheet("QGroupBox{color: rgb(255, 255, 255); background-color: rgba(255, 255, 255, 0);} "
                                             "QCheckBox{color: rgb(255, 255, 255); background-color: rgba(255, 255, 255, 0);} "
                                             "QLabel{color: rgb(255, 255, 255); background-color: rgba(255, 255, 255, 0);} "
@@ -189,7 +191,7 @@ Randomizer::Randomizer(zlManager *fileManager, DataHandler *dataSystem){
 
     QGroupBox *groupTrickOptions = new QGroupBox("Trick Options", m_UI->m_centralContainer);
     groupTrickOptions->setGeometry(QRect(QPoint(600,100), QSize(200,m_DataHandler->exodusData.trickList.size()*45)));
-    m_UI->m_currentModeWidgets.push_back(groupTrickOptions);
+    m_UI->m_currentWidgets.push_back(groupTrickOptions);
 
     for(int i = 0; i < m_DataHandler->exodusData.trickList.size(); i++){
         //maybe split this into sections for the different difficulties? trick list is sorted, currently
@@ -203,7 +205,7 @@ Randomizer::Randomizer(zlManager *fileManager, DataHandler *dataSystem){
 
     QGroupBox *groupModOptions = new QGroupBox("Mod Options", m_UI->m_centralContainer);
     groupModOptions->setGeometry(QRect(QPoint(800,100), QSize(200,300)));
-    m_UI->m_currentModeWidgets.push_back(groupModOptions);
+    m_UI->m_currentWidgets.push_back(groupModOptions);
 
     for(int i = 0; i < m_zlManager->m_ModHandler->modList.size(); i++){
         //this will need to be edited later for when we have more mods than will fit in the box to move to the next column. or scroll?
@@ -217,7 +219,7 @@ Randomizer::Randomizer(zlManager *fileManager, DataHandler *dataSystem){
 
     QGroupBox *groupLocations = new QGroupBox("Custom Locations", m_UI->m_centralContainer);
     groupLocations->setGeometry(QRect(QPoint(1000,100), QSize(200,300)));
-    m_UI->m_currentModeWidgets.push_back(groupLocations);
+    m_UI->m_currentWidgets.push_back(groupLocations);
 
     for(int i = 0; i < m_DataHandler->exodusData.customLocationList.size(); i++){
         qDebug() << Q_FUNC_INFO << "location name for" << i << ":" << m_DataHandler->exodusData.customLocationList[i].name;

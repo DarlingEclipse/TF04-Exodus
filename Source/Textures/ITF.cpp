@@ -59,34 +59,34 @@ void ITF::updateCenter(){
         QAbstractButton::connect(comboPalettes, &QComboBox::currentIndexChanged, m_UI, [this](int index) {selectPalette(index);});
         //QAbstractButton::connect(comboPalettes, &QComboBox::currentIndexChanged, parent, [this] {populatePalette();});
         comboPalettes->show();
-        m_UI->m_currentModeWidgets.push_back(comboPalettes);
-        m_UI->m_currentModeWidgets.push_back(CustomLabel::addLabel(comboPalettes->geometry(), "Choose palette:", m_UI->m_centralContainer));
+        m_UI->m_currentWidgets.push_back(comboPalettes);
+        m_UI->m_currentWidgets.push_back(CustomLabel::addLabel(comboPalettes->geometry(), "Choose palette:", m_UI->m_centralContainer));
 
         paletteTable = new QTableWidget(mipMaps[0].colorCount()/paletteCount, 7, m_UI->m_centralContainer);
         paletteTable->setGeometry(QRect(QPoint(50,250), QSize(125*7,300)));
         QAbstractButton::connect(paletteTable, &QTableWidget::cellChanged, m_UI, [this](int row, int column) {editPalette(row, column);});
         paletteTable->show();
-        m_UI->m_currentModeWidgets.push_back(paletteTable);
-        m_UI->m_currentModeWidgets.push_back(CustomLabel::addLabel(paletteTable->geometry(), "Current palette:", m_UI->m_centralContainer));
+        m_UI->m_currentWidgets.push_back(paletteTable);
+        m_UI->m_currentWidgets.push_back(CustomLabel::addLabel(paletteTable->geometry(), "Current palette:", m_UI->m_centralContainer));
         populatePalette();
 
         QPushButton* buttonRemovePalette = new QPushButton("Convert to Color", m_UI->m_centralContainer);
         buttonRemovePalette->setGeometry(QRect(QPoint(450,50), QSize(150,30)));
         QAbstractButton::connect(buttonRemovePalette, &QPushButton::released, m_UI, [this]{promptIndexToColor();});
         buttonRemovePalette->show();
-        m_UI->m_currentModeWidgets.push_back(buttonRemovePalette);
+        m_UI->m_currentWidgets.push_back(buttonRemovePalette);
 
         QPushButton* buttonImportPalette = new QPushButton("Import new palette", m_UI->m_centralContainer);
         buttonImportPalette->setGeometry(QRect(QPoint(50,50), QSize(150,30)));
         QAbstractButton::connect(buttonImportPalette, &QPushButton::released, m_UI, [this]{importPalette();});
         buttonImportPalette->show();
-        m_UI->m_currentModeWidgets.push_back(buttonImportPalette);
+        m_UI->m_currentWidgets.push_back(buttonImportPalette);
     } else {
         QPushButton* buttonAddPalette = new QPushButton("Convert to 8bpp", m_UI->m_centralContainer);
         buttonAddPalette->setGeometry(QRect(QPoint(250,50), QSize(150,30)));
         QAbstractButton::connect(buttonAddPalette, &QPushButton::released, m_UI, [this]{promptColorToIndex();});
         buttonAddPalette->show();
-        m_UI->m_currentModeWidgets.push_back(buttonAddPalette);
+        m_UI->m_currentWidgets.push_back(buttonAddPalette);
     }
 
     //allow the user to preview the swizzled image (useful for debugging)
@@ -97,8 +97,8 @@ void ITF::updateCenter(){
     comboSwizzle->setCurrentIndex(swizzled);
     QAbstractButton::connect(comboSwizzle, &QComboBox::currentIndexChanged, m_UI, [this](int index) {changeSwizzleType(index);});
     comboSwizzle->show();
-    m_UI->m_currentModeWidgets.push_back(comboSwizzle);
-    m_UI->m_currentModeWidgets.push_back(CustomLabel::addLabel(comboSwizzle->geometry(), "Preview image as:", m_UI->m_centralContainer));
+    m_UI->m_currentWidgets.push_back(comboSwizzle);
+    m_UI->m_currentWidgets.push_back(CustomLabel::addLabel(comboSwizzle->geometry(), "Preview image as:", m_UI->m_centralContainer));
 
     //display dropdown to select # of maps, button to generate maps
     QComboBox *userMipMaps = new QComboBox(m_UI->m_centralContainer);
@@ -111,18 +111,18 @@ void ITF::updateCenter(){
     QAbstractButton::connect(userMipMaps, &QComboBox::currentIndexChanged, m_UI, [this](int index) {selectMipMap(index+1);});
     userMipMaps->show();
     userMipMaps->setCurrentIndex(mipmapCount - 1);
-    m_UI->m_currentModeWidgets.push_back(userMipMaps);
-    m_UI->m_currentModeWidgets.push_back(CustomLabel::addLabel(userMipMaps->geometry(), "# of MipMaps to add:", m_UI->m_centralContainer));
+    m_UI->m_currentWidgets.push_back(userMipMaps);
+    m_UI->m_currentWidgets.push_back(CustomLabel::addLabel(userMipMaps->geometry(), "# of MipMaps to add:", m_UI->m_centralContainer));
 
     QPushButton* buttonAddMipmaps = new QPushButton("Add MipMaps", m_UI->m_centralContainer);
     buttonAddMipmaps->setGeometry(QRect(QPoint(850,50), QSize(150,30)));
     QAbstractButton::connect(buttonAddMipmaps, &QPushButton::released, m_UI, [this]{createMipMaps(currentMipMaps);});
     buttonAddMipmaps->show();
-    m_UI->m_currentModeWidgets.push_back(buttonAddMipmaps);
+    m_UI->m_currentWidgets.push_back(buttonAddMipmaps);
 
 
     updatePreview();
-    m_UI->m_currentModeWidgets.push_back(CustomLabel::addLabel(QRect(QPoint(50, 600), QSize(0, 0)), "Preview image:", m_UI->m_centralContainer));
+    m_UI->m_currentWidgets.push_back(CustomLabel::addLabel(QRect(QPoint(50, 600), QSize(0, 0)), "Preview image:", m_UI->m_centralContainer));
 
     QComboBox *comboAlphaType = new QComboBox(m_UI->m_centralContainer);
     comboAlphaType -> setGeometry(QRect(QPoint(650,120), QSize(150,30)));
@@ -132,8 +132,8 @@ void ITF::updateCenter(){
     comboAlphaType->setCurrentIndex(alphaType);
     QAbstractButton::connect(comboAlphaType, &QComboBox::currentIndexChanged, m_UI, [this](int index) {convertAlphaType(index);});
     comboAlphaType->show();
-    m_UI->m_currentModeWidgets.push_back(comboAlphaType);
-    m_UI->m_currentModeWidgets.push_back(CustomLabel::addLabel(comboAlphaType->geometry(), "Current alpha type:", m_UI->m_centralContainer));
+    m_UI->m_currentWidgets.push_back(comboAlphaType);
+    m_UI->m_currentWidgets.push_back(CustomLabel::addLabel(comboAlphaType->geometry(), "Current alpha type:", m_UI->m_centralContainer));
     qDebug() << Q_FUNC_INFO << "reached the end up updatecenter";
 
 
@@ -143,7 +143,7 @@ void ITF::updateCenter(){
     // labelImageDisplay->setPixmap(pixmapImageData);
     // labelImageDisplay->setGeometry(QRect(QPoint(50, 600), QSize(mipMaps[0].width(), mipMaps[0].height())));
     // labelImageDisplay->show();
-    // m_UI->m_currentModeWidgets.push_back(labelImageDisplay);
+    // m_UI->m_currentWidgets.push_back(labelImageDisplay);
 
 }
 
@@ -160,7 +160,7 @@ void ITF::updatePreview(){
         qDebug() << Q_FUNC_INFO << "displaying mipmap at" << mipMaps[i].width()*mapOffset << "given factors width" << mipMaps[i].width() << "mapoffset" << mapOffset;
         displayMipMap->setGeometry(QRect(QPoint(50 + (mipMaps[i].width()*mapOffset), 600), QSize(mipMaps[i].width(), mipMaps[i].height())));
         displayMipMap->show();
-        m_UI->m_currentModeWidgets.push_back(displayMipMap);
+        m_UI->m_currentWidgets.push_back(displayMipMap);
         labelMipMaps.push_back(displayMipMap);
         mapOffset += pow(2, i+1);
     }
@@ -332,27 +332,27 @@ void ITF::promptColorToIndex(){
     originalDisplay->setPixmap(originalData);
     originalDisplay->setGeometry(QRect(QPoint(50, 300), QSize(mipMaps[0].width(), mipMaps[0].height())));
     originalDisplay->show();
-    m_UI->m_currentModeWidgets.push_back(originalDisplay);
-    m_UI->m_currentModeWidgets.push_back(CustomLabel::addLabel(originalDisplay->geometry(), "Current Image:", m_UI->m_centralContainer));
+    m_UI->m_currentWidgets.push_back(originalDisplay);
+    m_UI->m_currentWidgets.push_back(CustomLabel::addLabel(originalDisplay->geometry(), "Current Image:", m_UI->m_centralContainer));
 
     QLabel *indexedDisplay = new QLabel(m_UI->m_centralContainer);
     indexedDisplay->setPixmap(indexedData);
     indexedDisplay->setGeometry(QRect(QPoint(100 + mipMaps[0].width(), 300), QSize(mipMaps[0].width(), mipMaps[0].height())));
     indexedDisplay->show();
-    m_UI->m_currentModeWidgets.push_back(indexedDisplay);
-    m_UI->m_currentModeWidgets.push_back(CustomLabel::addLabel(indexedDisplay->geometry(), "8bpp Image:", m_UI->m_centralContainer));
+    m_UI->m_currentWidgets.push_back(indexedDisplay);
+    m_UI->m_currentWidgets.push_back(CustomLabel::addLabel(indexedDisplay->geometry(), "8bpp Image:", m_UI->m_centralContainer));
 
     QPushButton* buttonConfirm = new QPushButton("Convert Image", m_UI->m_centralContainer);
     buttonConfirm->setGeometry(QRect(QPoint(250,50), QSize(150,30)));
     QAbstractButton::connect(buttonConfirm, &QPushButton::released, m_UI, [this]{convertColorToIndex(false);});
     buttonConfirm->show();
-    m_UI->m_currentModeWidgets.push_back(buttonConfirm);
+    m_UI->m_currentWidgets.push_back(buttonConfirm);
 
     QPushButton* buttonCancel = new QPushButton("Cancel", m_UI->m_centralContainer);
     buttonCancel->setGeometry(QRect(QPoint(450,50), QSize(150,30)));
     QAbstractButton::connect(buttonCancel, &QPushButton::released, m_UI, [this]{convertColorToIndex(true);});
     buttonCancel->show();
-    m_UI->m_currentModeWidgets.push_back(buttonCancel);
+    m_UI->m_currentWidgets.push_back(buttonCancel);
 
 }
 
@@ -377,27 +377,27 @@ void ITF::promptIndexToColor(){
     originalDisplay->setPixmap(originalData);
     originalDisplay->setGeometry(QRect(QPoint(50, 300), QSize(mipMaps[0].width(), mipMaps[0].height())));
     originalDisplay->show();
-    m_UI->m_currentModeWidgets.push_back(originalDisplay);
-    m_UI->m_currentModeWidgets.push_back(CustomLabel::addLabel(originalDisplay->geometry(), "Current Image:", m_UI->m_centralContainer));
+    m_UI->m_currentWidgets.push_back(originalDisplay);
+    m_UI->m_currentWidgets.push_back(CustomLabel::addLabel(originalDisplay->geometry(), "Current Image:", m_UI->m_centralContainer));
 
     QLabel *colorDisplay = new QLabel(m_UI->m_centralContainer);
     colorDisplay->setPixmap(colorData);
     colorDisplay->setGeometry(QRect(QPoint(100 + mipMaps[0].width(), 300), QSize(mipMaps[0].width(), mipMaps[0].height())));
     colorDisplay->show();
-    m_UI->m_currentModeWidgets.push_back(colorDisplay);
-    m_UI->m_currentModeWidgets.push_back(CustomLabel::addLabel(colorDisplay->geometry(), "Color (non-indexed) Image:", m_UI->m_centralContainer));
+    m_UI->m_currentWidgets.push_back(colorDisplay);
+    m_UI->m_currentWidgets.push_back(CustomLabel::addLabel(colorDisplay->geometry(), "Color (non-indexed) Image:", m_UI->m_centralContainer));
 
     QPushButton* buttonConfirm = new QPushButton("Convert Image", m_UI->m_centralContainer);
     buttonConfirm->setGeometry(QRect(QPoint(250,50), QSize(150,30)));
     QAbstractButton::connect(buttonConfirm, &QPushButton::released, m_UI, [this]{convertIndexToColor(false);});
     buttonConfirm->show();
-    m_UI->m_currentModeWidgets.push_back(buttonConfirm);
+    m_UI->m_currentWidgets.push_back(buttonConfirm);
 
     QPushButton* buttonCancel = new QPushButton("Cancel", m_UI->m_centralContainer);
     buttonCancel->setGeometry(QRect(QPoint(450,50), QSize(150,30)));
     QAbstractButton::connect(buttonCancel, &QPushButton::released, m_UI, [this]{convertIndexToColor(true);});
     buttonCancel->show();
-    m_UI->m_currentModeWidgets.push_back(buttonCancel);
+    m_UI->m_currentWidgets.push_back(buttonCancel);
 
 }
 

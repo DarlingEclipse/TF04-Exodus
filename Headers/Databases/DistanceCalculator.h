@@ -15,9 +15,9 @@ class WarpgateFile : public DatabaseFile{
 
 class DistanceCalculator{
 public:
-    DistanceCalculator(zlManager *fileManager);
+    DistanceCalculator(exWindowBase *passUI, zlManager *fileManager);
     std::vector<exWarpgate> warpgateList;
-    exWindow *m_UI;
+    exWindowBase *m_UI;
     exDebugger *m_Debug;
     zlManager *m_zlManager;
 

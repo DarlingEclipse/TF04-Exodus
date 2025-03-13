@@ -21,14 +21,14 @@ public:
 
 class ModHandler{
 public:
-    exWindow* m_UI;
+    exWindowBase* m_UI;
     zlManager* m_zlManager;
     exDebugger* m_Debug;
     std::vector<FileReplacement> replacementList;
     std::vector<RandomizerMod> modList;
     std::vector<taFolder> folderOptions;
 
-    ModHandler(zlManager *fileManager);
+    ModHandler(exWindowBase *passUI, zlManager *fileManager);
 
     void updateCenter();
     void setChanges();

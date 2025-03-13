@@ -6,7 +6,7 @@
 #include <QString>
 #include "Headers/FileManagement/taFileSystemObject.h"
 
-class ProgWindow;
+class exWindowBase;
 
 class VACFile : public taFile {
   public:

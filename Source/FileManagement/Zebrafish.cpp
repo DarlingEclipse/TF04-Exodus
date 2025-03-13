@@ -12,15 +12,15 @@
 #include "Headers/Audio/ToneLibraries.h"
 #include "Headers/Databases/Database.h"
 
-zlManager::zlManager(exSettings *passSettings)
+zlManager::zlManager(exWindowBase *passUI, exSettings *passSettings)
 {
-    m_UI = &exWindow::GetInstance();
+    m_UI = passUI;
     m_Debug = &exDebugger::GetInstance();
     m_Settings = passSettings;
 
     /*Initialize the ISO Builder. Ideally, this will be its own class and not contained within Zebrafish*/
     m_IsoBuilder = new IsoBuilder(this);
-    m_ModHandler = new ModHandler(this);
+    m_ModHandler = new ModHandler(m_UI, this);
 
     QMenu *menuBuild = m_UI->AddMenu("Build");
     QAction *actionUnpackISO = m_UI->AddAction(menuBuild, "Unpack ISO");

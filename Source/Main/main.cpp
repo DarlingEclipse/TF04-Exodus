@@ -12,10 +12,10 @@ int main(int argc, char *argv[])
     QApplication a(argc, argv);
 
     exUpdater();
-    exWindow mainWindow = exWindow();
-    exDebugger mainDebug = exDebugger();
     exSettings mainSettings = exSettings();
-    zlManager mainZebrafish = zlManager(&mainSettings);
+    exWindowMain mainWindow = exWindowMain();
+    exDebugger mainDebug = exDebugger(&mainWindow);
+    zlManager mainZebrafish = zlManager(&mainWindow, &mainSettings);
 
 
 

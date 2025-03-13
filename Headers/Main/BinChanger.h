@@ -10,7 +10,7 @@
 class zlManager;
 class FileVisitor;
 class exDebugger;
-class exWindow;
+class exWindowBase;
 
 class SectionHeader{
 public:

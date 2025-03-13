@@ -1024,19 +1024,19 @@ std::shared_ptr<taData> dictItem::editAttributeValue(QString itemType, std::shar
     QStringList listWindows = {"StringArray", "IntegerArray", "FloatArray", "LinkArray"};
 
     if(itemType == "Bool"){
-        dialogGetValue = exWindow::MakeSpecificPopup(isDialogOpen, {"checkbox"}, {""});
+        dialogGetValue = exWindowBase::MakeSpecificPopup(isDialogOpen, {"checkbox"}, {""});
         dialogGetValue->checkOption->setText("Set value to true?");
     } else if(itemType == "String"){
-        dialogGetValue = exWindow::MakeSpecificPopup(isDialogOpen, {"lineedit"}, {"Value:"});
+        dialogGetValue = exWindowBase::MakeSpecificPopup(isDialogOpen, {"lineedit"}, {"Value:"});
         QTimer::singleShot(0, dialogGetValue, [dialogGetValue]{dialogGetValue->lineOption->setFocus();});
     } else if(itemType == "Float"){
-        dialogGetValue = exWindow::MakeSpecificPopup(isDialogOpen, {"lineedit"}, {"Value:"});
+        dialogGetValue = exWindowBase::MakeSpecificPopup(isDialogOpen, {"lineedit"}, {"Value:"});
         /*Need to find the actual maximum and minimum*/
         QValidator *validator = new QDoubleValidator(-4000, 4000, 3, dialogGetValue);
         dialogGetValue->lineOption->setValidator(validator);
         QTimer::singleShot(0, dialogGetValue, [dialogGetValue]{dialogGetValue->lineOption->setFocus();});
     } else if(itemType == "Quaternion"){
-        dialogGetValue = exWindow::MakeSpecificPopup(isDialogOpen, {"boxset", "4"}, {"x:", "y:", "z:", "scalar:"});
+        dialogGetValue = exWindowBase::MakeSpecificPopup(isDialogOpen, {"boxset", "4"}, {"x:", "y:", "z:", "scalar:"});
         /*Need to find the actual maximum and minimum*/
         QValidator *validator = new QDoubleValidator(-4000, 4000, 3, dialogGetValue);
         for(int i = 0; i < dialogGetValue->boxList.size(); i++){
@@ -1044,7 +1044,7 @@ std::shared_ptr<taData> dictItem::editAttributeValue(QString itemType, std::shar
         }
         QTimer::singleShot(0, dialogGetValue, [dialogGetValue]{dialogGetValue->boxList[0]->setFocus();});
     } else if(itemType == "Integer"){
-        dialogGetValue = exWindow::MakeSpecificPopup(isDialogOpen, {"lineedit"}, {"Value:"});
+        dialogGetValue = exWindowBase::MakeSpecificPopup(isDialogOpen, {"lineedit"}, {"Value:"});
         /*Need to find the actual maximum and minimum*/
         QValidator *validator = new QIntValidator(-4000, 4000, dialogGetValue);
         dialogGetValue->lineOption->setValidator(validator);
@@ -1052,7 +1052,7 @@ std::shared_ptr<taData> dictItem::editAttributeValue(QString itemType, std::shar
     } else if(itemType == "Link" || itemType == "Flag"){
         /*Currently only limits to short, so this accommodates both Link and Flag. Later, having link pull from
          the list of available Instances would be convenient*/
-        dialogGetValue = exWindow::MakeSpecificPopup(isDialogOpen, {"lineedit"}, {"Value:"});
+        dialogGetValue = exWindowBase::MakeSpecificPopup(isDialogOpen, {"lineedit"}, {"Value:"});
         QValidator *validator = new QIntValidator(0, 65535, dialogGetValue);
         dialogGetValue->lineOption->setValidator(validator);
         QTimer::singleShot(0, dialogGetValue, [dialogGetValue]{dialogGetValue->lineOption->setFocus();});
@@ -1061,7 +1061,7 @@ std::shared_ptr<taData> dictItem::editAttributeValue(QString itemType, std::shar
         QValidator *validator = new QIntValidator(0, 65535, dialogGetValue);
         dialogGetValue->lineOption->setValidator(validator);
     }*/else if(itemType == "Point"){
-        dialogGetValue = exWindow::MakeSpecificPopup(isDialogOpen, {"boxset", "3"}, {"x:", "y:", "z:"});
+        dialogGetValue = exWindowBase::MakeSpecificPopup(isDialogOpen, {"boxset", "3"}, {"x:", "y:", "z:"});
         /*Need to find the actual maximum and minimum*/
         QValidator *validator = new QDoubleValidator(-4000, 4000, 3, dialogGetValue);
         for(int i = 0; i < dialogGetValue->boxList.size(); i++){
@@ -1070,7 +1070,7 @@ std::shared_ptr<taData> dictItem::editAttributeValue(QString itemType, std::shar
         //dialogGetValue->setFocusProxy(dialogGetValue->boxList[0]); //this does nothing, not sure why
         QTimer::singleShot(0, dialogGetValue, [dialogGetValue]{dialogGetValue->boxList[0]->setFocus();});
     } else if(itemType == "Enum"){
-        dialogGetValue = exWindow::MakeSpecificPopup(isDialogOpen, {"button","combobox"}, {"Add option", "Value options"});
+        dialogGetValue = exWindowBase::MakeSpecificPopup(isDialogOpen, {"button","combobox"}, {"Add option", "Value options"});
         for(int i = 0; i < itemToEdit->options().size(); i++){
             dialogGetValue->comboOption->addItem(itemToEdit->options()[i]);
         }
@@ -1084,7 +1084,7 @@ std::shared_ptr<taData> dictItem::editAttributeValue(QString itemType, std::shar
     } else if(listWindows.contains(itemType)){
         //Array values will be unsupported on the initial update.
         //need to look into the different options and see which one will be easiest for these
-        dialogGetValue = exWindow::MakeSpecificPopup(isDialogOpen, {"list"}, {itemType + " values:"});
+        dialogGetValue = exWindowBase::MakeSpecificPopup(isDialogOpen, {"list"}, {itemType + " values:"});
         CustomPopup::connect(dialogGetValue->listOption->itemDelegate(), &QAbstractItemDelegate::commitData, dialogGetValue, [dialogGetValue]() {
             if(dialogGetValue->listOption->itemAt(0, dialogGetValue->listOption->count())->text() != ""){
                 dialogGetValue->addBlankItem();
@@ -1094,7 +1094,7 @@ std::shared_ptr<taData> dictItem::editAttributeValue(QString itemType, std::shar
     } /*else if(itemType == "VectorArray"){
     }*/ else if(itemType == "Color"){
         //there is a color select dialog - implement this at some point
-        dialogGetValue = exWindow::MakeSpecificPopup(isDialogOpen, {"boxset", "4"}, {"r:", "g:", "b:", "a:"});
+        dialogGetValue = exWindowBase::MakeSpecificPopup(isDialogOpen, {"boxset", "4"}, {"r:", "g:", "b:", "a:"});
         QValidator *validator = new QIntValidator(0, 255, dialogGetValue);
         for(int i = 0; i < dialogGetValue->boxList.size(); i++){
             dialogGetValue->boxList[i]->setValidator(validator);
@@ -1115,7 +1115,7 @@ std::shared_ptr<taData> dictItem::editAttributeValue(QString itemType, std::shar
 
     dialogGetValue->open();
     while(isDialogOpen){
-        exWindow::ForceProcessEvents();
+        exWindowBase::ForceProcessEvents();
     }
     int resultDialog = dialogGetValue->result();
 
@@ -1198,7 +1198,7 @@ std::shared_ptr<taData> dictItem::editAttributeValue(QString itemType, std::shar
 
 std::shared_ptr<taData> dictItem::editEnumDefinition(std::shared_ptr<taData> itemToEdit){
     bool isDialogOpen = true;
-    CustomPopup* dialogGetValue = exWindow::MakeSpecificPopup(isDialogOpen, {"combobox"}, {""});
+    CustomPopup* dialogGetValue = exWindowBase::MakeSpecificPopup(isDialogOpen, {"combobox"}, {""});
     dialogGetValue->setWindowTitle("Select edit type.");
     QStringList editOptions = {"Change default value", "Add new value"};
 
@@ -1208,7 +1208,7 @@ std::shared_ptr<taData> dictItem::editEnumDefinition(std::shared_ptr<taData> ite
 
     dialogGetValue->open();
     while(isDialogOpen){
-        exWindow::ForceProcessEvents();
+        exWindowBase::ForceProcessEvents();
     }
     int resultDialog = dialogGetValue->result();
 
@@ -1221,14 +1221,14 @@ std::shared_ptr<taData> dictItem::editEnumDefinition(std::shared_ptr<taData> ite
 
     switch(selectedEdit){
     case 0: //change value
-        dialogGetValue = exWindow::MakeSpecificPopup(isDialogOpen, {"combobox"}, {"Value options:"});
+        dialogGetValue = exWindowBase::MakeSpecificPopup(isDialogOpen, {"combobox"}, {"Value options:"});
         for(int i = 0; i < itemToEdit->options().size(); i++){
             dialogGetValue->comboOption->addItem(itemToEdit->options()[i]);
         }
         dialogGetValue->setWindowTitle("Select value");
         break;
     case 1: //add value
-        dialogGetValue = exWindow::MakeSpecificPopup(isDialogOpen, {"lineedit"}, {"New value:"});
+        dialogGetValue = exWindowBase::MakeSpecificPopup(isDialogOpen, {"lineedit"}, {"New value:"});
         dialogGetValue->setWindowTitle("Add value");
         break;
     default: //unknown option
@@ -1240,7 +1240,7 @@ std::shared_ptr<taData> dictItem::editEnumDefinition(std::shared_ptr<taData> ite
     isDialogOpen = true;
     dialogGetValue->open();
     while(isDialogOpen){
-        exWindow::ForceProcessEvents();
+        exWindowBase::ForceProcessEvents();
     }
     resultDialog = dialogGetValue->result();
 
@@ -1284,7 +1284,7 @@ int dictItem::addAttribute(QString itemType){
 
     bool isDialogOpen = true;
 
-    CustomPopup* dialogCreateAttribute = exWindow::MakeSpecificPopup(isDialogOpen, {"combobox", "lineedit"}, {"Attribute type:", "Attribute Name:"});
+    CustomPopup* dialogCreateAttribute = exWindowBase::MakeSpecificPopup(isDialogOpen, {"combobox", "lineedit"}, {"Attribute type:", "Attribute Name:"});
     dialogCreateAttribute->setWindowTitle("Create New Attribute");
 
     for(int i = 0; i < valueTypes.size(); i++){
@@ -1293,7 +1293,7 @@ int dictItem::addAttribute(QString itemType){
 
     dialogCreateAttribute->open();
     while(isDialogOpen){
-        exWindow::ForceProcessEvents();
+        exWindowBase::ForceProcessEvents();
     }
     int resultDialog = dialogCreateAttribute->result();
 

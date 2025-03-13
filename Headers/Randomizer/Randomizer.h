@@ -3,17 +3,19 @@
 
 #include <QRandomGenerator>
 #include "Headers/Databases/Database.h"
-#include "Headers/ISOManager/ModHandler.h"
 
 class ProgWindow;
 class DatabaseFile;
+class DataHandler;
+class exPickupLocation;
+class taPickup;
 
 /*Randomizer will need, at minimum, the file manager and data handler*/
 class Randomizer{
 public:
-    Randomizer(zlManager *fileManager, DataHandler *dataSystem);
+    Randomizer(exWindowBase *passUI, zlManager *fileManager, DataHandler *dataSystem);
 
-    exWindow *m_UI;
+    exWindowBase *m_UI;
     zlManager *m_zlManager;
     DataHandler *m_DataHandler;
     exDebugger *m_Debug;

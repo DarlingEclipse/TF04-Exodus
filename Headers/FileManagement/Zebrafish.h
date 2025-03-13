@@ -6,7 +6,7 @@
 #include "Headers/Main/BinChanger.h"
 
 class DatabaseFile;
-class exWindow;
+class exWindowBase;
 class IsoBuilder;
 class ModHandler;
 class exSettings;
@@ -20,9 +20,9 @@ class taFile;
 class zlManager
 {
 public:
-    zlManager(exSettings *passSettings);
+    zlManager(exWindowBase *passUI, exSettings *passSettings);
 
-    exWindow* m_UI;
+    exWindowBase* m_UI;
     exSettings* m_Settings;
     exDebugger* m_Debug;
 
