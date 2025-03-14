@@ -12,6 +12,7 @@
 #include <QSlider>
 #include <QGroupBox>
 
+class exWindowBase;
 
 class CustomLabel : public QLabel {
 public:
@@ -58,11 +59,40 @@ public:
     void addBlankItem();
 };
 
-class SettingSlider : public QGroupBox {
+class exCustomGroup : public QGroupBox{
+public:
+    exWindowBase* m_UI; //this might not be needed, since we're inheriting QGroupBox
+    //the parent UI can be set in the constructor, then the rest can be added after
+    int m_groupType; //enum of the custom types
+};
+
+class exLineButton : public exCustomGroup{
+public:
+    QPushButton* m_button;
+    QLineEdit* m_lineedit;
+    exLineButton(QString buttonLabel, QWidget* parent = nullptr);
+};
+
+class exComboButton : public exCustomGroup{
+public:
+    QPushButton* m_button;
+    QComboBox* m_combobox;
+    exComboButton(QString buttonLabel, QStringList comboList, QWidget* parent = nullptr);
+};
+
+class exCheckList : public exCustomGroup{
+public:
+    std::vector<QCheckBox*> m_checklist;
+    exCheckList(std::vector<QString> labelList, QWidget* parent = nullptr);
+};
+
+class SettingSlider : public exCustomGroup {
 public:
     QSlider* slider;
     QLabel* label;
     SettingSlider(QString labelText, QWidget* parent = nullptr, int levels = 5);
 };
+
+
 
 #endif // CUSTOMQT_H
