@@ -23,54 +23,12 @@ exWindowBase::exWindowBase(QWidget *parent)
 
     resize(1200, 600);
 
-    QMenu *menuVBIN = menuBar()->addMenu("Model");
-    QMenu *menuITF = menuBar()->addMenu("Texture");
-    QMenu *menuSFX = menuBar()->addMenu("Sound");
-    QMenu *menuDatabase = menuBar() -> addMenu("Database");
+
     QMenu *menuCalculator = menuBar()->addMenu("Calculator");
     QMenu *menuRandomizer = menuBar()->addMenu("Randomizer");
-    QMenu *menuBuild = menuBar()->addMenu("Build");
-    QMenu *menuClear = menuBar()->addMenu("Clear");
-
-    QAction *actionLoadVBIN = menuVBIN->addAction("Load VBIN");
-    QAction *actionLoadMeshVBIN = menuVBIN->addAction("Load Mesh VBIN");
-    QAction *actionSaveModel = menuVBIN ->addAction("Export Model");
-    QAction *actionBulkLoadModel = menuVBIN->addAction("Bulk Load Model");
-    QAction *actionBulkSaveModel = menuVBIN->addAction("Bulk Export Model");
-
-    QAction *actionLoadITF = menuITF ->addAction("Load ITF");
-    QAction *actionLoadQImage = menuITF ->addAction("Import Image");
-    QAction *actionSaveITF = menuITF->addAction("Export Texture");
-    QAction *actionBulkLoadITF = menuITF->addAction("Bulk Load Texture");
-    QAction *actionBulkSaveITF = menuITF->addAction("Bulk Export Texture");
-
-    QAction *actionLoadVAC = menuSFX ->addAction("Load VAC");
-    QAction *actionSaveVAC = menuSFX->addAction("Export VAC");
-    QAction *actionBulkVAC = menuSFX->addAction("Bulk Export Sound");
-
-    QAction *actionCreateDefinition = menuDatabase->addAction("Create Definition");
-    QAction *actionCreateDatabase = menuDatabase->addAction("Create Database");
-    QAction *actionLoadTMD = menuDatabase ->addAction("Load TMD");
-    QAction *actionLoadTDB = menuDatabase ->addAction("Load TDB");
-    QAction *actionLoadBMD = menuDatabase ->addAction("Load BMD");
-    QAction *actionLoadBDB = menuDatabase ->addAction("Load BDB");
-    QAction *actionSaveDatabase = menuDatabase ->addAction("Export Database");
-    QAction *actionBulkDatabase = menuDatabase->addAction("Bulk Export Database");
-//    QAction *actionSaveTDB = menuDatabase ->addAction("Save TDB");
-//    QAction *actionSaveBMD = menuDatabase ->addAction("Save BMD");
-//    QAction *actionSaveBDB = menuDatabase ->addAction("Save BDB");
 
     QAction *actionOpenCalculator = menuCalculator -> addAction("Warpgate Distance Calculator");
     QAction *actionRandomizer = menuRandomizer -> addAction("Load Randomizer");
-
-    QAction *actionUnpackISO = menuBuild->addAction("Unpack ISO");
-    QAction *actionUnzipZips = menuBuild->addAction("Unpack special ZIPs");
-    QAction *actionModInterface = menuBuild->addAction("Mods and Replacements");
-    QAction *actionZipBuildISO = menuBuild->addAction("Zip and Build ISO");
-    QAction *actionBuildISO = menuBuild->addAction("Build ISO");
-    QAction *actionPackRandom = menuBuild->addAction("Build Randomizer ISO");
-
-    QAction *actionClearFiles = menuClear->addAction("Clear Loaded Files");
 
 
     m_loadingBar = nullptr;

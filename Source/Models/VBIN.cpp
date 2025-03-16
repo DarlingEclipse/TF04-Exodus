@@ -726,8 +726,8 @@ void VBIN::outputDataDAE(){
     std::vector<std::shared_ptr<taFile>> loadedInstances;
     for(int i = 0; i < instanceNameList.size(); i++){
         /*This should probably be moved to the loading side of things*/
-        m_zlManager->loadRequiredFile(this, instanceNameList[i], "VBIN");
-        testLoaded = m_zlManager->matchFile(instanceNameList[i] + ".VBIN");
+        m_zlManager->LoadRequiredFile(this, instanceNameList[i], "VBIN");
+        testLoaded = m_zlManager->MatchFile(instanceNameList[i] + ".VBIN");
         /*if(testLoaded == nullptr){
             //putting this separate from the while - don't want to run this check multiple times if it won't do anything
             QFileInfo dir(inputPath);

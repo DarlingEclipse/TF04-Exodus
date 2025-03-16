@@ -58,6 +58,7 @@ public:
     std::vector<exPickupLocation*> availableLocations;
     std::vector<exPickupLocation*> placedLocations;
 
+    void Load();
     void reset();
 
     void testAllPlacements();

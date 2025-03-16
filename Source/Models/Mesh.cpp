@@ -744,7 +744,7 @@ void FileSection::writeNodesDAE(QTextStream &fileOut){
 void Instance::writeNodesDAE(QTextStream &fileOut){
     std::shared_ptr<taFile> testLoaded;
     for(int i = 0; i < file->instanceNameList.size(); i++){
-        file->m_zlManager->loadRequiredFile(file, file->instanceNameList[i], "VBIN");
+        file->m_zlManager->LoadRequiredFile(file, file->instanceNameList[i], "VBIN");
         /*testLoaded = file->parent->matchFile(file->instanceNameList[i] + ".VBIN");
         while(testLoaded == nullptr){
             file->parent->messageError("Please load a file " + file->instanceNameList[i]+".VBIN");

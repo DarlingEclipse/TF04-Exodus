@@ -36,11 +36,11 @@ void DatabaseFile::writeDAE(){
     std::shared_ptr<taFile> testLoaded;
     std::vector<std::shared_ptr<taFile>> loadedModels;
     for(int i = 0; i < uniquePrototypes.size(); i++){
-        testLoaded = m_zlManager->matchFile(uniquePrototypes[i] + ".VBIN");
+        testLoaded = m_zlManager->MatchFile(uniquePrototypes[i] + ".VBIN");
         while(testLoaded == nullptr){
             m_Debug->MessageError("Please load a file " + uniquePrototypes[i]+".VBIN");
-            m_zlManager->openFile("VBIN");
-            testLoaded = m_zlManager->matchFile(uniquePrototypes[i] + ".VBIN");
+            m_zlManager->OpenFile("VBIN");
+            testLoaded = m_zlManager->MatchFile(uniquePrototypes[i] + ".VBIN");
         }
         testLoaded->outputPath = outputPath;
         loadedModels.push_back(testLoaded);

@@ -746,13 +746,13 @@ int DictionaryFile::readIncludedFiles(QString fullRead){
     }
 
     QString extension = fullRead.right(3).toUpper();
-    m_zlManager->loadRequiredFile(this, fullRead, extension);
+    m_zlManager->LoadRequiredFile(this, fullRead, extension);
 
     static QRegularExpression pathRemover = QRegularExpression("../");
     inheritedFileRelativePath = fullRead;
     inheritedFileName = fullRead.remove(pathRemover);
     inheritedFileRelativePath = inheritedFileRelativePath.remove(inheritedFileName);
-    inheritedFile = std::static_pointer_cast<DefinitionFile>(m_zlManager->matchFile(inheritedFileName));
+    inheritedFile = std::static_pointer_cast<DefinitionFile>(m_zlManager->MatchFile(inheritedFileName));
 
     if(inheritedFile != nullptr){
         //qDebug() << Q_FUNC_INFO << "The Database file includes the loaded Definition file. We can continue.";
@@ -1566,7 +1566,7 @@ void DatabaseFile::writeBinary(){
 }
 
 void DatabaseFile::acceptVisitor(zlManager& visitor){
-    visitor.visit(*this);
+    visitor.Visit(*this);
 }
 
 std::vector<dictItem> DatabaseFile::sendInstances(QString instanceType){

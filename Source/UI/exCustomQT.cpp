@@ -1,5 +1,6 @@
 #include <QPushButton>
 #include <QLineEdit>
+#include <QBoxLayout>
 
 #include "Headers/Main/CustomQT.h"
 
@@ -37,10 +38,11 @@ exComboButton::exComboButton(QString buttonLabel, QStringList comboList, QWidget
     m_combobox->setGeometry(QRect(QPoint(150, 0), QSize(150, 30)));
 }
 
-exCheckList::exCheckList(std::vector<QString> labelList, QWidget* parent){
+exCheckList::exCheckList(QStringList labelList, QWidget* parent){
+    setParent(parent);
+    m_checklist = new QVBoxLayout(this);
     for(int i = 0; i < labelList.size(); i++){
-        QCheckBox* currentCheck = new QCheckBox(labelList[i], this);
-        currentCheck->setGeometry(QRect(QPoint(0,0+(i*30)), QSize(150, 30)));
-        m_checklist.push_back(currentCheck);
+        QCheckBox* currentCheck = new QCheckBox(labelList[i]);
+        m_checklist->addWidget(currentCheck);
     }
 }

@@ -7,7 +7,7 @@
 void DistanceCalculator::userSelectLevel(int selectedLevel){
     //called when user makes a selection on the level list dropdown
     currentLevel = selectedLevel;
-    std::vector<dictItem> warpgateListRaw = m_zlManager->databaseList[currentLevel]->sendInstances("Warpgate");
+    std::vector<dictItem> warpgateListRaw = m_zlManager->m_databaseList[currentLevel]->sendInstances("Warpgate");
     //warpgateList = parent->databaseList[currentLevel]->sendWarpgates();
     //then currentlevel is used below to calculate the closest warpgate
 }
@@ -16,7 +16,7 @@ DistanceCalculator::DistanceCalculator(exWindowBase *passUI, zlManager *fileMana
     m_UI = passUI;
     m_Debug = &exDebugger::GetInstance();
     m_zlManager = fileManager;
-    if(m_zlManager->loadDatabases() != 0){
+    if(m_zlManager->LoadDatabases() != 0){
         m_Debug->Log("Could not load databases. Warpgate calculator was not loaded.");
         return;
     }
@@ -45,8 +45,8 @@ DistanceCalculator::DistanceCalculator(exWindowBase *passUI, zlManager *fileMana
     QComboBox* ListLevels = new QComboBox(m_UI->m_centralContainer);
     ListLevels -> setGeometry(QRect(QPoint(250,150), QSize(200,30)));
 
-    for(int i=0; i<m_zlManager->databaseList.size(); ++i){
-        ListLevels->insertItem(i, m_zlManager->databaseList[i]->fileName);
+    for(int i=0; i<m_zlManager->m_databaseList.size(); ++i){
+        ListLevels->insertItem(i, m_zlManager->m_databaseList[i]->fileName);
     }
 
     QComboBox::connect(ListLevels, &QComboBox::currentIndexChanged, m_UI, [ListLevels, this] {userSelectLevel(ListLevels->currentIndex());});

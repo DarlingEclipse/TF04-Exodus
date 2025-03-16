@@ -1,4 +1,5 @@
 #include <QFileDialog>
+#include <QInputDialog>
 #include "Headers/FileManagement/Zebrafish.h"
 #include "Headers/ISOManager/IsoBuilder.h"
 #include "Headers/ISOManager/ModHandler.h"
@@ -14,6 +15,7 @@
 
 zlManager::zlManager(exWindowBase *passUI, exSettings *passSettings)
 {
+    qDebug() << Q_FUNC_INFO << "Initializing Zebrafish file manager.";
     m_UI = passUI;
     m_Debug = &exDebugger::GetInstance();
     m_Settings = passSettings;
@@ -21,6 +23,72 @@ zlManager::zlManager(exWindowBase *passUI, exSettings *passSettings)
     /*Initialize the ISO Builder. Ideally, this will be its own class and not contained within Zebrafish*/
     m_IsoBuilder = new IsoBuilder(this);
     m_ModHandler = new ModHandler(m_UI, this);
+
+    AddMenuItems();
+
+    m_fileBrowser = new QListWidget;
+    m_UI->SetLeftWindow(m_fileBrowser);
+    m_fileBrowser->setGeometry(QRect(QPoint(0,0), QSize(m_UI->m_hSize*0.15,m_UI->m_vSize)));
+    QAbstractItemView::connect(m_fileBrowser, &QListWidget::itemSelectionChanged, m_UI, [this]{MatchFile(m_fileBrowser->currentItem()->text())->updateCenter();});
+
+}
+
+void zlManager::AddMenuItems(){
+    QMenu *menuVBIN = m_UI->AddMenu("Model");
+    QAction *actionLoadVBIN = m_UI->AddAction(menuVBIN, "Load VBIN");
+    QAction *actionLoadMeshVBIN = m_UI->AddAction(menuVBIN, "Load Mesh VBIN");
+    QAction *actionSaveModel = m_UI->AddAction(menuVBIN, "Export Model");
+    QAction *actionBulkLoadModel = m_UI->AddAction(menuVBIN, "Bulk Load Model");
+    QAction *actionBulkSaveModel = m_UI->AddAction(menuVBIN, "Bulk Export Model");
+    QAbstractButton::connect(actionSaveModel, &QAction::triggered, m_UI, [this] {SaveFile("Model");});
+    QAbstractButton::connect(actionLoadMeshVBIN, &QAction::triggered, m_UI, [this] {OpenFile("MESH.VBIN");});
+    QAbstractButton::connect(actionLoadVBIN, &QAction::triggered, m_UI, [this] {OpenFile("VBIN");});
+    QAbstractButton::connect(actionBulkLoadModel, &QAction::triggered, m_UI, [this] {BulkOpen("VBIN");});
+    QAbstractButton::connect(actionBulkSaveModel, &QAction::triggered, m_UI, [this] {BulkSave("Model");});
+
+
+    QMenu *menuITF = m_UI->AddMenu("Texture");
+    QAction *actionLoadITF = m_UI->AddAction(menuITF, "Load ITF");
+    QAction *actionLoadQImage = m_UI->AddAction(menuITF, "Import Image");
+    QAction *actionSaveITF = m_UI->AddAction(menuITF, "Export Texture");
+    QAction *actionBulkLoadITF = m_UI->AddAction(menuITF, "Bulk Load Texture");
+    QAction *actionBulkSaveITF = m_UI->AddAction(menuITF, "Bulk Export Texture");
+    QAbstractButton::connect(actionLoadITF, &QAction::triggered, m_UI, [this] {OpenFile("ITF");});
+    QAbstractButton::connect(actionSaveITF, &QAction::triggered, m_UI, [this] {SaveFile("Texture");});
+    QAbstractButton::connect(actionLoadQImage, &QAction::triggered, m_UI, [this] {OpenFile("Image Files (*." + QImageWriter::supportedImageFormats().join(";*.")+")");});
+    QAbstractButton::connect(actionBulkLoadITF, &QAction::triggered, m_UI, [this] {BulkOpen("ITF");});
+    QAbstractButton::connect(actionBulkSaveITF, &QAction::triggered, m_UI, [this] {BulkSave("Texture");});
+
+
+    QMenu *menuSFX = m_UI->AddMenu("Sound");
+    QAction *actionLoadVAC = m_UI->AddAction(menuSFX, "Load VAC");
+    QAction *actionSaveVAC = m_UI->AddAction(menuSFX, "Export VAC");
+    QAction *actionBulkVAC = m_UI->AddAction(menuSFX, "Bulk Export Sound");
+
+
+    QMenu *menuDatabase = m_UI->AddMenu("Database");
+    QAction *actionCreateDefinition = m_UI->AddAction(menuDatabase, "Create Definition");
+    QAction *actionCreateDatabase = m_UI->AddAction(menuDatabase, "Create Database");
+    QAction *actionLoadTMD = m_UI->AddAction(menuDatabase, "Load TMD");
+    QAction *actionLoadTDB = m_UI->AddAction(menuDatabase, "Load TDB");
+    QAction *actionLoadBMD = m_UI->AddAction(menuDatabase, "Load BMD");
+    QAction *actionLoadBDB = m_UI->AddAction(menuDatabase, "Load BDB");
+    QAction *actionSaveDatabase = m_UI->AddAction(menuDatabase, "Export Database");
+    QAction *actionBulkDatabase = m_UI->AddAction(menuDatabase, "Bulk Export Database");
+    QAbstractButton::connect(actionSaveDatabase, &QAction::triggered, m_UI, [this] {SaveFile("Database");});
+    QAbstractButton::connect(actionBulkDatabase, &QAction::triggered, m_UI, [this] {BulkSave("Database");});
+    QAbstractButton::connect(actionLoadTMD, &QAction::triggered, m_UI, [this] {OpenFile("TMD");});
+    QAbstractButton::connect(actionLoadBMD, &QAction::triggered, m_UI, [this] {OpenFile("BMD");});
+    QAbstractButton::connect(actionLoadTDB, &QAction::triggered, m_UI, [this] {OpenFile("TDB");});
+    QAbstractButton::connect(actionLoadBDB, &QAction::triggered, m_UI, [this] {OpenFile("BDB");});
+    QAbstractButton::connect(actionCreateDefinition, &QAction::triggered, m_UI, [this] {CreateDefinitionFile();});
+    QAbstractButton::connect(actionCreateDatabase, &QAction::triggered, m_UI, [this] {CreateDatabaseFile();});
+
+
+    QMenu *menuClear = m_UI->AddMenu("Files");
+    QAction *actionClearFiles = m_UI->AddAction(menuClear, "Clear Loaded Files");
+    QAbstractButton::connect(actionClearFiles, &QAction::triggered, m_UI, [this] {m_UI->ClearWindow(); ClearFiles();});
+
 
     QMenu *menuBuild = m_UI->AddMenu("Build");
     QAction *actionUnpackISO = m_UI->AddAction(menuBuild, "Unpack ISO");
@@ -33,38 +101,26 @@ zlManager::zlManager(exWindowBase *passUI, exSettings *passSettings)
 
     QAbstractButton::connect(actionUnpackISO, &QAction::triggered, m_UI, [this] {m_IsoBuilder->unpackISO();});
     QAbstractButton::connect(actionUnzipZips, &QAction::triggered, m_UI, [this] {m_IsoBuilder->unzipSpecial();});
-    QAbstractButton::connect(actionModInterface, &QAction::triggered, m_UI, [this] {openModHandler();});
+    QAbstractButton::connect(actionModInterface, &QAction::triggered, m_UI, [this] {OpenModHandler();});
     QAbstractButton::connect(actionZipBuildISO, &QAction::triggered, m_UI, [this] {m_IsoBuilder->rezipTFA_sevenZip(false);});
     QAbstractButton::connect(actionBuildISO, &QAction::triggered, m_UI, [this] {m_IsoBuilder->repackISO(false);});
     QAbstractButton::connect(actionPackRandom, &QAction::triggered, m_UI, [this] {m_IsoBuilder->packModded("Rebuild");});
 
-
-    fileBrowser = new QListWidget;
-    m_UI->SetLeftWindow(fileBrowser);
-    fileBrowser->setGeometry(QRect(QPoint(0,0), QSize(m_UI->m_hSize*0.15,m_UI->m_vSize)));
-    QAbstractItemView::connect(fileBrowser, &QListWidget::itemSelectionChanged, m_UI, []{qDebug() << "Selection changed";});
-
-    QMenu *menuClear = m_UI->AddMenu("File");
-    //With the plan to change to a full file browser of the game directory, this shouldn't be needed later.
-    QAction *actionClearFiles = m_UI->AddAction(menuClear, "Clear Loaded Files");
-
-    QAbstractButton::connect(actionClearFiles, &QAction::triggered, m_UI, [this]{m_UI->ClearWindow();});
-
 }
 
-void zlManager::openModHandler(){
+void zlManager::OpenModHandler(){
     m_UI->ClearWindow();
     m_ModHandler->updateCenter();
 }
 
 
 template <typename theFile>
-void zlManager::loadFile(theFile fileToOpen, QString givenPath){
+void zlManager::LoadFile(theFile fileToOpen, QString givenPath){
     m_UI->ClearWindow();
     std::shared_ptr<taFile> checkFile;
     qDebug() << Q_FUNC_INFO << "running this function for file" << givenPath;
-    fileData.input = true;
-    fileToOpen->fileData = &fileData;
+    m_fileData.input = true;
+    fileToOpen->fileData = &m_fileData;
     fileToOpen->m_UI = m_UI;
     fileToOpen->m_zlManager = this;
     QString openSelector;
@@ -79,67 +135,67 @@ void zlManager::loadFile(theFile fileToOpen, QString givenPath){
     }
     qDebug() << Q_FUNC_INFO << "filein:" << fileIn;
     if(!fileIn.isNull()){
-        fileMode = fileToOpen->fileExtension;
+        m_fileMode = fileToOpen->fileExtension;
         fileToOpen->inputPath = fileIn;
-        fileData.readFile(fileIn);
+        m_fileData.readFile(fileIn);
 
         QFile inputFile(fileIn);
         inputFile.open(QIODevice::ReadOnly);
         QFileInfo fileInfo(inputFile);
         fileToOpen->fileName = fileInfo.fileName().left(fileInfo.fileName().indexOf("."));
         fileToOpen->fileExtension = fileInfo.fileName().right(fileInfo.fileName().length() - (fileInfo.fileName().indexOf(".")+1)).toUpper();
-        checkFile = matchFile(fileToOpen->fullFileName());
+        checkFile = MatchFile(fileToOpen->fullFileName());
         while(checkFile != nullptr){
             fileToOpen->duplicateFileCount = checkFile->duplicateFileCount + 1;
-            checkFile = matchFile(fileToOpen->fullFileName());
+            checkFile = MatchFile(fileToOpen->fullFileName());
         }
 
         fileToOpen->load(fileToOpen->fileExtension);
-        loadedFiles.push_back(fileToOpen);
-        loadedFileNames.push_back(fileToOpen->fullFileName().toUpper());
-        fileBrowser->addItem(fileToOpen->fullFileName());
-        qDebug() << Q_FUNC_INFO << "number of items in file browser" << fileBrowser->count();
-        if(!bulkLoading){
+        m_loadedFiles.push_back(fileToOpen);
+        m_loadedFileNames.push_back(fileToOpen->fullFileName().toUpper());
+        m_fileBrowser->addItem(fileToOpen->fullFileName());
+        qDebug() << Q_FUNC_INFO << "number of items in file browser" << m_fileBrowser->count();
+        if(!m_bulkLoading){
             /*This sets the most recent file as the selected file and updates the center view. When loading multiple files, we don't need to do this until the last file.*/
-            fileBrowser->setCurrentRow(fileBrowser->count()-1);
+            m_fileBrowser->setCurrentRow(m_fileBrowser->count()-1);
         }
 
     }
 }
 
 template <typename theFile>
-void zlManager::loadBulkFile(theFile fileToOpen){
+void zlManager::LoadBulkFile(theFile fileToOpen){
     m_UI->ClearWindow();
     std::shared_ptr<taFile> checkFile;
     //qDebug() << Q_FUNC_INFO << "running this function";
-    fileData.input = true;
-    fileToOpen->fileData = &fileData;
+    m_fileData.input = true;
+    fileToOpen->fileData = &m_fileData;
     fileToOpen->m_UI = m_UI;
     fileToOpen->m_zlManager = this;
-    fileMode = fileToOpen->fileExtension;
+    m_fileMode = fileToOpen->fileExtension;
 
 
-    fileData.readFile(fileToOpen->inputPath);
+    m_fileData.readFile(fileToOpen->inputPath);
 
     QFile inputFile(fileToOpen->inputPath);
     inputFile.open(QIODevice::ReadOnly);
     QFileInfo fileInfo(inputFile);
     fileToOpen->fileName = fileInfo.fileName().left(fileInfo.fileName().indexOf("."));
-    checkFile = matchFile(fileToOpen->fullFileName());
+    checkFile = MatchFile(fileToOpen->fullFileName());
     while(checkFile != nullptr){
         fileToOpen->duplicateFileCount = checkFile->duplicateFileCount + 1;
-        checkFile = matchFile(fileToOpen->fullFileName());
+        checkFile = MatchFile(fileToOpen->fullFileName());
     }
 
     fileToOpen->load(fileToOpen->fileExtension);
-    loadedFiles.push_back(fileToOpen);
-    loadedFileNames.push_back(fileToOpen->fullFileName().toUpper());
-    fileBrowser->addItem(fileToOpen->fullFileName());
+    m_loadedFiles.push_back(fileToOpen);
+    m_loadedFileNames.push_back(fileToOpen->fullFileName().toUpper());
+    m_fileBrowser->addItem(fileToOpen->fullFileName());
     //qDebug() << Q_FUNC_INFO << "number of items in file browser" << fileBrowser->count();
 
 }
 
-void zlManager::bulkOpen(QString fileType){
+void zlManager::BulkOpen(QString fileType){
     QString filePath = QFileDialog::getExistingDirectory(m_UI, m_UI->tr(QString("Select " + fileType + " folder.").toStdString().c_str()), QDir::currentPath() + "/" + fileType + "/");
     QDir directory(filePath);
     for(const QFileInfo &checkFile : directory.entryInfoList(QDir::Files)){
@@ -148,81 +204,191 @@ void zlManager::bulkOpen(QString fileType){
                 std::shared_ptr<VBIN> vbinFile(new VBIN);
                 vbinFile->fileExtension = fileType;
                 vbinFile->inputPath = checkFile.filePath();
-                zlManager::loadBulkFile(vbinFile);
+                LoadBulkFile(vbinFile);
             } else if (fileType == "MESH.VBIN"){
                 std::shared_ptr<MeshVBIN> levelFile(new MeshVBIN);
                 levelFile->fileExtension = fileType;
                 levelFile->inputPath = checkFile.filePath();
-                loadBulkFile(levelFile);
+                LoadBulkFile(levelFile);
             } else if (fileType == "ITF" or fileType == "Image Files (*." + QImageWriter::supportedImageFormats().join(";*.")+")"){
                 std::shared_ptr<ITF> itfFile(new ITF);
                 itfFile->fileExtension = fileType;
                 itfFile->inputPath = checkFile.filePath();
-                loadBulkFile(itfFile);
+                LoadBulkFile(itfFile);
             } else if (fileType == "BMD" or fileType == "TMD"){
                 std::shared_ptr<DefinitionFile> definitionFile(new DefinitionFile);
                 definitionFile->fileExtension = fileType;
                 definitionFile->inputPath = checkFile.filePath();
-                loadBulkFile(definitionFile);
+                LoadBulkFile(definitionFile);
             } else if (fileType == "BDB" or fileType == "TDB"){
                 std::shared_ptr<DatabaseFile> databaseFile(new DatabaseFile);
                 databaseFile->fileExtension = fileType;
                 databaseFile->inputPath = checkFile.filePath();
-                loadBulkFile(databaseFile);
+                LoadBulkFile(databaseFile);
             } else if (fileType == "VAC"){
                 std::shared_ptr<VACFile> vacFile(new VACFile);
                 vacFile->fileExtension = fileType;
                 vacFile->inputPath = checkFile.filePath();
-                loadBulkFile(vacFile);
+                LoadBulkFile(vacFile);
             } else {
                 qDebug() << Q_FUNC_INFO << "File type" << fileType << "hasn't been implemented yet.";
                 return;
             }
         }
     }
-    fileBrowser->setCurrentRow(fileBrowser->count()-1);
+    m_fileBrowser->setCurrentRow(m_fileBrowser->count()-1);
 }
 
-void zlManager::openFile(QString fileType, QString givenPath){
+void zlManager::OpenFile(QString fileType, QString givenPath){
     qDebug() << Q_FUNC_INFO << "running this function for file" << givenPath;
     if(fileType == "VBIN" or fileType == "STL" or fileType == "DAE" or fileType == "GRAPH.VBIN"){
         std::shared_ptr<VBIN> vbinFile(new VBIN);
         vbinFile->fileExtension = fileType;
         vbinFile->isSplitFile = false;
-        zlManager::loadFile(vbinFile, givenPath);
+        zlManager::LoadFile(vbinFile, givenPath);
     } else if (fileType == "MESH.VBIN"){
 
         std::shared_ptr<MeshVBIN> levelFile(new MeshVBIN);
         levelFile->fileExtension = fileType;
-        zlManager::loadFile(levelFile, givenPath);
+        zlManager::LoadFile(levelFile, givenPath);
 
         std::shared_ptr<VBIN> graphFile(new VBIN);
         graphFile->meshFile = levelFile;
         graphFile->isSplitFile = true;
         graphFile->fileExtension = "GRAPH.VBIN";
-        zlManager::loadFile(graphFile, givenPath);
+        zlManager::LoadFile(graphFile, givenPath);
 
     } else if (fileType == "ITF" or fileType == "Image Files (*." + QImageWriter::supportedImageFormats().join(";*.")+")"){
         std::shared_ptr<ITF> itfFile(new ITF);
         itfFile->fileExtension = fileType;
-        zlManager::loadFile(itfFile, givenPath);
+        zlManager::LoadFile(itfFile, givenPath);
     } else if (fileType == "BMD" or fileType == "TMD"){
         std::shared_ptr<DefinitionFile> definitionFile(new DefinitionFile);
         definitionFile->fileExtension = fileType;
-        zlManager::loadFile(definitionFile, givenPath);
-        //definitionFile->acceptVisitor(*this);
+        zlManager::LoadFile(definitionFile, givenPath);
+        definitionFile->acceptVisitor(*this);
     } else if (fileType == "BDB" or fileType == "TDB"){
         std::shared_ptr<DatabaseFile> databaseFile(new DatabaseFile);
         databaseFile->fileExtension = fileType;
-        zlManager::loadFile(databaseFile, givenPath);
-        //databaseFile->acceptVisitor(*this);
+        zlManager::LoadFile(databaseFile, givenPath);
+        databaseFile->acceptVisitor(*this);
     } else if (fileType == "VAC"){
         std::shared_ptr<VACFile> vacFile(new VACFile);
         vacFile->fileExtension = fileType;
-        zlManager::loadFile(vacFile, givenPath);
+        zlManager::LoadFile(vacFile, givenPath);
     } else {
         qDebug() << Q_FUNC_INFO << "File type" << fileType << "hasn't been implemented yet.";
         return;
+    }
+
+}
+
+void zlManager::SaveFile(QString fromType, QString givenPath){
+    QStringList validFiles;
+    QString selectedFile;
+    QString currentCenterFile;
+    int centerFileIndex = 0;
+    bool completed;
+    qDebug() << Q_FUNC_INFO << "loaded files" << m_loadedFiles.size();
+    for(int i = 0; i < m_loadedFiles.size(); i++){
+        //qDebug() << Q_FUNC_INFO << "loaded file" << loadedFiles[i]->fileName << "with extension" << loadedFiles[i]->fileExtension << "vs" << fromType;
+        if(m_loadedFiles[i]->fileCategory() == fromType){
+            validFiles.append(m_loadedFiles[i]->fullFileName());
+        }
+    }
+    if(validFiles.isEmpty()){
+        m_Debug->MessageError("No loaded files of the selected type: " + fromType);
+        return;
+    }
+
+    currentCenterFile = m_fileBrowser->currentItem()->text();
+    if(validFiles.contains(currentCenterFile)){
+        qDebug() << Q_FUNC_INFO << "File was found in the list.";
+        //I would use validFiles.indexOf(currentCenterFile) but that doesn't work
+        for(int i = 0; i < validFiles.size(); i++){
+            qDebug() << Q_FUNC_INFO << "comparing" << validFiles[i] << "to" << currentCenterFile;
+            if(validFiles[i] == currentCenterFile){
+                centerFileIndex = i;
+            }
+        }
+    }
+    qDebug() << Q_FUNC_INFO << "center file index:" << centerFileIndex;
+
+    selectedFile = QInputDialog::getItem(m_UI, m_UI->tr("Select a file:"), m_UI->tr("File name:"), validFiles, centerFileIndex, false, &completed);
+    if(!completed){
+        m_Debug->MessageError("File save operation cancelled.");
+        return;
+    }
+    for(int i = 0; i < m_loadedFiles.size(); i++){
+        if(m_loadedFiles[i]->fullFileName() != selectedFile){
+            continue;
+        }
+        QString selectedType = QInputDialog::getItem(m_UI, m_UI->tr("Select an output type:"), m_UI->tr("File type:"), m_loadedFiles[i]->validOutputs(), 0, false, &completed);
+        qDebug() << Q_FUNC_INFO << "completed value:" << completed;
+        if(!completed){
+            m_Debug->MessageError("File save operation cancelled.");
+            return;
+        }
+
+        QString fileOut;
+        if(givenPath == ""){
+            fileOut = QFileDialog::getSaveFileName(m_UI, m_UI->tr(QString("Select Output "  + selectedType).toStdString().c_str()), QDir::currentPath() + "/" + selectedType + "/"
+                                                   , m_UI->tr(QString(m_loadedFiles[i]->fileCategory() + " Files (*." + selectedType + ")").toStdString().c_str()));
+        } else {
+            fileOut = givenPath;
+        }
+
+
+        if(fileOut.isEmpty()){
+            m_Debug->MessageError(selectedType + " export cancelled.");
+            return;
+        }
+        m_loadedFiles[i]->outputPath = fileOut;
+        m_loadedFiles[i]->save(selectedType);
+    }
+
+}
+
+void zlManager::BulkSave(QString category){
+    QStringList validFiles;
+    QString selectedType = "";
+    QString currentCenterFile;
+    int centerFileIndex = 0;
+    bool completed;
+    qDebug() << Q_FUNC_INFO << "loaded files" << m_loadedFiles.size();
+    for(int i = 0; i < m_loadedFiles.size(); i++){
+        //qDebug() << Q_FUNC_INFO << "loaded file" << loadedFiles[i]->fileName << "with extension" << loadedFiles[i]->fileExtension << "vs" << fromType;
+        if(m_loadedFiles[i]->fileCategory() != category){
+            continue;
+        }
+        if(selectedType == ""){
+            selectedType = QInputDialog::getItem(m_UI, m_UI->tr("Select an output type:"), m_UI->tr("File type:"), m_loadedFiles[i]->validOutputs(), 0, false, &completed);
+            if(!completed){
+                m_Debug->MessageError("File save operation cancelled.");
+                return;
+            }
+        }
+        validFiles.append(m_loadedFiles[i]->fullFileName());
+    }
+    if(validFiles.isEmpty()){
+        m_Debug->MessageError("No loaded files of the selected type: " + category);
+        return;
+    }
+
+    QString filePath = QFileDialog::getExistingDirectory(m_UI, m_UI->tr("Select output folder"), QDir::currentPath());
+
+    if(filePath.isEmpty()){
+        m_Debug->MessageError(category + " export cancelled.");
+        return;
+    }
+    for(int i = 0; i < m_loadedFiles.size(); i++){
+        if(m_loadedFiles[i]->fileCategory() != category){
+            continue;
+        }
+
+        m_loadedFiles[i]->outputPath = filePath + "\\" + m_loadedFiles[i]->fileName + "." + selectedType;
+        m_loadedFiles[i]->save(selectedType);
+        m_Debug->MessageSuccess(selectedType + " file saved.");
     }
 
 }
@@ -254,7 +420,7 @@ QStringList zlManager::UnzippedFolders(bool modded){
     return unzippedList;
 }
 
-void zlManager::loadRequiredFile(taFile* fromFile, QString needFile, QString fileType){
+void zlManager::LoadRequiredFile(taFile* fromFile, QString needFile, QString fileType){
     qDebug() << Q_FUNC_INFO << "dependant file is:" << needFile << "from starting file" << fromFile->fullFileName();
     static QRegularExpression pathRemover = QRegularExpression("../");
     int directoriesToAscend = needFile.count(pathRemover);
@@ -263,13 +429,13 @@ void zlManager::loadRequiredFile(taFile* fromFile, QString needFile, QString fil
         needFile += "."+fileType;
     }
 
-    long storedPosition = fileData.currentPosition;
+    long storedPosition = m_fileData.currentPosition;
     QString storedPath = fromFile->inputPath;
 
     QString startingPath = fromFile->inputPath;
     startingPath.remove(fromFile->fullFileName());
 
-    std::shared_ptr<taFile> testLoaded = matchFile(needFile);
+    std::shared_ptr<taFile> testLoaded = MatchFile(needFile);
     if(testLoaded == nullptr){
         QDir dir(startingPath);
         qDebug() << Q_FUNC_INFO << "Dir before ascending:" << dir.absolutePath();
@@ -296,122 +462,122 @@ void zlManager::loadRequiredFile(taFile* fromFile, QString needFile, QString fil
         isFileInDirectory = QFileInfo::exists(inheritPath);
         qDebug() << Q_FUNC_INFO << "file directory after check is" << inheritPath << "and file exists?" << isFileInDirectory;
         if(isFileInDirectory){
-            openFile(fileType, inheritPath);
+            OpenFile(fileType, inheritPath);
         }
-        testLoaded = matchFile(needFile);
+        testLoaded = MatchFile(needFile);
     }
     while(testLoaded == nullptr){
         m_Debug->MessageError("Please load file " + needFile);
-        openFile(fileType);
-        testLoaded = matchFile(needFile);
+        OpenFile(fileType);
+        testLoaded = MatchFile(needFile);
     }
-    fileData.readFile(storedPath);
-    fileData.currentPosition = storedPosition;
+    m_fileData.readFile(storedPath);
+    m_fileData.currentPosition = storedPosition;
 }
 
-void zlManager::visit(taFile dataFile){
+void zlManager::Visit(taFile dataFile){
     qDebug() << Q_FUNC_INFO << "invalid file visited:" << dataFile.fullFileName();
 }
 
-void zlManager::visit(DatabaseFile dataFile){
+void zlManager::Visit(DatabaseFile dataFile){
     qDebug() << Q_FUNC_INFO << "Correct data file visited:" << dataFile.fullFileName();
-    databaseList.push_back(std::make_shared<DatabaseFile> (dataFile));
+    m_databaseList.push_back(std::make_shared<DatabaseFile> (dataFile));
 }
 
-int zlManager::loadDatabases(){
+int zlManager::LoadDatabases(){
     qDebug() << Q_FUNC_INFO << "Attempting to load all level database files";
     std::shared_ptr<taFile> testLoaded;
-    bulkLoading = true;
+    m_bulkLoading = true;
     //need to prompt the user for the game directory, then use that
     if(m_Settings->GetValue("Game extract path") == ""){
         //can re-empty gamePath if there's an error reading the files
-        gamePath = QFileDialog::getExistingDirectory(m_UI, m_UI->tr(QString("Select TF2004 game folder.").toStdString().c_str()), QDir::currentPath());
-        m_Settings->SetValue("Game extract path", gamePath);
+        m_gamePath = QFileDialog::getExistingDirectory(m_UI, m_UI->tr(QString("Select TF2004 game folder.").toStdString().c_str()), QDir::currentPath());
+        m_Settings->SetValue("Game extract path", m_gamePath);
     } else {
-        gamePath = m_Settings->GetValue("Game extract path");
+        m_gamePath = m_Settings->GetValue("Game extract path");
     }
     //then load TMD from TFA2, then load each file from TFA.
-    testLoaded = matchFile("CREATURE.TMD");
+    testLoaded = MatchFile("CREATURE.TMD");
     if(testLoaded == nullptr){
-        QString definitionPath = gamePath + "/TFA2/CREATURE.TMD";
+        QString definitionPath = m_gamePath + "/TFA2/CREATURE.TMD";
         bool isFileInDirectory = QFileInfo::exists(definitionPath);
         qDebug() << Q_FUNC_INFO << "file directory is" << definitionPath << "and file exists?" << isFileInDirectory;
         if(isFileInDirectory){
-            openFile("TMD", definitionPath);
+            OpenFile("TMD", definitionPath);
         }
-        testLoaded = matchFile("CREATURE.TMD");
+        testLoaded = MatchFile("CREATURE.TMD");
 
         if(testLoaded == nullptr){
             m_Debug->MessageError("CREATURE.TMD was not found. Database files were not loaded.");
-            gamePath = "";
+            m_gamePath = "";
             return 1;
         }
     }
 
     //Load the METAGAME files for minicon randomization.
-    testLoaded = matchFile("METAGAME.TMD");
+    testLoaded = MatchFile("METAGAME.TMD");
     if(testLoaded == nullptr){
-        QString definitionPath = gamePath + "/TFA/METAGAME.TMD";
+        QString definitionPath = m_gamePath + "/TFA/METAGAME.TMD";
         bool isFileInDirectory = QFileInfo::exists(definitionPath);
         qDebug() << Q_FUNC_INFO << "file directory is" << definitionPath << "and file exists?" << isFileInDirectory;
         if(isFileInDirectory){
-            openFile("TMD", definitionPath);
+            OpenFile("TMD", definitionPath);
         }
-        testLoaded = matchFile("METAGAME.TMD");
+        testLoaded = MatchFile("METAGAME.TMD");
 
         if(testLoaded == nullptr){
             m_Debug->MessageError("METAGAME.TMD was not found. Database files were not loaded.");
-            gamePath = "";
+            m_gamePath = "";
             return 1;
         }
     }
 
-    testLoaded = matchFile("METAGAME.TDB");
+    testLoaded = MatchFile("METAGAME.TDB");
     if(testLoaded == nullptr){
-        QString definitionPath = gamePath + "/TFA/METAGAME.TDB";
+        QString definitionPath = m_gamePath + "/TFA/METAGAME.TDB";
         bool isFileInDirectory = QFileInfo::exists(definitionPath);
         qDebug() << Q_FUNC_INFO << "file directory is" << definitionPath << "and file exists?" << isFileInDirectory;
         if(isFileInDirectory){
-            openFile("TDB", definitionPath);
+            OpenFile("TDB", definitionPath);
         }
-        testLoaded = matchFile("TFA-METAGAME.TDB");
+        testLoaded = MatchFile("TFA-METAGAME.TDB");
 
         if(testLoaded == nullptr){
             m_Debug->MessageError("METAGAME.TDB was not found. Database files were not loaded.");
-            gamePath = "";
+            m_gamePath = "";
             return 1;
         }
         //adds the database to the database list
         //testLoaded->acceptVisitor(*this);
     }
 
-    QString levelPath = gamePath + "/TFA/LEVELS/EPISODES";
+    QString levelPath = m_gamePath + "/TFA/LEVELS/EPISODES";
     QStringList levelList = QDir(levelPath).entryList(QDir::AllDirs | QDir::NoDotAndDotDot);
     int levelCount = levelList.count();
     for(int level = 0; level < levelCount; level++){
-        testLoaded = matchFile(levelList[level] + "-CREATURE.BDB");
+        testLoaded = MatchFile(levelList[level] + "-CREATURE.BDB");
         if(testLoaded == nullptr){
             QString creaturePath = levelPath + "/" + levelList[level] + "/CREATURE.BDB";
             bool isFileInDirectory = QFileInfo::exists(creaturePath);
             qDebug() << Q_FUNC_INFO << "file directory is" << creaturePath << "and file exists?" << isFileInDirectory;
             if(isFileInDirectory){
-                openFile("BDB", creaturePath);
+                OpenFile("BDB", creaturePath);
             }
-            testLoaded = matchFile(levelList[level] + "-CREATURE.BDB");
+            testLoaded = MatchFile(levelList[level] + "-CREATURE.BDB");
         }
         if(testLoaded == nullptr){
             m_Debug->MessageError("CREATURE.BDB was not found. Database files were not loaded.");
-            gamePath = "";
+            m_gamePath = "";
             return 1;
         }
         //testLoaded->acceptVisitor(*this);
 
     }
-    bulkLoading = false;
+    m_bulkLoading = false;
     return 0;
 }
 
-int zlManager::createDefinitionFile(){
+int zlManager::CreateDefinitionFile(){
     //make popup window with all options
     /*for a definition file, need:
         Name - can get this from save dialog
@@ -465,18 +631,18 @@ int zlManager::createDefinitionFile(){
     customFile->fileExtension = selectedType;
     customFile->m_UI = m_UI;
 
-    loadedFiles.push_back(customFile);
-    loadedFileNames.push_back(customFile->fullFileName().toUpper());
-    fileBrowser->addItem(customFile->fullFileName());
-    qDebug() << Q_FUNC_INFO << "number of items in file browser" << fileBrowser->count();
-    fileBrowser->setCurrentRow(fileBrowser->count()-1);
+    m_loadedFiles.push_back(customFile);
+    m_loadedFileNames.push_back(customFile->fullFileName().toUpper());
+    m_fileBrowser->addItem(customFile->fullFileName());
+    qDebug() << Q_FUNC_INFO << "number of items in file browser" << m_fileBrowser->count();
+    m_fileBrowser->setCurrentRow(m_fileBrowser->count()-1);
     customFile->updateCenter();
 
     return 0;
 
 }
 
-int zlManager::createDatabaseFile(){
+int zlManager::CreateDatabaseFile(){
     //make popup window with all options
     /*for a database file, need:
         Name - can get this from save dialog
@@ -491,8 +657,8 @@ int zlManager::createDatabaseFile(){
     dialogDatabase->setWindowTitle("Create Database Definition");
     dialogDatabase->checkOption->setText("Check box if making a binary file.");
 
-    for(int i = 0; i < loadedFiles.size(); i++){
-        dialogDatabase->comboOption->addItem(loadedFiles[i]->fullFileName());
+    for(int i = 0; i < m_loadedFiles.size(); i++){
+        dialogDatabase->comboOption->addItem(m_loadedFiles[i]->fullFileName());
     }
 
     dialogDatabase->open();
@@ -533,26 +699,26 @@ int zlManager::createDatabaseFile(){
     customFile->fileName = fileInfo.fileName().left(fileInfo.fileName().indexOf("."));
     customFile->fileExtension = selectedType;
     customFile->inheritedFileName = fileSelection;
-    customFile->inheritedFile = std::static_pointer_cast<DefinitionFile>(matchFile(fileSelection));
+    customFile->inheritedFile = std::static_pointer_cast<DefinitionFile>(MatchFile(fileSelection));
     customFile->maxInstances = 0;
     customFile->m_UI = m_UI;
 
-    loadedFiles.push_back(customFile);
-    loadedFileNames.push_back(customFile->fullFileName().toUpper());
-    fileBrowser->addItem(customFile->fullFileName());
-    qDebug() << Q_FUNC_INFO << "number of items in file browser" << fileBrowser->count();
-    fileBrowser->setCurrentRow(fileBrowser->count()-1);
+    m_loadedFiles.push_back(customFile);
+    m_loadedFileNames.push_back(customFile->fullFileName().toUpper());
+    m_fileBrowser->addItem(customFile->fullFileName());
+    qDebug() << Q_FUNC_INFO << "number of items in file browser" << m_fileBrowser->count();
+    m_fileBrowser->setCurrentRow(m_fileBrowser->count()-1);
     customFile->updateCenter();
 
     return 0;
 
 }
 
-std::shared_ptr<taFile> zlManager::matchFile(QString fileNameFull){
-    if(loadedFileNames.contains(fileNameFull.toUpper())){
-        return loadedFiles[loadedFileNames.indexOf(fileNameFull.toUpper())];
+std::shared_ptr<taFile> zlManager::MatchFile(QString fileNameFull){
+    if(m_loadedFileNames.contains(fileNameFull.toUpper())){
+        return m_loadedFiles[m_loadedFileNames.indexOf(fileNameFull.toUpper())];
     } else {
-        qDebug() << Q_FUNC_INFO << "loaded file names:" << loadedFileNames;
+        qDebug() << Q_FUNC_INFO << "loaded file names:" << m_loadedFileNames;
         //log("File " + fileNameFull + " was not found.");
     }
     /*for(int i = 0; i < loadedFiles.size(); i++){
@@ -562,4 +728,8 @@ std::shared_ptr<taFile> zlManager::matchFile(QString fileNameFull){
         }
     }*/
     return nullptr;
+}
+
+void zlManager::ClearFiles(){
+    m_loadedFiles.clear();
 }

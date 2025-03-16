@@ -34,8 +34,14 @@ Randomizer::Randomizer(exWindowBase *passUI, zlManager *fileManager, DataHandler
     m_zlManager = fileManager;
     m_DataHandler = dataSystem;
 
+    QMenu* randomizerMenu = m_UI->AddMenu("Randomizer");
+    QAction* loadRandomizer = m_UI->AddAction(randomizerMenu, "Randomizer");
+    QAbstractButton::connect(loadRandomizer, &QAction::triggered, m_UI, [this]{Load();});
+}
+
+void Randomizer::Load(){
     qDebug() << Q_FUNC_INFO << "loading database files";
-    if(m_zlManager->loadDatabases() != 0){
+    if(m_zlManager->LoadDatabases() != 0){
         m_Debug->Log("Failed to find database files. Randomizer could not load.");
         return;
     }
@@ -907,7 +913,7 @@ void Randomizer::spoilMinicon(int pickupID, QTextStream& stream){
 int Randomizer::writeSpoilers(){
     //use game directory, make new directory in same directory as game
     //this will actually be read earlier in the process, just doing this here for now
-    QString outputFile = m_zlManager->copyOutputPath + "/Spoilers.txt";
+    QString outputFile = m_zlManager->m_copyOutputPath + "/Spoilers.txt";
     QFile spoilerOut(outputFile);
     QFile file(outputFile);
     qDebug() << Q_FUNC_INFO << "checking if randomizer directory exists:" << file.exists();
@@ -982,11 +988,11 @@ int Randomizer::editDatabases(){
         fixBunkerLinks();
 
         if(currentLevel->usesAlternate){
-            qDebug() << Q_FUNC_INFO << "output path for this level will be" << QString(m_zlManager->copyOutputPath + "/TFA/" + m_DataHandler->getGameEpisode(currentLevel->episodeID)->alternativeDirectoryName.toUpper() + "/CREATURE.TDB");
-            levelPath = m_zlManager->copyOutputPath + "/TFA/" + m_DataHandler->getGameEpisode(currentLevel->episodeID)->alternativeDirectoryName.toUpper();
+            qDebug() << Q_FUNC_INFO << "output path for this level will be" << QString(m_zlManager->m_copyOutputPath + "/TFA/" + m_DataHandler->getGameEpisode(currentLevel->episodeID)->alternativeDirectoryName.toUpper() + "/CREATURE.TDB");
+            levelPath = m_zlManager->m_copyOutputPath + "/TFA/" + m_DataHandler->getGameEpisode(currentLevel->episodeID)->alternativeDirectoryName.toUpper();
         } else {
-            qDebug() << Q_FUNC_INFO << "output path for this level will be" << QString(m_zlManager->copyOutputPath + "/TFA/" + m_DataHandler->getGameEpisode(currentLevel->episodeID)->directoryName.toUpper() + "/CREATURE.TDB");
-            levelPath = m_zlManager->copyOutputPath + "/TFA/" + m_DataHandler->getGameEpisode(currentLevel->episodeID)->directoryName.toUpper();
+            qDebug() << Q_FUNC_INFO << "output path for this level will be" << QString(m_zlManager->m_copyOutputPath + "/TFA/" + m_DataHandler->getGameEpisode(currentLevel->episodeID)->directoryName.toUpper() + "/CREATURE.TDB");
+            levelPath = m_zlManager->m_copyOutputPath + "/TFA/" + m_DataHandler->getGameEpisode(currentLevel->episodeID)->directoryName.toUpper();
         }
 
         //get containing directory
@@ -1023,11 +1029,11 @@ int Randomizer::editDatabases(){
     return 0;
 
     bool metagameEdited = false;
-    for(int i = 0; i<m_zlManager->databaseList.size(); i++){
-        qDebug() << Q_FUNC_INFO << "checking databse file" << m_zlManager->databaseList[i]->fileName;
-        if(m_zlManager->databaseList[i]->fileName == "TFA-METAGAME"){
-            qDebug() << Q_FUNC_INFO << "setting metagame file to:" << m_zlManager->databaseList[i]->fileName;
-            m_DataHandler->gameData.metagameFile = m_zlManager->databaseList[i];
+    for(int i = 0; i<m_zlManager->m_databaseList.size(); i++){
+        qDebug() << Q_FUNC_INFO << "checking databse file" << m_zlManager->m_databaseList[i]->fileName;
+        if(m_zlManager->m_databaseList[i]->fileName == "TFA-METAGAME"){
+            qDebug() << Q_FUNC_INFO << "setting metagame file to:" << m_zlManager->m_databaseList[i]->fileName;
+            m_DataHandler->gameData.metagameFile = m_zlManager->m_databaseList[i];
         }
     }
 
@@ -1053,8 +1059,8 @@ int Randomizer::editDatabases(){
     }
 
     if(metagameEdited){
-        qDebug() << Q_FUNC_INFO << "output path for METAGAME will be" << QString(m_zlManager->copyOutputPath + "/TFA/METAGAME.TDB");
-        QString metagamePath = m_zlManager->copyOutputPath + "/TFA/METAGAME.TDB";
+        qDebug() << Q_FUNC_INFO << "output path for METAGAME will be" << QString(m_zlManager->m_copyOutputPath + "/TFA/METAGAME.TDB");
+        QString metagamePath = m_zlManager->m_copyOutputPath + "/TFA/METAGAME.TDB";
         m_DataHandler->gameData.metagameFile->outputPath = metagamePath;
         m_DataHandler->gameData.metagameFile->save("TDB");
     }

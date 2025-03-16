@@ -16,11 +16,11 @@ IsoBuilder::IsoBuilder(zlManager *fileManager){
 void IsoBuilder::setCopyPath(QString folderName){
     QDir gameParent(m_zlManager->m_Settings->GetValue("Game extract path"));
     gameParent.cdUp();
-    m_zlManager->copyOutputPath = gameParent.absolutePath() + "/" + folderName;
+    m_zlManager->m_copyOutputPath = gameParent.absolutePath() + "/" + folderName;
     //get containing directory
     //create Randomizer folder in that directory
-    qDebug() << Q_FUNC_INFO << "path being checked:" << m_zlManager->copyOutputPath << "based on " << gameParent.absolutePath();
-    QDir checkDir(m_zlManager->copyOutputPath);
+    qDebug() << Q_FUNC_INFO << "path being checked:" << m_zlManager->m_copyOutputPath << "based on " << gameParent.absolutePath();
+    QDir checkDir(m_zlManager->m_copyOutputPath);
     if(!checkDir.exists()){
         checkDir.mkpath(".");
     }

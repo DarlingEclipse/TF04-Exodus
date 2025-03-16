@@ -256,7 +256,7 @@ void ModHandler::replaceFile(QString fileName, QString destinationPath){
     QFile fileReplacement(fileInputDirectory);
     qDebug() << Q_FUNC_INFO << "checking if replacement image exists:" << fileReplacement.exists() << "at directory:" << fileInputDirectory;
 
-    QString fileOutputDirectory = m_zlManager->copyOutputPath + destinationPath;
+    QString fileOutputDirectory = m_zlManager->m_copyOutputPath + destinationPath;
 
     qDebug() << Q_FUNC_INFO << "creating directory" << fileOutputDirectory;
     QDir createFile(fileOutputDirectory);
@@ -379,7 +379,7 @@ void ModHandler::applyModifications(){
     qDebug() << Q_FUNC_INFO << "mod file list:" << modFiles;
     args.append(modFiles);
 
-    QString randomizerPath = m_zlManager->copyOutputPath + "/SLUS_206.68";
+    QString randomizerPath = m_zlManager->m_copyOutputPath + "/SLUS_206.68";
 
     args.append(randomizerPath);
 

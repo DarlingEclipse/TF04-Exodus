@@ -29,5 +29,5 @@ taFile::taFile(){
 }
 
 void taFile::acceptVisitor(zlManager& visitor){
-    visitor.visit(*this);
+    visitor.Visit(*this);
 }

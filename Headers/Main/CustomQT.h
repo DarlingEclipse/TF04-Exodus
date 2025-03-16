@@ -8,6 +8,7 @@
 
 #include <QDialog>
 #include <QCheckBox>
+#include <QBoxLayout>
 
 #include <QSlider>
 #include <QGroupBox>
@@ -82,8 +83,8 @@ public:
 
 class exCheckList : public exCustomGroup{
 public:
-    std::vector<QCheckBox*> m_checklist;
-    exCheckList(std::vector<QString> labelList, QWidget* parent = nullptr);
+    QVBoxLayout *m_checklist;
+    exCheckList(QStringList labelList, QWidget* parent = nullptr);
 };
 
 class SettingSlider : public exCustomGroup {
