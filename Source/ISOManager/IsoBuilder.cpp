@@ -9,8 +9,10 @@
 
 //https://doc.qt.io/qt-6/qprocess.html
 
-IsoBuilder::IsoBuilder(zlManager *fileManager){
+IsoBuilder::IsoBuilder(exWindowBase *passWindow, zlManager *fileManager){
     m_zlManager = fileManager;
+    m_UI = passWindow;
+    m_Debug = &exDebugger::GetInstance();
 }
 
 void IsoBuilder::setCopyPath(QString folderName){

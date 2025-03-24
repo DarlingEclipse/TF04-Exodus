@@ -26,7 +26,7 @@ public:
     QString moddedOutput = "";
     bool buildingRandomizer;
 
-    IsoBuilder(zlManager *fileManager);
+    IsoBuilder(exWindowBase *passWindow, zlManager *fileManager);
 
     void setCopyPath(QString folderName = "Exodus2004Output");
     int unpackISO(); //calls TF04 ISO Manager to unpack and attempt to unzip TFA etc

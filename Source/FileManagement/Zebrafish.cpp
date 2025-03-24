@@ -21,7 +21,7 @@ zlManager::zlManager(exWindowBase *passUI, exSettings *passSettings)
     m_Settings = passSettings;
 
     /*Initialize the ISO Builder. Ideally, this will be its own class and not contained within Zebrafish*/
-    m_IsoBuilder = new IsoBuilder(this);
+    m_IsoBuilder = new IsoBuilder(m_UI, this);
     m_ModHandler = new ModHandler(m_UI, this);
 
     AddMenuItems();
