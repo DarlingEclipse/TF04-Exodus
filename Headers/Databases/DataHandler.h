@@ -143,16 +143,30 @@ public:
 
 };
 
-enum class BossType{None, Starscream, Cyclonus, Megatron, TidalWave, Unicron};
-enum class Episode{Amazon_1, Antarctica, Amazon_2, AircraftCarrier, Greenland, Spaceship, EasterIsland, Cybertron};
+enum BossType{BossTypeInvalid = -1
+                , BossTypeNone
+                , BossTypeStarscream
+                , BossTypeCyclonus
+                , BossTypeMegatron
+                , BossTypeTidalWave
+                , BossTypeUnicron};
+enum Episode{EpisodeInvalid = -1
+               , EpisodeAmazon_1
+               , EpisodeAntarctica
+               , EpisodeAmazon_2
+               , EpisodeAircraftCarrier
+               , EpisodeGreenland
+               , EpisodeSpaceship
+               , EpisodeEasterIsland
+               , EpisodeCybertron};
 class taEpisode : public taDatabaseInstance{
 public:
     /*all members from metagame.tmd*/
     QString alternativeDirectoryName;
-    BossType bossType;
+    int bossType;
     int dataconCount;
     QString directoryName;
-    Episode episodeID;
+    int episode;
     bool hasAlternativeDirectory;
     int miniconCount;
     int miniconUnlockCountExtreme;
@@ -230,8 +244,7 @@ class exEpisode;
 
 class exPickupLocation{
 public:
-    exEpisode* episode;
-    Episode originalEpisode;
+    int world;
     bool usesAlternate;
     QString levelName;
     int uniqueID; //randomizer ID
@@ -269,7 +282,7 @@ public:
     //using std::sort instead of making a whole function for it
     bool operator < (const exPickupLocation& compLocation) const
     {
-        return (episode < compLocation.episode);
+        return (world < compLocation.world);
     }
 };
 
@@ -278,7 +291,6 @@ public:
     //from database file
     QString logName;
     int requirements;
-    Episode episodeID;
     bool usesAlternate = false;
     /*whether the level needs highjump or slipstream to beat normally
      * Handling requirements this way because integerarrays won't work for a while
@@ -288,7 +300,7 @@ public:
      * 3 = both*/
     std::vector<exTrick*> availableTricks; //tricks that can be used to complete the level without its typical requirements
     bool placeable; //only used for post-boss Mid-Atlantic
-    int originalEpisode; //for reconstructing the original CREATURE folder's location
+    int world; //for reconstructing the original CREATURE folder's location
 
     //populated at runtime
     int currentEpisode; //for randomizing the level order
@@ -453,6 +465,7 @@ public:
 
 
     dictItem createGamePickupPlaced(const exPickupLocation* location);
+    dictItem createGameEpisode(const taEpisode* episode);
     dictItem createMetagameMinicon(taMinicon minicon);
     void LoadAll();
     void loadMinicons();
@@ -477,8 +490,8 @@ public:
     exMinicon* getExodusMinicon(QString searchName);
     taMinicon* getGameMinicon(QString searchName);
 
-    exEpisode* getExodusEpisode(Episode episodeToGet);
-    taEpisode* getGameEpisode(Episode episodeToGet);
+    exEpisode* getExodusEpisode(int episodeToGet);
+    taEpisode* getGameEpisode(int episodeToGet);
 
     int highestAvailableLevel(int checkRequirements);
 

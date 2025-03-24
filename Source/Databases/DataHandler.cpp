@@ -168,11 +168,11 @@ exMinicon::exMinicon(dictItem copyItem){
 
 taEpisode::taEpisode(dictItem copyItem){
     this->alternativeDirectoryName = copyItem.searchAttributes<QString>("AlternativeDirectoryName");
-    this->bossType = static_cast<BossType>(copyItem.searchAttributes<int>("BossType"));
+    this->bossType = copyItem.searchAttributes<int>("BossType");
     this->dataconCount = copyItem.searchAttributes<int>("DataconCount");
     this->directoryName = copyItem.searchAttributes<QString>("DirectoryName");
     this->episodeOrder = copyItem.searchAttributes<int>("Episode");
-    this->episodeID = static_cast<Episode>(episodeOrder);
+    this->episode = episodeOrder;
     this->hasAlternativeDirectory = copyItem.searchAttributes<bool>("HasAlternativeDirectory");
     this->miniconCount = copyItem.searchAttributes<int>("MiniconCount");
     this->miniconUnlockCountExtreme = copyItem.searchAttributes<int>("MiniconUnlockCountExtreme");
@@ -192,7 +192,7 @@ void taEpisode::updateDirectories(){
 
 exPickupLocation::exPickupLocation(dictItem copyItem){
     int levelID = copyItem.searchAttributes<int>("Level");
-    originalEpisode = static_cast<Episode>(levelID);
+    world = levelID;
     usesAlternate = copyItem.searchAttributes<bool>("UsesAlternateDirectory");
     //levelName = copyItem.searchAttributes<QString>("LevelName");
     inputDatabaseInstance = copyItem.searchAttributes<int>("GameID");
@@ -227,9 +227,8 @@ exEpisode::exEpisode(dictItem copyItem){
         usesAlternate = true;
     }
     //outputFileName = copyItem.searchAttributes<QString>("EpisodeFolder");
-    originalEpisode = copyItem.searchAttributes<int>("EpisodeID");
-    currentEpisode = originalEpisode;
-    episodeID = static_cast<Episode>(originalEpisode);
+    world = copyItem.searchAttributes<int>("EpisodeID");
+    currentEpisode = world;
     requirements = copyItem.searchAttributes<int>("Requirements");
     placeable = copyItem.searchAttributes<bool>("Placeable");
 
@@ -239,7 +238,7 @@ exEpisode::exEpisode(dictItem copyItem){
 
 exEpisode::exEpisode(){
     logName = "UNLOADED LEVEL";
-    episodeID = Episode::Cybertron;
+    world = EpisodeInvalid;
     assignedMinicons = 0;
     assignedDatacons = 0;
 }
@@ -264,24 +263,24 @@ exMinicon::exMinicon(){
     //setAttribute("Position", "0, 0, 0");
 }
 
-exEpisode* DataHandler::getExodusEpisode(Episode episodeToGet){
+exEpisode* DataHandler::getExodusEpisode(int episodeToGet){
     for(int i = 0; i < exodusData.loadedLevels.size(); i++){
-        if(exodusData.loadedLevels[i].episodeID == episodeToGet){
+        if(exodusData.loadedLevels[i].world == episodeToGet){
             return &exodusData.loadedLevels[i];
         }
     }
-    qDebug() << Q_FUNC_INFO << "Episode" << static_cast<int>(episodeToGet) << "was not found in the Exodus data";
+    qDebug() << Q_FUNC_INFO << "Episode" << episodeToGet << "was not found in the Exodus data";
     return nullptr;
 }
 
-taEpisode* DataHandler::getGameEpisode(Episode episodeToGet){
+taEpisode* DataHandler::getGameEpisode(int episodeToGet){
     QStringList splitPath;
     for(int i = 0; i < gameData.levelList.size(); i++){
-        if(gameData.levelList[i].episodeID == episodeToGet){
+        if(gameData.levelList[i].episode == episodeToGet){
             return &gameData.levelList[i];
         }
     }
-    qDebug() << Q_FUNC_INFO << "Episode" << static_cast<int>(episodeToGet) << "was not found in the Game data";
+    qDebug() << Q_FUNC_INFO << "Episode" << episodeToGet << "was not found in the Game data";
     return nullptr;
 }
 
@@ -434,6 +433,9 @@ exTrick::exTrick(dictItem fromItem){
 void DataHandler::loadTricks(){
     exodusData.trickList = convertInstances<exTrick>(exodusData.dataFile->sendInstances("exTrick"));
     std::sort(exodusData.trickList.begin(), exodusData.trickList.end());
+    for(int i = 0; i < exodusData.trickList.size(); i++){
+        exodusData.trickList[i].enabled = false;
+    }
 }
 
 void DataHandler::addCustomLocations(){
@@ -449,18 +451,17 @@ void DataHandler::addCustomLocations(){
         }
     }
     for(int i = 0; i < loadedLocations.size(); i++){
-        qDebug() << Q_FUNC_INFO << "custom location has original episode" << static_cast<int>(loadedLocations[i].originalEpisode) << "uses alternate?" << loadedLocations[i].usesAlternate;
+        qDebug() << Q_FUNC_INFO << "custom location has original episode" << loadedLocations[i].world << "uses alternate?" << loadedLocations[i].usesAlternate;
     }
 
     for(int i = 0; i < exodusData.loadedLevels.size(); i++){
         for(int j = 0; j < loadedLocations.size(); j++){
-            if(exodusData.loadedLevels[i].episodeID != loadedLocations[j].originalEpisode){
+            if(exodusData.loadedLevels[i].world != loadedLocations[j].world){
                 continue;
             }
             if(exodusData.loadedLevels[i].usesAlternate != loadedLocations[j].usesAlternate){
                 continue;
             }
-            loadedLocations[j].episode = &exodusData.loadedLevels[i];
             exodusData.loadedLevels[i].spawnLocations.push_back(loadedLocations[j]);
         }
     }
@@ -481,12 +482,12 @@ void DataHandler::loadLevels(){
     qDebug() << Q_FUNC_INFO << "Loaded levels:" << exodusData.loadedLevels.size();
 
     for(int i = 0; i< exodusData.loadedLevels.size(); i++){
-        taEpisode* currentEpisode = getGameEpisode(exodusData.loadedLevels[i].episodeID);
+        taEpisode* currentEpisode = getGameEpisode(exodusData.loadedLevels[i].world);
         QString alternateCheck = "";
         if(exodusData.loadedLevels[i].usesAlternate){
             alternateCheck = "DEFEATED";
         }
-        QString nameCheck = "0" + QString::number(exodusData.loadedLevels[i].originalEpisode+1) + "_" + currentEpisode->name.toUpper() + alternateCheck + "-CREATURE";
+        QString nameCheck = "0" + QString::number(exodusData.loadedLevels[i].world+1) + "_" + currentEpisode->name.toUpper() + alternateCheck + "-CREATURE";
         for(int j = 0; j < m_zlManager->m_databaseList.size(); j++){
             qDebug() << Q_FUNC_INFO << "Checking for file name:" << nameCheck << "vs" << m_zlManager->m_databaseList[j]->fileName;
             if(m_zlManager->m_databaseList[j]->fileName == nameCheck){
@@ -539,13 +540,12 @@ void DataHandler::loadLevels(){
 
     for(int i = 0; i < exodusData.loadedLevels.size(); i++){
         for(int j = 0; j < loadedLocations.size(); j++){
-            if(exodusData.loadedLevels[i].episodeID != loadedLocations[j].originalEpisode){
+            if(exodusData.loadedLevels[i].world != loadedLocations[j].world){
                 continue;
             }
             if(exodusData.loadedLevels[i].usesAlternate != loadedLocations[j].usesAlternate){
                 continue;
             }
-            loadedLocations[j].episode = &exodusData.loadedLevels[i];
             exodusData.loadedLevels[i].spawnLocations.push_back(loadedLocations[j]);
         }
     }
@@ -561,7 +561,7 @@ void DataHandler::debugLocations(){
             currentLocation = &exodusData.loadedLevels[i].spawnLocations[j];
             QVector3D debugPosition = currentLocation->position;
             qDebug() << Q_FUNC_INFO << i << j << " " << currentLocation->uniqueID << "  "
-                     << currentLocation->linkedLocationIDs << "    " << currentLocation->episode->originalEpisode << "    "
+                     << currentLocation->linkedLocationIDs << "    " << currentLocation->world << "    "
                      << currentLocation->locationName << "    " << debugPosition.x() << "   " << debugPosition.y() << "  " << debugPosition.z()
                      << "  " << currentLocation->originalTeleportNode;
             qDebug() << Q_FUNC_INFO << "is pickup nullptr? (it should be)" << (exodusData.loadedLevels[i].spawnLocations[j].pickup == nullptr);
@@ -573,7 +573,7 @@ dictItem DataHandler::createGamePickupPlaced(const exPickupLocation* location){
     //exEpisode targetLevel = exodusData.loadedLevels[static_cast<int>(location.episode)];
     dictItem convertedData;
     convertedData.name = "PickupPlaced";
-    convertedData.attributes = location->episode->levelFile->generateAttributes("PickupPlaced");
+    convertedData.attributes = getExodusEpisode(location->world)->levelFile->generateAttributes("PickupPlaced");
     //qDebug() << Q_FUNC_INFO << "new item has" << convertedData.attributes.size() << "attributes";
 
     convertedData.setAttribute("Position", QString::number(location->position.x()) + ", " + QString::number(location->position.y()) + ", " + QString::number(location->position.z()));
@@ -592,6 +592,29 @@ dictItem DataHandler::createGamePickupPlaced(const exPickupLocation* location){
     /*for(int i = 0; i < convertedData.attributes.size(); i++){
         qDebug() << Q_FUNC_INFO << "attribute" << i << "name" << convertedData.attributes[i]->name << "value" << convertedData.attributes[i]->display();
     }*/
+
+    return convertedData;
+}
+
+dictItem DataHandler::createGameEpisode(const taEpisode* episode){
+    //exEpisode targetLevel = exodusData.loadedLevels[static_cast<int>(location.episode)];
+    dictItem convertedData;
+    convertedData.name = "Episode";
+    convertedData.attributes = gameData.metagameFile->generateAttributes("Episode");
+    //qDebug() << Q_FUNC_INFO << "new item has" << convertedData.attributes.size() << "attributes";
+
+    convertedData.setAttribute("BossType", QString::number(episode->bossType));
+    convertedData.setAttribute("DataconCount", QString::number(episode->dataconCount));
+    convertedData.setAttribute("DirectoryName", episode->directoryName);
+    convertedData.setAttribute("Episode", QString::number(getExodusEpisode(episode->episode)->currentEpisode));
+
+    if(episode->hasAlternativeDirectory){
+        convertedData.setAttribute("HasAlternativeDirectory", "True");
+        convertedData.setAttribute("AlternativeDirectoryName", episode->alternativeDirectoryName);
+    }
+
+    convertedData.setAttribute("MiniconCount", QString::number(episode->miniconCount));
+    convertedData.setAttribute("Name", episode->name);
 
     return convertedData;
 }
@@ -789,7 +812,7 @@ void DataHandler::loadCustomLocations(){
             }
             for(int i = 0; i <currentLocations.locationCount; i++){
                 exPickupLocation customLocation = exPickupLocation();
-                customLocation.originalEpisode = Episode::Cybertron;
+                customLocation.world = EpisodeInvalid;
                 //double-check that the below doesn't need to find the specific database for the target level
                 //customLocation.attributes = levelList[0].levelFile->generateAttributes("PickupPlaced");
                 bool readingLocation = true;
@@ -803,10 +826,10 @@ void DataHandler::loadCustomLocations(){
                                 qDebug() << Q_FUNC_INFO << "comparing level" << gameData.levelList[i].name << "to" << customLocation.levelName;
                                 if(gameData.levelList[i].name == customLocation.levelName){
                                     qDebug() << Q_FUNC_INFO << "comparing level: match";
-                                    customLocation.originalEpisode = static_cast<Episode>(i);
+                                    customLocation.world = i;
                                 }
                             }
-                            if(customLocation.originalEpisode == Episode::Cybertron){
+                            if(customLocation.world == EpisodeInvalid){
                                 qDebug() << Q_FUNC_INFO << "Invalid level:" << modProperty.readValue;
                             }
                             break;
@@ -900,7 +923,7 @@ bool DataHandler::duplicateLocation(exPickupLocation testLocation){
             if((testPosition.x() < loadedPosition.x()+5 && testPosition.x() > loadedPosition.x() - 5)
                     && (testPosition.y() < loadedPosition.y()+5 && testPosition.y() > loadedPosition.y() - 5)
                     && (testPosition.z() < loadedPosition.z()+5 && testPosition.z() > loadedPosition.z() - 5)
-                    && (testLocation.episode == exodusData.loadedLevels[i].spawnLocations[j].episode)){
+                    && (testLocation.world == exodusData.loadedLevels[i].spawnLocations[j].world)){
                 locationCount++;
             }
             if(locationCount > 1){
@@ -947,7 +970,7 @@ int DataHandler::highestAvailableLevel(int checkRequirements){
     int checkWorld = 0;
     qDebug() << Q_FUNC_INFO << "Checking for highest level available without requirement" << checkRequirements;
     for(int i = 0; i < exodusData.loadedLevels.size(); i++){
-        qDebug() << Q_FUNC_INFO << "original episode" << exodusData.loadedLevels[i].originalEpisode << "has current episode" << exodusData.loadedLevels[i].currentEpisode;
+        qDebug() << Q_FUNC_INFO << "original episode" << exodusData.loadedLevels[i].world << "has current episode" << exodusData.loadedLevels[i].currentEpisode;
         /*set up a case statement to handle alternate requirements based on available tricks*/
         checkWorld = exodusData.loadedLevels[i].currentEpisode;
         if(availableWorld > checkWorld){
