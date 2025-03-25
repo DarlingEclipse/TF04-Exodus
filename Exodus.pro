@@ -12,6 +12,7 @@ SOURCES += \
     Source/Databases/DataHandler.cpp \
     Source/Databases/DatabaseModel.cpp \
     Source/Databases/DistanceCalculator.cpp \
+    Source/Databases/taMinicon.cpp \
     Source/FileManagement/Zebrafish.cpp \
     Source/FileManagement/taFileSystemObject.cpp \
     Source/ISOManager/IsoBuilder.cpp \
@@ -36,6 +37,7 @@ SOURCES += \
 HEADERS += \
     Headers/Databases/DataHandler.h \
     Headers/Databases/DistanceCalculator.h \
+    Headers/Databases/taMinicon.h \
     Headers/FileManagement/Zebrafish.h \
     Headers/FileManagement/taFileSystemObject.h \
     Headers/ISOManager/IsoBuilder.h \

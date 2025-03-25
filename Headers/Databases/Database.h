@@ -473,4 +473,10 @@ public:
     void acceptVisitor(zlManager& visitor);
 };
 
+class taDatabaseInstance{
+public:
+    std::shared_ptr<DatabaseFile> fromFile;
+    int instanceIndex;
+};
+
 #endif // DATABASE_H

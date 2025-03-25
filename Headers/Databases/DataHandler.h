@@ -2,14 +2,9 @@
 #define DATAHANDLER_H
 
 #include "Headers/Databases/Database.h"
+#include "Headers/Databases/taMinicon.h"
 
 /*For handling data from database files in a more detailed manner*/
-
-class taDatabaseInstance{
-public:
-    std::shared_ptr<DatabaseFile> fromFile;
-    int instanceIndex;
-};
 
 class exWarpgate : public dictItem{
 public:
@@ -84,7 +79,7 @@ enum PickupToSpawn{Health_Small, Health_Large,  SidekickJuice, Data, AssaultBlas
                            , SuperHeavyArmor, Dash, EmergencyWarpGate, EnergonMeleeWeapon, BallisticShield, EnergonVision, EnergonShield, EnhancedDash
                            , MeleeDamageEnhance, MiniconSensor, WeaponDistanceEnhance, ReflectionShield, Stealth, TractorBeam, UltimateShield, AutoRepair
                            , Revive, BoostJump, HeavyHomingMissile};
-enum ProductArt{None,CharacterEnergon,RendersAutobots2,CardArtwork,DecepticloneSubmission,LeClezio1,RendersDecepticons2,ConceptArtDecepticlone,LeClezio2
+enum ProductArt{ProductArtNone,CharacterEnergon,RendersAutobots2,CardArtwork,DecepticloneSubmission,LeClezio1,RendersDecepticons2,ConceptArtDecepticlone,LeClezio2
                   , TVSeriesThemeMusic,LevelStoryboardsAmazon,ArtPostcards,InstructionSheetOptimus,ConceptArtAutobots,MovieStills6,MovieStills7,RendersDecepticon
                   , ThemeRegurgitator,MiniComic1,MiniComic2,MiniComic3,MiniComic4,ProductionArtAmazon,ProductionArtAntarctica,ProductionArtDeepAmazon
                   , ProductionArtMidAtlantic,ProductionArtAlaska,ProductionArtStarship,ProdcutionArtPacificIsland,ProductionArtAutobotHQ,RendersAutobots
@@ -318,83 +313,6 @@ public:
     }
 };
 
-enum class ActivationType{HoldDown, AlwaysOn, PressInstant, ReleaseInstant, PressAndRelease, ChargeRelease, ChargeReleasePartial, Toggle, ToggleDrain, HoldDownDrain};
-enum class CrosshairIndex{None, AssaultBlaster, Lockon, Slingshot, Claymore, Tractor, Firefight, Hailstorm, Landslide, Smackdown, Watchdog, Lookout, Sparkjump, Skirmish, Airburst, Sandstorm, Twister, Discord, Corona, Aftershock, Aurora, Failsafe, Jumpstart, Endgame, UltimatePrimary, UltimateSecondary};
-enum class Icon{Armor, Beam, Blaster, Exotic, Lobbed, Melee, Missile, Movement, Repair, Shield, Stealth, Vision, None};
-enum class MiniconEffects{None, AssaultBlaster, HeavyAssaultBlaster, SuperHeavyAssaultBlaster, SuperHeavyCannon, HeavyElectricArcGun, SuperHeavyElectricArcGun
-                          , ImpactGun, HeavyRibbonBeam, SuperHeavyRibbonBeam, UltimatePrimary, ClusterRocket, HeavyClusterRocket, DarkEnergonBlaster
-                          , DecoyLauncher, EMPBlast, FlakBurst, GrenadeLauncher, HomingMissile, LimpetMine, DropMine, SniperRifle, VortexCannon, UltimateSecondary
-                          , ElectroField, Glide, UltimateGlide, AreaEffectScrambler, Armor, HeavyArmor, SuperHeavyArmor, Dash, EmergencyWarpGate, EnergonMeleeWeapon
-                          , EnergonScreen, EnergonVision, EnergonShield, EnhancedDash, MeleeDamageEnhance, MiniconSensor, WeaponDistanceEnhance, ReflectionShield
-                          , Stealth, TractorBeam, UltimateShield, AutoRepair, Revive, BoostJump, HeavyHomingMissile};
-enum class RecoilType{None, Small, Large};
-enum class RestrictToButton{Default, L2, R2, L1, R1};
-enum class Slot{PrimaryWeapon, SecondaryWeapon, Movement, Ability};
-enum class Team{Green, Blue, Red, Purple, Gold, None};
-enum class UI_DamagePri{NA, UseFloat, UseFloatX2, UseFloatX4, Variable, AutobotMeleexFloat, plusFloat, FloatPerSec};
-enum class UI_DamageSec{NA, UseFloat, UseFloatx4, Variable, Special, FloatPerSec};
-enum class UI_Defence{NA, Float, AllBeamAndBlaster, AllBeamAndMelee, AllMissileAndMelee};
-enum class UI_Duration{NA, Constant, FloatBoosts, FloatSec, Float, Instant};
-enum class UI_Range{NA, UseRangeFloat, Melee, LineOfSight, PlusPercent, Drop};
-enum class UI_Recharge{NA, FloatPtsPerSec, FloatSec, FloatSecOrHQ, HQ};
-enum class UI_Rounds{NA, UseInt, Variable};
-class taMinicon : public taDatabaseInstance{
-    /*From METAGAME.TMD*/
-public:
-    ActivationType activationType;
-    float chargeDrainRate_Commander;
-    float chargeDrainRate_Veteran;
-    float chargeDrainTime;
-    float coolDownTime;
-    float coolDownTimeDepleted;
-    CrosshairIndex crosshairIndex;
-    QString description;
-    bool equipInHQ;
-    Icon icon;
-    MiniconEffects minicon;
-    float minimumChargeToUse;
-    float minimumChargeToUsePerShot;
-    QString name;
-    int nodeToKeepIndex;
-    int paletteIndex;
-    int powerCost;
-    float rechargeTime;
-    RecoilType recoilType;
-    RestrictToButton restrictToButton;
-    int segments;
-    float sidekickChargeDrainTime;
-    float sidekickCoolDownTime;
-    float sidekickCoolDownTimeDepleted;
-    float sidekickMinimumChargeToUse;
-    float sidekickRechargeTime;
-    int sidekickSegments;
-    Slot slot;
-    Team team;
-    QString toneLibrary;
-    UI_DamagePri uiDamagePri;
-    float UI_DamagePriFloat;
-    UI_DamageSec uiDamageSec;
-    float UI_DamageSecFloat;
-    UI_Defence uiDefence;
-    UI_Duration uiDuration;
-    float UI_DurationFloat;
-    UI_Range uiRange;
-    float UI_RangeDist;
-    UI_Recharge UI_Recharge;
-    UI_Rounds uiRounds;
-    int UI_RoundsInt;
-
-    taMinicon();
-    taMinicon(dictItem copyItem);
-};
-
-class taMiniconArmor : public taMinicon {
-public:
-    float AbsorbPercentage;
-    float MaxAbsorbPerHit;
-    float MaxDamageToAbsorb;
-};
-
 class ExodusOption{
 public:
     /*From */
@@ -421,6 +339,13 @@ class ExodusData{
     std::vector<exEpisode> loadedLevels;
     std::vector<exTrick> trickList;
 };
+
+class taMinicon;
+class taMiniconArmor;
+class taMiniconDamageBonus;
+class taMiniconEmergencyWarpgate;
+class taMiniconRangeBonus;
+class taMiniconRegeneration;
 
 class GameData{
   /*Container for all information used in game database files*/
@@ -466,9 +391,16 @@ public:
 
     dictItem createGamePickupPlaced(const exPickupLocation* location);
     dictItem createGameEpisode(const taEpisode* episode);
-    dictItem createMetagameMinicon(taMinicon minicon);
+    dictItem createMetagameMinicon(const taMinicon* minicon);
+    dictItem createMetagameMinicon(const taMiniconArmor* minicon);
+    dictItem createMetagameMinicon(const taMiniconDamageBonus* minicon);
+    dictItem createMetagameMinicon(const taMiniconEmergencyWarpgate* minicon);
+    dictItem createMetagameMinicon(const taMiniconRangeBonus* minicon);
+    dictItem createMetagameMinicon(const taMiniconRegeneration* minicon);
+    void SetMiniconAttributes(const taMinicon* minicon, dictItem* itemToEdit);
     void LoadAll();
     void loadMinicons();
+    void LoadMiniconType(QString miniconType);
     void loadDatacons();
     void loadLevels();
     void loadAutobots();
@@ -478,6 +410,9 @@ public:
     void loadCustomLocations();
     void addCustomLocations();
     void debugLocations();
+    void updateMetagameMinicons();
+    void updateMetagemaAutobots();
+    void updateMetagameEpisodes();
     //void addCustomLocation(int locationID, int level, QVector3D location);
 
     //compare taMinicon MiniconList to exMinicon enumID

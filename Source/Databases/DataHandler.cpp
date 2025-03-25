@@ -3,6 +3,7 @@
 #include <QCoreApplication>
 
 #include "Headers/Databases/DataHandler.h"
+#include "Headers/Databases/taMinicon.h"
 #include "Headers/UI/exWindow.h"
 #include "Headers/Main/exDebugger.h"
 #include "Headers/FileManagement/Zebrafish.h"
@@ -100,61 +101,6 @@ Pickup::Pickup(){
     setAttribute("Position", "0, 0, 0");
 }
 
-/*exPickup::exPickup(taPickupPlaced copyItem){
-    this->pickupID = static_cast<int>(copyItem.pickupToSpawn);
-    this->placed = false;
-    this->dataID = static_cast<int>(copyItem.productArt);
-}
-
-exPickup::exPickup(dictItem copyItem){
-    this->pickupID = copyItem.searchAttributes<int>("PickupToSpawn");
-    this->pickupToSpawn = copyItem.searchAttributes<QString>("PickupToSpawn");
-    this->dataID = copyItem.searchAttributes<int>("ProductionArt");
-    this->placed = false;
-}
-
-exPickup::exPickup(){
-    this->pickupID = 99;
-    this->pickupToSpawn = "";
-    this->dataID = 99;
-    this->placed = false;
-}*/
-
-taMinicon::taMinicon(){
-    this->name = "UNLOADED";
-    this->minicon = MiniconEffects::None;
-}
-
-taMinicon::taMinicon(dictItem copyItem){
-
-    this->activationType = static_cast<ActivationType>(copyItem.searchAttributes<int>("ActivationType"));
-    this->chargeDrainRate_Commander = copyItem.searchAttributes<float>("ChargeDrainMultiplier_Commander");
-    this->chargeDrainRate_Veteran = copyItem.searchAttributes<float>("ChargeDrainMultiplier_Veteran");
-    this->chargeDrainTime = copyItem.searchAttributes<float>("ChargeDrainTime");
-    this->coolDownTime = copyItem.searchAttributes<float>("CoolDownTime");
-    this->coolDownTimeDepleted = copyItem.searchAttributes<float>("CoolDownTimeDepleted");
-    this->crosshairIndex = static_cast<CrosshairIndex>(copyItem.searchAttributes<int>("CrosshairIndex"));
-    this->equipInHQ = copyItem.searchAttributes<bool>("EquipInHQ");
-    this->icon = static_cast<Icon>(copyItem.searchAttributes<int>("Icon"));
-    this->minicon = static_cast<MiniconEffects>(copyItem.searchAttributes<int>("Minicon"));
-    this->minimumChargeToUse = copyItem.searchAttributes<float>("MinimumChargeToUse");
-    this->minimumChargeToUsePerShot = copyItem.searchAttributes<float>("MinimumChargeToUsePerShot");
-    this->name = copyItem.searchAttributes<QString>("Name");
-    this->nodeToKeepIndex = copyItem.searchAttributes<int>("NodeToKeepIndex");
-    this->paletteIndex = copyItem.searchAttributes<int>("PaletteIndex");
-    this->powerCost = copyItem.searchAttributes<int>("PowerCost");
-    this->rechargeTime = copyItem.searchAttributes<float>("RechargeTime");
-    this->recoilType = static_cast<RecoilType>(copyItem.searchAttributes<int>("RecoilType"));
-    this->restrictToButton = static_cast<RestrictToButton>(copyItem.searchAttributes<int>("RestrictToButton"));
-    this->segments = copyItem.searchAttributes<int>("Segments");
-    this->sidekickCoolDownTime = copyItem.searchAttributes<float>("SidekickCoolDownTime");
-    this->sidekickRechargeTime = copyItem.searchAttributes<float>("SidekickRechargeTime");
-    this->sidekickSegments = copyItem.searchAttributes<int>("SidekickSegments");
-    this->slot = static_cast<Slot>(copyItem.searchAttributes<int>("Slot"));
-    this->team = static_cast<Team>(copyItem.searchAttributes<int>("Team"));
-    this->toneLibrary = copyItem.searchAttributes<QString>("ToneLibrary");
-}
-
 exMinicon::exMinicon(dictItem copyItem){
     this->creatureID = copyItem.searchAttributes<int>("CreatureID");
     this->metagameID = copyItem.searchAttributes<int>("MetagameID");
@@ -185,9 +131,9 @@ taEpisode::taEpisode(dictItem copyItem){
 
 void taEpisode::updateDirectories(){
     if(hasAlternativeDirectory){
-        alternativeDirectoryName = "levels//episodes//0" + QString::number(static_cast<int>(episodeOrder)) + "_" + name + "Defeated/";
+        alternativeDirectoryName = "levels//episodes//0" + QString::number(episodeOrder) + "_" + name + "Defeated/";
     }
-    directoryName = "levels//episodes//0" + QString::number(static_cast<int>(episodeOrder)) + "_" + name + "/";
+    directoryName = "levels//episodes//0" + QString::number(episodeOrder) + "_" + name + "/";
 }
 
 exPickupLocation::exPickupLocation(dictItem copyItem){
@@ -321,7 +267,7 @@ exMinicon* DataHandler::getExodusMinicon(QString searchName){
 
 taMinicon* DataHandler::getGameMinicon(int searchID){
     for(int i = 0; i < gameData.miniconList.size(); i++){
-        if(static_cast<int>(gameData.miniconList[i].minicon) == searchID){
+        if(gameData.miniconList[i].minicon == searchID){
             return &gameData.miniconList[i];
         }
     }
@@ -465,6 +411,55 @@ void DataHandler::addCustomLocations(){
             exodusData.loadedLevels[i].spawnLocations.push_back(loadedLocations[j]);
         }
     }
+}
+
+void DataHandler::loadMinicons(){
+
+    /*Move the metagame and exodusmain file searches to datahandler initialization*/
+    for(int i = 0; i < m_zlManager->m_databaseList.size(); i++){
+        qDebug() << Q_FUNC_INFO << "checking file name" << m_zlManager->m_databaseList[i]->fileName;
+        if(m_zlManager->m_databaseList[i]->fileName == "TFA-METAGAME"){
+            gameData.metagameFile = m_zlManager->m_databaseList[i];
+        }
+    }
+
+    if(gameData.metagameFile == nullptr){
+        m_Debug->Log("Unable to find file METAGAME.TDB. Minicon metadata was not loaded.");
+    }
+
+    QStringList miniconTypes = {"Minicon", "MiniconDamageBonus", "MiniconArmor", "MiniconEmergencyWarpgate", "MiniconRangeBonus", "MiniconRegeneration"};
+
+    for(int i = 0; i < miniconTypes.size(); i++){
+        LoadMiniconType(miniconTypes[i]);
+    }
+
+    qDebug() << Q_FUNC_INFO << "gameData loaded minicons:" << gameData.miniconList.size();
+    for(int i = 0; i < gameData.miniconList.size(); i++){
+        qDebug() << Q_FUNC_INFO << "loaded minicon" << i << "is named" << gameData.miniconList[i].name << gameData.miniconList[i].minicon;
+    }
+
+    exodusData.miniconList = convertInstances<exMinicon>(exodusData.dataFile->sendInstances("exMinicon"));
+
+    for(int i = 0; i < exodusData.loadedLevels.size(); i++){
+        std::vector<taPickup> filePickupsBase = convertInstances<taPickup>(exodusData.loadedLevels[i].levelFile->sendInstances("PickupPlaced"));
+        for(int j = 0; j < filePickupsBase.size(); j++){
+            if(!duplicatePickup(filePickupsBase[j])){
+                gameData.pickupList.push_back(filePickupsBase[j]);
+            }
+        }
+    }
+
+    qDebug() << Q_FUNC_INFO << "Total gameData pickuplist items:" << gameData.pickupList.size();
+    for(int i = 0; i < gameData.pickupList.size(); i++){
+        qDebug() << Q_FUNC_INFO << i << gameData.pickupList[i].isMinicon() << gameData.pickupList[i].pickupToSpawn << gameData.pickupList[i].productArt;
+    }
+
+    qDebug() << Q_FUNC_INFO << "exodusData loaded minicons:" << exodusData.miniconList.size();
+    for(int i = 0; i < exodusData.miniconList.size(); i++){
+        qDebug() << Q_FUNC_INFO << i << " " << exodusData.miniconList[i].creatureID << "  " << exodusData.miniconList[i].name << "    "
+                 << " is weapon:" << exodusData.miniconList[i].isWeapon;
+    }
+
 }
 
 void DataHandler::loadLevels(){
@@ -617,107 +612,6 @@ dictItem DataHandler::createGameEpisode(const taEpisode* episode){
     convertedData.setAttribute("Name", episode->name);
 
     return convertedData;
-}
-
-dictItem DataHandler::createMetagameMinicon(taMinicon minicon){
-
-    dictItem convertedData;
-    convertedData.name = "Minicon";
-    convertedData.attributes = gameData.metagameFile->generateAttributes("Minicon");
-    qDebug() << Q_FUNC_INFO << "new item has" << convertedData.attributes.size() << "attributes";
-
-    convertedData.setAttribute("ActivationType", QString::number(static_cast<int>(minicon.activationType)));
-    convertedData.setAttribute("ChargeDrainMultiplier_Commander", QString::number(minicon.chargeDrainRate_Commander));
-    convertedData.setAttribute("ChargeDrainMultiplier_Veteran", QString::number(minicon.chargeDrainRate_Veteran));
-    convertedData.setAttribute("ChargeDrainTime", QString::number(minicon.chargeDrainTime));
-    convertedData.setAttribute("CoolDownTime", QString::number(minicon.coolDownTime));
-    convertedData.setAttribute("CoolDownTimeDepleted", QString::number(minicon.coolDownTimeDepleted));
-    convertedData.setAttribute("CrosshairIndex", QString::number(static_cast<int>(minicon.crosshairIndex)));
-    convertedData.setAttribute("EquipInHQ", QString::number(minicon.equipInHQ));
-    convertedData.setAttribute("Icon", QString::number(static_cast<int>(minicon.icon)));
-    convertedData.setAttribute("Minicon", QString::number(static_cast<int>(minicon.minicon)));
-    convertedData.setAttribute("MinimumChargeToUse", QString::number(minicon.minimumChargeToUse));
-    convertedData.setAttribute("MinimumChargeToUsePerShot", QString::number(minicon.minimumChargeToUsePerShot));
-    convertedData.setAttribute("Name", minicon.name);
-    convertedData.setAttribute("NodeToKeepIndex", QString::number(minicon.nodeToKeepIndex));
-    convertedData.setAttribute("PaletteIndex", QString::number(minicon.paletteIndex));
-    convertedData.setAttribute("PowerCost", QString::number(minicon.powerCost));
-    convertedData.setAttribute("RechargeTime", QString::number(minicon.rechargeTime));
-    convertedData.setAttribute("RecoilType", QString::number(static_cast<int>(minicon.recoilType)));
-    convertedData.setAttribute("RestrictToButton", QString::number(static_cast<int>(minicon.restrictToButton)));
-    convertedData.setAttribute("Segments", QString::number(minicon.segments));
-    convertedData.setAttribute("SidekickCoolDownTime", QString::number(minicon.sidekickCoolDownTime));
-    convertedData.setAttribute("SidekickRechargeTime", QString::number(minicon.sidekickRechargeTime));
-    convertedData.setAttribute("SidekickSegments", QString::number(minicon.sidekickSegments));
-    convertedData.setAttribute("Slot", QString::number(static_cast<int>(minicon.slot)));
-    convertedData.setAttribute("Team", QString::number(static_cast<int>(minicon.team)));
-    convertedData.setAttribute("ToneLibrary", minicon.toneLibrary);
-
-    return convertedData;
-
-}
-
-void DataHandler::loadMinicons(){
-
-
-    /*Move the metagame and exodusmain file searches to datahandler initialization*/
-    for(int i = 0; i < m_zlManager->m_databaseList.size(); i++){
-        qDebug() << Q_FUNC_INFO << "checking file name" << m_zlManager->m_databaseList[i]->fileName;
-        if(m_zlManager->m_databaseList[i]->fileName == "TFA-METAGAME"){
-            gameData.metagameFile = m_zlManager->m_databaseList[i];
-        }
-    }
-
-    if(gameData.metagameFile == nullptr){
-        m_Debug->Log("Unable to find file METAGAME.TDB. Minicon metadata was not loaded.");
-    }
-
-    QStringList miniconTypes = {"Minicon", "MiniconDamageBonus", "MiniconArmor", "MiniconEmergencyWarpgate", "MiniconRangeBonus", "MiniconRegeneration"};
-
-    std::vector<taMinicon> metagameMinicons;
-    for(int type = 0; type < miniconTypes.size(); type++){
-        qDebug() << Q_FUNC_INFO << "Calling for minicon type" << miniconTypes[type];
-        metagameMinicons = convertInstances<taMinicon>(gameData.metagameFile->sendInstances(miniconTypes[type]));
-        for(int i = 0; i < metagameMinicons.size(); i++){
-            if(metagameMinicons[i].minicon != MiniconEffects::None){
-                gameData.miniconList.push_back(metagameMinicons[i]);
-            }
-        }
-        //gameData.miniconList.insert(gameData.miniconList.end(), metagameMinicons.begin(), metagameMinicons.end());
-        qDebug() << Q_FUNC_INFO << "Minicon list now has:" << gameData.miniconList.size() << "loaded minicons";
-    }
-
-    qDebug() << Q_FUNC_INFO << "gameData loaded minicons:" << gameData.miniconList.size();
-    for(int i = 0; i < gameData.miniconList.size(); i++){
-        qDebug() << Q_FUNC_INFO << "loaded minicon" << i << "is named" << gameData.miniconList[i].name << static_cast<int>(gameData.miniconList[i].minicon);
-    }
-
-    exodusData.miniconList = convertInstances<exMinicon>(exodusData.dataFile->sendInstances("exMinicon"));
-
-    for(int i = 0; i < exodusData.loadedLevels.size(); i++){
-        std::vector<taPickup> filePickupsBase = convertInstances<taPickup>(exodusData.loadedLevels[i].levelFile->sendInstances("PickupPlaced"));
-        for(int j = 0; j < filePickupsBase.size(); j++){
-            if(!duplicatePickup(filePickupsBase[j])){
-                gameData.pickupList.push_back(filePickupsBase[j]);
-            }
-        }
-    }
-
-    qDebug() << Q_FUNC_INFO << "Total gameData pickuplist items:" << gameData.pickupList.size();
-    for(int i = 0; i < gameData.pickupList.size(); i++){
-        qDebug() << Q_FUNC_INFO << i << gameData.pickupList[i].isMinicon() << gameData.pickupList[i].pickupToSpawn << gameData.pickupList[i].productArt;
-    }
-
-    qDebug() << Q_FUNC_INFO << "exodusData loaded minicons:" << exodusData.miniconList.size();
-    for(int i = 0; i < exodusData.miniconList.size(); i++){
-        qDebug() << Q_FUNC_INFO << i << " " << exodusData.miniconList[i].creatureID << "  " << exodusData.miniconList[i].name << "    "
-                 << " is weapon:" << exodusData.miniconList[i].isWeapon;
-    }
-
-
-
-    //std::sort(miniconList.begin(), miniconList.end());
-    //std::sort(dataconList.begin(), dataconList.end());
 }
 
 void DataHandler::loadAutobots(){
@@ -984,6 +878,41 @@ int DataHandler::highestAvailableLevel(int checkRequirements){
         }
     }
     return availableWorld;
+}
+
+void DataHandler::updateMetagameEpisodes(){
+    for(int i = 0; i < exodusData.loadedLevels.size(); i++){
+        int miniconCount = exodusData.loadedLevels[i].assignedMinicons;
+        int dataconCount = exodusData.loadedLevels[i].assignedDatacons;
+        getGameEpisode(exodusData.loadedLevels[i].world)->miniconCount = miniconCount;
+        getGameEpisode(exodusData.loadedLevels[i].world)->dataconCount = dataconCount;
+    }
+
+    gameData.metagameFile->removeAll("Episode");
+    for(int i = 0; i < gameData.levelList.size(); i++){
+        dictItem itemToAdd = createGameEpisode(&gameData.levelList[i]);
+        gameData.metagameFile->addInstance(itemToAdd);
+    }
+}
+
+void DataHandler::updateMetagameMinicons(){
+    QStringList miniconTypes = {"Minicon", "MiniconDamageBonus", "MiniconArmor", "MiniconEmergencyWarpgate", "MiniconRangeBonus", "MiniconRegeneration"};
+    //QStringList miniconTypes = {"Minicon"};
+    //this could be an issue - some minicons are their own classes and inherit from minicon.
+    for(int i = 0; i < miniconTypes.size(); i++){
+        gameData.metagameFile->removeAll(miniconTypes[i]);
+    }
+    for(int i = 0; i < gameData.miniconList.size(); i++){
+        dictItem itemToAdd = createMetagameMinicon(&gameData.miniconList[i]);
+        gameData.metagameFile->addInstance(itemToAdd);
+    }
+}
+
+void DataHandler::updateMetagemaAutobots(){
+    gameData.metagameFile->removeAll("Autobot");
+    for(int i = 0; i < gameData.autobotList.size(); i++){
+        gameData.metagameFile->addInstance(gameData.autobotList[i]);
+    }
 }
 
 exPickupLocation::exPickupLocation(taLocation fromItem){

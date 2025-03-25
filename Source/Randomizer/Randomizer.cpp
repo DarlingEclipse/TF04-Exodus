@@ -7,6 +7,7 @@
 #include "Headers/FileManagement/Zebrafish.h"
 #include "Headers/ISOManager/IsoBuilder.h"
 #include "Headers/Databases/DataHandler.h"
+#include "Headers/Databases/taMinicon.h"
 #include "Headers/ISOManager/ModHandler.h"
 
 /*
@@ -1046,59 +1047,23 @@ int Randomizer::editDatabases(){
         }
     }
 
-    //exiting function now until I can confirm that the move to DataHandler didn't break these
-    //return 0;
-
     m_Debug->Debug("Testing metagame file generation", Q_FUNC_INFO);
-    bool metagameEdited = true;
-    /*for(int i = 0; i<m_zlManager->m_databaseList.size(); i++){
-        qDebug() << Q_FUNC_INFO << "checking databse file" << m_zlManager->m_databaseList[i]->fileName;
-        if(m_zlManager->m_databaseList[i]->fileName == "TFA-METAGAME"){
-            qDebug() << Q_FUNC_INFO << "setting metagame file to:" << m_zlManager->m_databaseList[i]->fileName;
-            m_DataHandler->gameData.metagameFile = m_zlManager->m_databaseList[i];
-        }
-    }*/
 
-    for(int i = 0; i < m_DataHandler->exodusData.loadedLevels.size(); i++){
-        int miniconCount = m_DataHandler->exodusData.loadedLevels[i].assignedMinicons;
-        int dataconCount = m_DataHandler->exodusData.loadedLevels[i].assignedDatacons;
-        m_DataHandler->getGameEpisode(m_DataHandler->exodusData.loadedLevels[i].world)->miniconCount = miniconCount;
-        m_DataHandler->getGameEpisode(m_DataHandler->exodusData.loadedLevels[i].world)->dataconCount = dataconCount;
-    }
+    m_DataHandler->updateMetagameEpisodes();
 
-    m_DataHandler->gameData.metagameFile->removeAll("Episode");
-    for(int i = 0; i < m_DataHandler->gameData.levelList.size(); i++){
-        dictItem itemToAdd = m_DataHandler->createGameEpisode(&m_DataHandler->gameData.levelList[i]);
-        m_DataHandler->gameData.metagameFile->addInstance(itemToAdd);
-    }
-
-    QStringList miniconTypes = {"Minicon", "MiniconDamageBonus", "MiniconArmor", "MiniconEmergencyWarpgate", "MiniconRangeBonus", "MiniconRegeneration"};
+    qDebug() << Q_FUNC_INFO << "Randsettings for power and teams:" << randSettings.randomizePower << randSettings.randomizeTeams;
     if(randSettings.randomizePower || randSettings.randomizeTeams){
-        //this could be an issue - some minicons are their own classes and inherit from minicon.
-        //metagameEdited = true;
-        for(int i = 0; i < miniconTypes.size(); i++){
-            m_DataHandler->gameData.metagameFile->removeAll(miniconTypes[i]);
-        }
-        for(int i = 0; i < m_DataHandler->gameData.miniconList.size(); i++){
-            dictItem itemToAdd = m_DataHandler->createMetagameMinicon(m_DataHandler->gameData.miniconList[i]);
-            m_DataHandler->gameData.metagameFile->addInstance(itemToAdd);
-        }
+        m_DataHandler->updateMetagameMinicons();
     }
 
     if(randSettings.randomizeAutobotStats){
-        //metagameEdited = true;
-        m_DataHandler->gameData.metagameFile->removeAll("Autobot");
-        for(int i = 0; i < m_DataHandler->gameData.autobotList.size(); i++){
-            m_DataHandler->gameData.metagameFile->addInstance(m_DataHandler->gameData.autobotList[i]);
-        }
+        m_DataHandler->updateMetagemaAutobots();
     }
 
-    if(metagameEdited){
-        qDebug() << Q_FUNC_INFO << "output path for METAGAME will be" << QString(m_zlManager->m_copyOutputPath + "/TFA/METAGAME.TDB");
-        QString metagamePath = m_zlManager->m_copyOutputPath + "/TFA/METAGAME.TDB";
-        m_DataHandler->gameData.metagameFile->outputPath = metagamePath;
-        m_DataHandler->gameData.metagameFile->save("TDB");
-    }
+    qDebug() << Q_FUNC_INFO << "output path for METAGAME will be" << QString(m_zlManager->m_copyOutputPath + "/TFA/METAGAME.TDB");
+    QString metagamePath = m_zlManager->m_copyOutputPath + "/TFA/METAGAME.TDB";
+    m_DataHandler->gameData.metagameFile->outputPath = metagamePath;
+    m_DataHandler->gameData.metagameFile->save("TDB");
 
     return 0;
 }
