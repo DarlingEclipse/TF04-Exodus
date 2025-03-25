@@ -31,6 +31,9 @@ int dictItem::setAttribute(QString itemName, QString value){
     qDebug() << Q_FUNC_INFO << "Setting attribute" << itemName << "to value" << value;
     for(int i = 0; i < attributes.size(); i++){
         if(attributes[i]->name == itemName){
+            if(value == attributes[i]->display() && attributes[i]->isDefault){
+                return 0;
+            }
             attributes[i]->setValue(value);
             attributes[i]->isDefault = false;
             return 0;
@@ -268,7 +271,7 @@ std::shared_ptr<taData> taDataBool<bool>::clone(){
 
 template <>
 void taDataBool<bool>::setValue(QString changedValue){
-    if(changedValue == "True"){
+    if(changedValue == "True" || changedValue == "1"){
         value = true;
     } else {
         value = false;
