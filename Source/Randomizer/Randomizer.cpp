@@ -241,9 +241,9 @@ void Randomizer::Load(){
     }
 
 
-    groupModOptions->show();
-    groupLocations->show();
-    groupTrickOptions->show();
+    //groupModOptions->show();
+    //groupLocations->show();
+    //groupTrickOptions->show();
 
     qDebug() << Q_FUNC_INFO << "testing randomization";
 
@@ -1079,7 +1079,7 @@ int Randomizer::editDatabases(){
         for(int i = 0; i < miniconTypes.size(); i++){
             m_DataHandler->gameData.metagameFile->removeAll(miniconTypes[i]);
         }
-        for(int i = 0; i < m_DataHandler->exodusData.miniconList.size(); i++){
+        for(int i = 0; i < m_DataHandler->gameData.miniconList.size(); i++){
             dictItem itemToAdd = m_DataHandler->createMetagameMinicon(m_DataHandler->gameData.miniconList[i]);
             m_DataHandler->gameData.metagameFile->addInstance(itemToAdd);
         }
@@ -1199,6 +1199,10 @@ void Randomizer::randomizePowers(){
     for(int i = 0; i <m_DataHandler->exodusData.miniconList.size(); i++){
         shuffleValue = placemaster.generate();
         taMinicon* gameMinicon = m_DataHandler->getGameMinicon(m_DataHandler->exodusData.miniconList[i].metagameID);
+        if(gameMinicon == nullptr){
+            m_Debug->Log("Could not randomize stats for Minicon: " + m_DataHandler->exodusData.miniconList[i].name);
+            continue;
+        }
         powerLevel = powerLevel = gameMinicon->powerCost;
         //powerLevel = m_DataHandler->exodusData.miniconList[i].searchAttributes<int>("PowerCost");
         if(randSettings.balancedPower){

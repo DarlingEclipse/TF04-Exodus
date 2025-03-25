@@ -52,7 +52,7 @@ exWindowMain::exWindowMain(QWidget *parent)
     m_centralContainer->setGeometry(QRect(QPoint(m_hSize*0.15,0), QSize(m_hSize*0.6,m_vSize)));
     UpdateBackground();
 
-    setWindowTitle("Exodus 0.7.4.0");
+    setWindowTitle("Exodus 0.7.4.1");
     setGeometry(QRect(QPoint(0,0), QSize(m_hSize,m_vSize)));
     //w.resize(1200, 600);
 
