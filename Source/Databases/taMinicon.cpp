@@ -44,7 +44,7 @@ taMinicon::taMinicon(dictItem copyItem){
     SetValues(copyItem);
 }
 
-/*taMiniconArmor::taMiniconArmor(dictItem copyItem){
+taMiniconArmor::taMiniconArmor(dictItem copyItem){
     SetValues(copyItem);
     this->AbsorbPercentage = copyItem.searchAttributes<float>("AbsorbPercentage");
     this->MaxAbsorbPerHit = copyItem.searchAttributes<float>("MaxAbsorbPerHit");
@@ -65,124 +65,136 @@ taMiniconRegeneration::taMiniconRegeneration(dictItem copyItem){
     SetValues(copyItem);
     this->HealthRegenPerSecond = copyItem.searchAttributes<float>("HealthRegenPerSecond");
     this->PowerlinkedHealthRegenPerSecond = copyItem.searchAttributes<float>("PowerlinkedHealthRegenPerSecond");
-}*/
+}
+
+taMiniconEmergencyWarpgate::taMiniconEmergencyWarpgate(dictItem copyItem){
+    SetValues(copyItem);
+    this->TimeActive = copyItem.searchAttributes<float>("TimeActive");
+}
 
 void DataHandler::LoadMiniconType(QString miniconType){
-    std::vector<taMinicon> metagameMinicons;
-    metagameMinicons = convertInstances<taMinicon>(gameData.metagameFile->sendInstances(miniconType));
+    /*this is awful but it's 3am and it compiles and it works*/
+    std::vector<std::shared_ptr<taMinicon>> metagameMinicons;
+    std::vector<std::shared_ptr<taMiniconDamageBonus>> metagameMiniconDamageBonus;
+    std::vector<std::shared_ptr<taMiniconArmor>> metagameMiniconArmor;
+    std::vector<std::shared_ptr<taMiniconEmergencyWarpgate>> metagameMiniconEmergencyWarpgate;
+    std::vector<std::shared_ptr<taMiniconRangeBonus>> metagameMiniconRangeBonus;
+    std::vector<std::shared_ptr<taMiniconRegeneration>> metagameMiniconRegeneration;
+    switch(m_miniconTypes.indexOf(miniconType)){
+    case 0: //Minicon
+        convertInstances<taMinicon>(gameData.metagameFile->sendInstances(miniconType), &metagameMinicons);
+        break;
+    case 1: //MiniconDamageBonus
+        convertInstances<taMiniconDamageBonus>(gameData.metagameFile->sendInstances(miniconType), &metagameMiniconDamageBonus);
+        for(int i = 0; i < metagameMiniconDamageBonus.size(); i++){
+            metagameMinicons.push_back(metagameMiniconDamageBonus[i]);
+        }
+        break;
+    case 2: //MiniconArmor
+        convertInstances<taMiniconArmor>(gameData.metagameFile->sendInstances(miniconType), &metagameMiniconArmor);
+        for(int i = 0; i < metagameMiniconArmor.size(); i++){
+            metagameMinicons.push_back(metagameMiniconArmor[i]);
+        }
+        break;
+    case 3: //MiniconEmergencyWarpgate
+        convertInstances<taMiniconEmergencyWarpgate>(gameData.metagameFile->sendInstances(miniconType), &metagameMiniconEmergencyWarpgate);
+        for(int i = 0; i < metagameMiniconEmergencyWarpgate.size(); i++){
+            metagameMinicons.push_back(metagameMiniconEmergencyWarpgate[i]);
+        }
+        break;
+    case 4: //MiniconRangeBonus
+        convertInstances<taMiniconRangeBonus>(gameData.metagameFile->sendInstances(miniconType), &metagameMiniconRangeBonus);
+        for(int i = 0; i < metagameMiniconRangeBonus.size(); i++){
+            metagameMinicons.push_back(metagameMiniconRangeBonus[i]);
+        }
+        break;
+    case 5: //MiniconRegeneration
+        convertInstances<taMiniconRegeneration>(gameData.metagameFile->sendInstances(miniconType), &metagameMiniconRegeneration);
+        for(int i = 0; i < metagameMiniconRegeneration.size(); i++){
+            metagameMinicons.push_back(metagameMiniconRegeneration[i]);
+        }
+        break;
+    default:
+        convertInstances<taMinicon>(gameData.metagameFile->sendInstances(miniconType), &metagameMinicons);
+        break;
+    }
+
     for(int i = 0; i < metagameMinicons.size(); i++){
-        if(metagameMinicons[i].minicon != MiniconNone){
+        if(metagameMinicons[i]->minicon != MiniconNone){
             gameData.miniconList.push_back(metagameMinicons[i]);
         }
     }
     qDebug() << Q_FUNC_INFO << "Minicon list now has:" << gameData.miniconList.size() << "loaded minicons";
 }
 
-void DataHandler::SetMiniconAttributes(const taMinicon *minicon, dictItem *itemToEdit){
-    itemToEdit->setAttribute("ActivationType", QString::number(minicon->activationType));
-    itemToEdit->setAttribute("ChargeDrainMultiplier_Commander", QString::number(minicon->chargeDrainRate_Commander));
-    itemToEdit->setAttribute("ChargeDrainMultiplier_Veteran", QString::number(minicon->chargeDrainRate_Veteran));
-    itemToEdit->setAttribute("ChargeDrainTime", QString::number(minicon->chargeDrainTime));
-    itemToEdit->setAttribute("CoolDownTime", QString::number(minicon->coolDownTime));
-    itemToEdit->setAttribute("CoolDownTimeDepleted", QString::number(minicon->coolDownTimeDepleted));
-    itemToEdit->setAttribute("CrosshairIndex", QString::number(minicon->crosshairIndex));
-    itemToEdit->setAttribute("EquipInHQ", QString::number(minicon->equipInHQ));
-    itemToEdit->setAttribute("Icon", QString::number(minicon->icon));
-    itemToEdit->setAttribute("Minicon", QString::number(minicon->minicon));
-    itemToEdit->setAttribute("MinimumChargeToUse", QString::number(minicon->minimumChargeToUse));
-    itemToEdit->setAttribute("MinimumChargeToUsePerShot", QString::number(minicon->minimumChargeToUsePerShot));
-    itemToEdit->setAttribute("Name", minicon->name);
-    itemToEdit->setAttribute("NodeToKeepIndex", QString::number(minicon->nodeToKeepIndex));
-    itemToEdit->setAttribute("PaletteIndex", QString::number(minicon->paletteIndex));
-    itemToEdit->setAttribute("PowerCost", QString::number(minicon->powerCost));
-    itemToEdit->setAttribute("RechargeTime", QString::number(minicon->rechargeTime));
-    itemToEdit->setAttribute("RecoilType", QString::number(minicon->recoilType));
-    itemToEdit->setAttribute("RestrictToButton", QString::number(minicon->restrictToButton));
-    itemToEdit->setAttribute("Segments", QString::number(minicon->segments));
-    itemToEdit->setAttribute("SidekickCoolDownTime", QString::number(minicon->sidekickCoolDownTime));
-    itemToEdit->setAttribute("SidekickRechargeTime", QString::number(minicon->sidekickRechargeTime));
-    itemToEdit->setAttribute("SidekickSegments", QString::number(minicon->sidekickSegments));
-    itemToEdit->setAttribute("Slot", QString::number(minicon->slot));
-    itemToEdit->setAttribute("Team", QString::number(minicon->team));
-    itemToEdit->setAttribute("ToneLibrary", minicon->toneLibrary);
+const void taMinicon::SetBaseAttributes(dictItem *itemToEdit){
+    itemToEdit->setAttribute("ActivationType", QString::number(activationType));
+    itemToEdit->setAttribute("ChargeDrainMultiplier_Commander", QString::number(chargeDrainRate_Commander));
+    itemToEdit->setAttribute("ChargeDrainMultiplier_Veteran", QString::number(chargeDrainRate_Veteran));
+    itemToEdit->setAttribute("ChargeDrainTime", QString::number(chargeDrainTime));
+    itemToEdit->setAttribute("CoolDownTime", QString::number(coolDownTime));
+    itemToEdit->setAttribute("CoolDownTimeDepleted", QString::number(coolDownTimeDepleted));
+    itemToEdit->setAttribute("CrosshairIndex", QString::number(crosshairIndex));
+    itemToEdit->setAttribute("EquipInHQ", QString::number(equipInHQ));
+    itemToEdit->setAttribute("Icon", QString::number(icon));
+    itemToEdit->setAttribute("Minicon", QString::number(minicon));
+    itemToEdit->setAttribute("MinimumChargeToUse", QString::number(minimumChargeToUse));
+    itemToEdit->setAttribute("MinimumChargeToUsePerShot", QString::number(minimumChargeToUsePerShot));
+    itemToEdit->setAttribute("Name", name);
+    itemToEdit->setAttribute("NodeToKeepIndex", QString::number(nodeToKeepIndex));
+    itemToEdit->setAttribute("PaletteIndex", QString::number(paletteIndex));
+    itemToEdit->setAttribute("PowerCost", QString::number(powerCost));
+    itemToEdit->setAttribute("RechargeTime", QString::number(rechargeTime));
+    itemToEdit->setAttribute("RecoilType", QString::number(recoilType));
+    itemToEdit->setAttribute("RestrictToButton", QString::number(restrictToButton));
+    itemToEdit->setAttribute("Segments", QString::number(segments));
+    itemToEdit->setAttribute("SidekickCoolDownTime", QString::number(sidekickCoolDownTime));
+    itemToEdit->setAttribute("SidekickRechargeTime", QString::number(sidekickRechargeTime));
+    itemToEdit->setAttribute("SidekickSegments", QString::number(sidekickSegments));
+    itemToEdit->setAttribute("Slot", QString::number(slot));
+    itemToEdit->setAttribute("Team", QString::number(team));
+    itemToEdit->setAttribute("ToneLibrary", toneLibrary);
 }
 
-dictItem DataHandler::createMetagameMinicon(const taMinicon *minicon){
+dictItem DataHandler::createMetagameMinicon(taMinicon* minicon){
 
     dictItem convertedData;
-    convertedData.name = "Minicon";
-    convertedData.attributes = gameData.metagameFile->generateAttributes("Minicon");
+    convertedData.name = minicon->Type();
+    convertedData.attributes = gameData.metagameFile->generateAttributes(minicon->Type());
     qDebug() << Q_FUNC_INFO << "new item has" << convertedData.attributes.size() << "attributes";
 
-    SetMiniconAttributes(minicon, &convertedData);
+    minicon->SetBaseAttributes(&convertedData);
+    minicon->SetSpecificAttributes(&convertedData);
 
     return convertedData;
 }
 
-dictItem DataHandler::createMetagameMinicon(const taMiniconArmor *minicon){
-
-    dictItem convertedData;
-    convertedData.name = "MiniconArmor";
-    convertedData.attributes = gameData.metagameFile->generateAttributes("MiniconArmor");
-    qDebug() << Q_FUNC_INFO << "new item has" << convertedData.attributes.size() << "attributes";
-
-    SetMiniconAttributes(minicon, &convertedData);
-    convertedData.setAttribute("AbsorbPercentage", QString::number(minicon->AbsorbPercentage));
-    convertedData.setAttribute("MaxAbsorbPerHit", QString::number(minicon->MaxAbsorbPerHit));
-    convertedData.setAttribute("MaxDamageToAbsorb", QString::number(minicon->MaxDamageToAbsorb));
-
-    return convertedData;
+void taMinicon::SetSpecificAttributes(dictItem *itemToEdit){
+    qDebug() << Q_FUNC_INFO << "Called base function";
+    return;
 }
 
-dictItem DataHandler::createMetagameMinicon(const taMiniconDamageBonus *minicon){
+void taMiniconArmor::SetSpecificAttributes(dictItem *itemToEdit){
+    qDebug() << Q_FUNC_INFO << "CALLED ARMOR FUNCTION CORRECTLY";
 
-    dictItem convertedData;
-    convertedData.name = "MiniconDamageBonus";
-    convertedData.attributes = gameData.metagameFile->generateAttributes("MiniconDamageBonus");
-    qDebug() << Q_FUNC_INFO << "new item has" << convertedData.attributes.size() << "attributes";
-
-    SetMiniconAttributes(minicon, &convertedData);
-    convertedData.setAttribute("MeleeDamageBonus", QString::number(minicon->MeleeDamageBonus));
-
-    return convertedData;
+    itemToEdit->setAttribute("AbsorbPercentage", QString::number(AbsorbPercentage));
+    itemToEdit->setAttribute("MaxAbsorbPerHit", QString::number(MaxAbsorbPerHit));
+    itemToEdit->setAttribute("MaxDamageToAbsorb", QString::number(MaxDamageToAbsorb));
 }
 
-dictItem DataHandler::createMetagameMinicon(const taMiniconEmergencyWarpgate *minicon){
-
-    dictItem convertedData;
-    convertedData.name = "MiniconEmergencyWarpgate";
-    convertedData.attributes = gameData.metagameFile->generateAttributes("MiniconEmergencyWarpgate");
-    qDebug() << Q_FUNC_INFO << "new item has" << convertedData.attributes.size() << "attributes";
-
-    SetMiniconAttributes(minicon, &convertedData);
-    convertedData.setAttribute("TimeActive", QString::number(minicon->TimeActive));
-
-    return convertedData;
+void taMiniconDamageBonus::SetSpecificAttributes(dictItem *itemToEdit){
+    itemToEdit->setAttribute("MeleeDamageBonus", QString::number(MeleeDamageBonus));
 }
 
-dictItem DataHandler::createMetagameMinicon(const taMiniconRangeBonus *minicon){
-
-    dictItem convertedData;
-    convertedData.name = "MiniconRangeBonus";
-    convertedData.attributes = gameData.metagameFile->generateAttributes("MiniconRangeBonus");
-    qDebug() << Q_FUNC_INFO << "new item has" << convertedData.attributes.size() << "attributes";
-
-    SetMiniconAttributes(minicon, &convertedData);
-    convertedData.setAttribute("RangeBonus", QString::number(minicon->RangeBonus));
-
-    return convertedData;
+void taMiniconEmergencyWarpgate::SetSpecificAttributes(dictItem *itemToEdit){
+    itemToEdit->setAttribute("TimeActive", QString::number(TimeActive));
 }
 
-dictItem DataHandler::createMetagameMinicon(const taMiniconRegeneration *minicon){
+void taMiniconRangeBonus::SetSpecificAttributes(dictItem *itemToEdit){
+    itemToEdit->setAttribute("RangeBonus", QString::number(RangeBonus));
+}
 
-    dictItem convertedData;
-    convertedData.name = "MiniconRegeneration";
-    convertedData.attributes = gameData.metagameFile->generateAttributes("MiniconRegeneration");
-    qDebug() << Q_FUNC_INFO << "new item has" << convertedData.attributes.size() << "attributes";
-
-    SetMiniconAttributes(minicon, &convertedData);
-    convertedData.setAttribute("HealthRegenPerSecond", QString::number(minicon->HealthRegenPerSecond));
-    convertedData.setAttribute("PowerlinkedHealthRegenPerSecond", QString::number(minicon->PowerlinkedHealthRegenPerSecond));
-
-    return convertedData;
+void taMiniconRegeneration::SetSpecificAttributes(dictItem *itemToEdit){
+    itemToEdit->setAttribute("HealthRegenPerSecond", QString::number(HealthRegenPerSecond));
+    itemToEdit->setAttribute("PowerlinkedHealthRegenPerSecond", QString::number(PowerlinkedHealthRegenPerSecond));
 }

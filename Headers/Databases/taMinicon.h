@@ -75,7 +75,11 @@ public:
 
     taMinicon();
     taMinicon(dictItem copyItem);
+    virtual ~taMinicon() = default;
     void SetValues(dictItem copyItem);
+    const void SetBaseAttributes(dictItem *itemToEdit);
+    virtual QString Type(){return "Minicon";};
+    virtual void SetSpecificAttributes(dictItem *itemToEdit);
 };
 
 class taMiniconArmor : public taMinicon {
@@ -83,32 +87,47 @@ public:
     float AbsorbPercentage;
     float MaxAbsorbPerHit;
     float MaxDamageToAbsorb;
-    //taMiniconArmor(dictItem copyItem);
+    taMiniconArmor(dictItem copyItem);
+    ~taMiniconArmor() = default;
+    QString Type(){return "MiniconArmor";};
+    void SetSpecificAttributes(dictItem *itemToEdit);
 };
 
 class taMiniconDamageBonus : public taMinicon {
 public:
     float MeleeDamageBonus;
-    //taMiniconDamageBonus(dictItem copyItem);
+    taMiniconDamageBonus(dictItem copyItem);
+    ~taMiniconDamageBonus() = default;
+    QString Type(){return "MiniconDamageBonus";};
+    void SetSpecificAttributes(dictItem *itemToEdit);
 };
 
 class taMiniconEmergencyWarpgate : public taMinicon {
 public:
     float TimeActive;
-    //taMiniconEmergencyWarpgate(dictItem copyItem);
+    taMiniconEmergencyWarpgate(dictItem copyItem);
+    ~taMiniconEmergencyWarpgate() = default;
+    QString Type(){return "MiniconEmergencyWarpgate";};
+    void SetSpecificAttributes(dictItem *itemToEdit);
 };
 
 class taMiniconRangeBonus : public taMinicon {
 public:
     float RangeBonus;
-    //taMiniconRangeBonus(dictItem copyItem);
+    taMiniconRangeBonus(dictItem copyItem);
+    ~taMiniconRangeBonus() = default;
+    QString Type(){return "MiniconRangeBonus";};
+    void SetSpecificAttributes(dictItem *itemToEdit);
 };
 
 class taMiniconRegeneration : public taMinicon {
 public:
     float HealthRegenPerSecond;
     float PowerlinkedHealthRegenPerSecond;
-    //taMiniconRegeneration(dictItem copyItem);
+    taMiniconRegeneration(dictItem copyItem);
+    ~taMiniconRegeneration() = default;
+    QString Type(){return "MiniconRegeneration";};
+    void SetSpecificAttributes(dictItem *itemToEdit);
 };
 
 #endif // TAMINICON_H
