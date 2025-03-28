@@ -28,10 +28,10 @@ std::shared_ptr<taData> dictItem::getAttribute(QString attributeName){
 }
 
 int dictItem::setAttribute(QString itemName, QString value){
-    qDebug() << Q_FUNC_INFO << "Setting attribute" << itemName << "to value" << value;
+    //qDebug() << Q_FUNC_INFO << "Setting attribute" << itemName << "to value" << value;
     for(int i = 0; i < attributes.size(); i++){
         if(attributes[i]->name == itemName){
-            if(value == attributes[i]->display() && attributes[i]->isDefault){
+            if((value == attributes[i]->display() || value == "") && attributes[i]->isDefault){
                 return 0;
             }
             attributes[i]->setValue(value);
