@@ -229,7 +229,7 @@ int DatabaseFile::addInstance(dictItem itemToAdd){
         //qDebug() << Q_FUNC_INFO << "checking attribute" << i << dictionary[dictIndex].attributes[i]->name << "in itemtoadd's attribute list of" << itemToAdd.attributes.size() << "items";
         for(int j = 0; j < itemToAdd.attributes.size(); j++){
             if(itemToAdd.attributes[j]->name == dictionary[dictIndex].attributes[i]->name){
-                qDebug() << Q_FUNC_INFO << "found a match";
+                //qDebug() << Q_FUNC_INFO << "found a match";
                 attributeIndex = j;
             }
         }
@@ -1580,18 +1580,22 @@ std::vector<dictItem> DatabaseFile::sendInstances(QString instanceType){
 }
 
 std::vector<std::shared_ptr<taData>> DatabaseFile::generateAttributes(QString className){
-    int classIndexTMD = 0;
+    int classIndexTMD = -1;
     std::vector<std::shared_ptr<taData>> generatedAttributes;
     for(int i = 0; i < inheritedFile->dictionary.size(); i++){
-        qDebug() << "comparing class" << i << inheritedFile->dictionary[i].name << "to inherited class" << className;
+        //qDebug() << "comparing class" << i << inheritedFile->dictionary[i].name << "to inherited class" << className;
         if(inheritedFile->dictionary[i].name == className){
-            qDebug() << Q_FUNC_INFO << "They match.";
+            qDebug() << Q_FUNC_INFO << "Match found for" << className;
             classIndexTMD = i;
             break;
         }
     }
+    if(classIndexTMD == -1){
+        qDebug() << Q_FUNC_INFO << "No match found";
+        return generatedAttributes;
+    }
+    qDebug() << Q_FUNC_INFO << "class to copy has" << inheritedFile->dictionary[classIndexTMD].attributes.size() << "attributes";
     for(int j =0; j < inheritedFile->dictionary[classIndexTMD].attributes.size(); j++){
-        qDebug() << "adding attribute from class" << inheritedFile->dictionary[classIndexTMD].name << ":" << inheritedFile->dictionary[classIndexTMD].attributes[j]->name;
         std::shared_ptr<taData> dictionaryCopy = inheritedFile->dictionary[classIndexTMD].attributes[j]->clone();
         if(dictionaryCopy == nullptr){
             dictionaryCopy = inheritedFile->dictionary[classIndexTMD].attributes[j];
