@@ -12,8 +12,8 @@ IDI_ICON1 ICON "Exodus_basic.ico"
 
 // Version information; this, too, is used by WinSparkle
 1 VERSIONINFO
- FILEVERSION     0,7,4,1
- PRODUCTVERSION  0,7,4,1
+ FILEVERSION     0,7,4,3
+ PRODUCTVERSION  0,7,4,3
  FILEFLAGSMASK   VS_FFI_FILEFLAGSMASK
  FILEFLAGS       0
  //FILEOS          VOS_NT_WINDOWS64
@@ -28,12 +28,12 @@ BEGIN
             VALUE "Comments", "Example app."
             VALUE "CompanyName", "DarlingEclipse Programming\0"
             VALUE "FileDescription", "TF 2004 Exodus\0"
-            VALUE "FileVersion", "0.7.4.1\0"
+            VALUE "FileVersion", "0.7.4.3\0"
             VALUE "InternalName", "Exodus_WIP\0"
             VALUE "OriginalFilename", "Exodus.exe\0"
             VALUE "LegalCopyright", "Public Domain\0"
             VALUE "ProductName", "TF 2004 Exodus\0"
-            VALUE "ProductVersion", "0.7.4.1\0"
+            VALUE "ProductVersion", "0.7.4.3\0"
         END
     END
 
