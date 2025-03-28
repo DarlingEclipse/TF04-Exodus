@@ -8,29 +8,6 @@
 #include "Headers/Main/exDebugger.h"
 #include "Headers/FileManagement/Zebrafish.h"
 
-/*std::vector<Pickup> convertPickups(std::vector<dictItem> itemList){
-
-}
-
-std::vector<Minicon> convertMinicons(std::vector<dictItem> itemList){
-
-}
-
-std::vector<Warpgate> convertWarpgates(std::vector<dictItem> itemList){
-    std::vector<Warpgate> warpgateList;
-    for(int i = 0; i < itemList.size(); i++){
-        if(itemList[i].name == "CreatureWarpGate"){
-            Warpgate nextWarpgate = Warpgate(itemList[i]);
-            warpgateList.push_back(nextWarpgate);
-        }
-    }
-    return warpgateList;
-}*/
-
-// DataHandler::DataHandler(){
-//     qDebug() << Q_FUNC_INFO << "Base DataHandler intialization called. This shouldn't happen";
-// }
-
 DataHandler::DataHandler(exWindowBase *passUI, zlManager *fileManager){
     m_UI = passUI;
     m_Debug = &exDebugger::GetInstance();
@@ -211,8 +188,8 @@ exMinicon::exMinicon(){
 
 exEpisode* DataHandler::getExodusEpisode(int episodeToGet){
     for(int i = 0; i < exodusData.loadedLevels.size(); i++){
-        if(exodusData.loadedLevels[i].world == episodeToGet){
-            return &exodusData.loadedLevels[i];
+        if(exodusData.loadedLevels[i]->world == episodeToGet){
+            return exodusData.loadedLevels[i].get();
         }
     }
     qDebug() << Q_FUNC_INFO << "Episode" << episodeToGet << "was not found in the Exodus data";
@@ -222,8 +199,8 @@ exEpisode* DataHandler::getExodusEpisode(int episodeToGet){
 taEpisode* DataHandler::getGameEpisode(int episodeToGet){
     QStringList splitPath;
     for(int i = 0; i < gameData.levelList.size(); i++){
-        if(gameData.levelList[i].episode == episodeToGet){
-            return &gameData.levelList[i];
+        if(gameData.levelList[i]->episode == episodeToGet){
+            return gameData.levelList[i].get();
         }
     }
     qDebug() << Q_FUNC_INFO << "Episode" << episodeToGet << "was not found in the Game data";
@@ -232,8 +209,8 @@ taEpisode* DataHandler::getGameEpisode(int episodeToGet){
 
 taPickup* DataHandler::getPickup(int searchID){
     for(int i = 0; i < gameData.pickupList.size(); i++){
-        if(gameData.pickupList[i].pickupToSpawn == searchID){
-            return &gameData.pickupList[i];
+        if(gameData.pickupList[i]->pickupToSpawn == searchID){
+            return gameData.pickupList[i].get();
         }
     }
     qDebug() << Q_FUNC_INFO << "Pickup" << searchID << "was not found.";
@@ -247,8 +224,8 @@ exMinicon* DataHandler::getExodusMinicon(int searchID){
         return nullptr;
     }
     for(int i = 0; i < exodusData.miniconList.size(); i++){
-        if(exodusData.miniconList[i].creatureID == searchID){
-            return &exodusData.miniconList[i];
+        if(exodusData.miniconList[i]->creatureID == searchID){
+            return exodusData.miniconList[i].get();
         }
     }
     qDebug() << Q_FUNC_INFO << "minicon" << searchID << "was not found.";
@@ -257,8 +234,8 @@ exMinicon* DataHandler::getExodusMinicon(int searchID){
 
 exMinicon* DataHandler::getExodusMinicon(QString searchName){
     for(int i = 0; i < exodusData.miniconList.size(); i++){
-        if(exodusData.miniconList[i].name == searchName){
-            return &exodusData.miniconList[i];
+        if(exodusData.miniconList[i]->name == searchName){
+            return exodusData.miniconList[i].get();
         }
     }
     qDebug() << Q_FUNC_INFO << "minicon" << searchName << "was not found.";
@@ -267,8 +244,8 @@ exMinicon* DataHandler::getExodusMinicon(QString searchName){
 
 taMinicon* DataHandler::getGameMinicon(int searchID){
     for(int i = 0; i < gameData.miniconList.size(); i++){
-        if(gameData.miniconList[i].minicon == searchID){
-            return &gameData.miniconList[i];
+        if(gameData.miniconList[i]->minicon == searchID){
+            return gameData.miniconList[i].get();
         }
     }
     qDebug() << Q_FUNC_INFO << "minicon" << searchID << "was not found.";
@@ -277,8 +254,8 @@ taMinicon* DataHandler::getGameMinicon(int searchID){
 
 taMinicon* DataHandler::getGameMinicon(QString searchName){
     for(int i = 0; i < gameData.miniconList.size(); i++){
-        if(gameData.miniconList[i].name == searchName){
-            return &gameData.miniconList[i];
+        if(gameData.miniconList[i]->name == searchName){
+            return gameData.miniconList[i].get();
         }
     }
     qDebug() << Q_FUNC_INFO << "minicon" << searchName << "was not found.";
@@ -287,7 +264,7 @@ taMinicon* DataHandler::getGameMinicon(QString searchName){
 
 void DataHandler::resetMinicons(){
     for(int i = 0; i < exodusData.miniconList.size(); i++){
-        exodusData.miniconList[i].placed = false;
+        exodusData.miniconList[i]->placed = false;
     }
 }
 
@@ -299,8 +276,8 @@ void DataHandler::resetDatacons(){
 
 void DataHandler::resetLevels(){
     for(int i = 0; i < gameData.levelList.size(); i++){
-        gameData.levelList[i].dataconCount = 0;
-        gameData.levelList[i].miniconCount = 0;
+        gameData.levelList[i]->dataconCount = 0;
+        gameData.levelList[i]->miniconCount = 0;
     }
 }
 
@@ -377,10 +354,10 @@ exTrick::exTrick(dictItem fromItem){
 }
 
 void DataHandler::loadTricks(){
-    exodusData.trickList = convertInstances<exTrick>(exodusData.dataFile->sendInstances("exTrick"));
+    convertInstances<exTrick>(exodusData.dataFile->sendInstances("exTrick"), &exodusData.trickList);
     std::sort(exodusData.trickList.begin(), exodusData.trickList.end());
     for(int i = 0; i < exodusData.trickList.size(); i++){
-        exodusData.trickList[i].enabled = false;
+        exodusData.trickList[i]->enabled = false;
     }
 }
 
@@ -388,11 +365,11 @@ void DataHandler::addCustomLocations(){
     std::vector<exPickupLocation> loadedLocations;
     qDebug() << Q_FUNC_INFO << "Adding custom locations to list." << exodusData.customLocationList.size() << "custom locations to add.";
     for(int i = 0; i < exodusData.customLocationList.size(); i++){
-        qDebug() << Q_FUNC_INFO << "enabled?" << exodusData.customLocationList[i].enabled;
-        if(exodusData.customLocationList[i].enabled){
-            qDebug() << Q_FUNC_INFO << "Locationlist" << i << "has" << exodusData.customLocationList[i].locationList.size() << "locations";
-            for(int j = 0; j < exodusData.customLocationList[i].locationList.size(); j++){
-                loadedLocations.push_back(exodusData.customLocationList[i].locationList[j]);
+        qDebug() << Q_FUNC_INFO << "enabled?" << exodusData.customLocationList[i]->enabled;
+        if(exodusData.customLocationList[i]->enabled){
+            qDebug() << Q_FUNC_INFO << "Locationlist" << i << "has" << exodusData.customLocationList[i]->locationList.size() << "locations";
+            for(int j = 0; j < exodusData.customLocationList[i]->locationList.size(); j++){
+                loadedLocations.push_back(exodusData.customLocationList[i]->locationList[j]);
             }
         }
     }
@@ -402,13 +379,13 @@ void DataHandler::addCustomLocations(){
 
     for(int i = 0; i < exodusData.loadedLevels.size(); i++){
         for(int j = 0; j < loadedLocations.size(); j++){
-            if(exodusData.loadedLevels[i].world != loadedLocations[j].world){
+            if(exodusData.loadedLevels[i]->world != loadedLocations[j].world){
                 continue;
             }
-            if(exodusData.loadedLevels[i].usesAlternate != loadedLocations[j].usesAlternate){
+            if(exodusData.loadedLevels[i]->usesAlternate != loadedLocations[j].usesAlternate){
                 continue;
             }
-            exodusData.loadedLevels[i].spawnLocations.push_back(loadedLocations[j]);
+            exodusData.loadedLevels[i]->spawnLocations.push_back(loadedLocations[j]);
         }
     }
 }
@@ -427,37 +404,36 @@ void DataHandler::loadMinicons(){
         m_Debug->Log("Unable to find file METAGAME.TDB. Minicon metadata was not loaded.");
     }
 
-    QStringList miniconTypes = {"Minicon", "MiniconDamageBonus", "MiniconArmor", "MiniconEmergencyWarpgate", "MiniconRangeBonus", "MiniconRegeneration"};
-
-    for(int i = 0; i < miniconTypes.size(); i++){
-        LoadMiniconType(miniconTypes[i]);
+    for(int i = 0; i < m_miniconTypes.size(); i++){
+        LoadMiniconType(m_miniconTypes[i]);
     }
 
     qDebug() << Q_FUNC_INFO << "gameData loaded minicons:" << gameData.miniconList.size();
     for(int i = 0; i < gameData.miniconList.size(); i++){
-        qDebug() << Q_FUNC_INFO << "loaded minicon" << i << "is named" << gameData.miniconList[i].name << gameData.miniconList[i].minicon;
+        qDebug() << Q_FUNC_INFO << "loaded minicon" << i << "is named" << gameData.miniconList[i]->name << gameData.miniconList[i]->minicon;
     }
 
-    exodusData.miniconList = convertInstances<exMinicon>(exodusData.dataFile->sendInstances("exMinicon"));
+    convertInstances<exMinicon>(exodusData.dataFile->sendInstances("exMinicon"), &exodusData.miniconList);
 
     for(int i = 0; i < exodusData.loadedLevels.size(); i++){
-        std::vector<taPickup> filePickupsBase = convertInstances<taPickup>(exodusData.loadedLevels[i].levelFile->sendInstances("PickupPlaced"));
+        std::vector<std::shared_ptr<taPickup>> filePickupsBase;
+        convertInstances<taPickup>(exodusData.loadedLevels[i]->levelFile->sendInstances("PickupPlaced"), &filePickupsBase);
         for(int j = 0; j < filePickupsBase.size(); j++){
-            if(!duplicatePickup(filePickupsBase[j])){
-                gameData.pickupList.push_back(filePickupsBase[j]);
+            if(!duplicatePickup(*filePickupsBase[j].get())){
+                gameData.pickupList.emplace_back(filePickupsBase[j]);
             }
         }
     }
 
     qDebug() << Q_FUNC_INFO << "Total gameData pickuplist items:" << gameData.pickupList.size();
     for(int i = 0; i < gameData.pickupList.size(); i++){
-        qDebug() << Q_FUNC_INFO << i << gameData.pickupList[i].isMinicon() << gameData.pickupList[i].pickupToSpawn << gameData.pickupList[i].productArt;
+        qDebug() << Q_FUNC_INFO << i << gameData.pickupList[i]->isMinicon() << gameData.pickupList[i]->pickupToSpawn << gameData.pickupList[i]->productArt;
     }
 
     qDebug() << Q_FUNC_INFO << "exodusData loaded minicons:" << exodusData.miniconList.size();
     for(int i = 0; i < exodusData.miniconList.size(); i++){
-        qDebug() << Q_FUNC_INFO << i << " " << exodusData.miniconList[i].creatureID << "  " << exodusData.miniconList[i].name << "    "
-                 << " is weapon:" << exodusData.miniconList[i].isWeapon;
+        qDebug() << Q_FUNC_INFO << i << " " << exodusData.miniconList[i]->creatureID << "  " << exodusData.miniconList[i]->name << "    "
+                 << " is weapon:" << exodusData.miniconList[i]->isWeapon;
     }
 
 }
@@ -471,62 +447,63 @@ void DataHandler::loadLevels(){
         }
     }
 
-    exodusData.loadedLevels = convertInstances<exEpisode>(exodusData.dataFile->sendInstances("exEpisode"));
-    gameData.levelList = convertInstances<taEpisode>(gameData.metagameFile->sendInstances("Episode"));
+    convertInstances<exEpisode>(exodusData.dataFile->sendInstances("exEpisode"), &exodusData.loadedLevels);
+    convertInstances<taEpisode>(gameData.metagameFile->sendInstances("Episode"), &gameData.levelList);
 
     qDebug() << Q_FUNC_INFO << "Loaded levels:" << exodusData.loadedLevels.size();
 
     for(int i = 0; i< exodusData.loadedLevels.size(); i++){
-        taEpisode* currentEpisode = getGameEpisode(exodusData.loadedLevels[i].world);
+        taEpisode* currentEpisode = getGameEpisode(exodusData.loadedLevels[i]->world);
         QString alternateCheck = "";
-        if(exodusData.loadedLevels[i].usesAlternate){
+        if(exodusData.loadedLevels[i]->usesAlternate && exodusData.loadedLevels[i]->logName != "Starship"){
             alternateCheck = "DEFEATED";
         }
-        QString nameCheck = "0" + QString::number(exodusData.loadedLevels[i].world+1) + "_" + currentEpisode->name.toUpper() + alternateCheck + "-CREATURE";
+        QString nameCheck = "0" + QString::number(exodusData.loadedLevels[i]->world+1) + "_" + currentEpisode->name.toUpper() + alternateCheck + "-CREATURE";
         for(int j = 0; j < m_zlManager->m_databaseList.size(); j++){
             qDebug() << Q_FUNC_INFO << "Checking for file name:" << nameCheck << "vs" << m_zlManager->m_databaseList[j]->fileName;
             if(m_zlManager->m_databaseList[j]->fileName == nameCheck){
                 qDebug() << Q_FUNC_INFO << "Setting level file.";
-                exodusData.loadedLevels[i].levelFile = m_zlManager->m_databaseList[j];
+                exodusData.loadedLevels[i]->levelFile = m_zlManager->m_databaseList[j];
             }
         }
     }
 
 
-    std::vector<exPickupLocation> loadedLocations = convertInstances<exPickupLocation>(exodusData.dataFile->sendInstances("exPickupLocation"));
+    std::vector<std::shared_ptr<exPickupLocation>> loadedLocations;
+    convertInstances<exPickupLocation>(exodusData.dataFile->sendInstances("exPickupLocation"), &loadedLocations);
 
     /*Manually setting linked locations, since they don't work until the Database system is fixed*/
     for(int i = 0; i < loadedLocations.size(); i++){
-        switch(loadedLocations[i].uniqueID){
+        switch(loadedLocations[i]->uniqueID){
             case 3061:
-            loadedLocations[i].linkedLocationIDs.push_back(13065);
+            loadedLocations[i]->linkedLocationIDs.push_back(13065);
             break;
             case 3062:
-            loadedLocations[i].linkedLocationIDs.push_back(13066);
+            loadedLocations[i]->linkedLocationIDs.push_back(13066);
             break;
             case 3063:
-            loadedLocations[i].linkedLocationIDs.push_back(13068);
+            loadedLocations[i]->linkedLocationIDs.push_back(13068);
             break;
             case 3064:
-            loadedLocations[i].linkedLocationIDs.push_back(13067);
+            loadedLocations[i]->linkedLocationIDs.push_back(13067);
             break;
             case 13065:
-            loadedLocations[i].linkedLocationIDs.push_back(3061);
+            loadedLocations[i]->linkedLocationIDs.push_back(3061);
             break;
             case 13066:
-            loadedLocations[i].linkedLocationIDs.push_back(3062);
+            loadedLocations[i]->linkedLocationIDs.push_back(3062);
             break;
             case 13067:
-            loadedLocations[i].linkedLocationIDs.push_back(3064);
+            loadedLocations[i]->linkedLocationIDs.push_back(3064);
             break;
             case 13068:
-            loadedLocations[i].linkedLocationIDs.push_back(3063);
+            loadedLocations[i]->linkedLocationIDs.push_back(3063);
             break;
             case 5094:
-            loadedLocations[i].linkedLocationIDs.push_back(5095);
+            loadedLocations[i]->linkedLocationIDs.push_back(5095);
             break;
             case 5095:
-            loadedLocations[i].linkedLocationIDs.push_back(5094);
+            loadedLocations[i]->linkedLocationIDs.push_back(5094);
             break;
         default:
             break;
@@ -535,13 +512,13 @@ void DataHandler::loadLevels(){
 
     for(int i = 0; i < exodusData.loadedLevels.size(); i++){
         for(int j = 0; j < loadedLocations.size(); j++){
-            if(exodusData.loadedLevels[i].world != loadedLocations[j].world){
+            if(exodusData.loadedLevels[i]->world != loadedLocations[j]->world){
                 continue;
             }
-            if(exodusData.loadedLevels[i].usesAlternate != loadedLocations[j].usesAlternate){
+            if(exodusData.loadedLevels[i]->usesAlternate != loadedLocations[j]->usesAlternate){
                 continue;
             }
-            exodusData.loadedLevels[i].spawnLocations.push_back(loadedLocations[j]);
+            exodusData.loadedLevels[i]->spawnLocations.push_back(*loadedLocations[j].get());
         }
     }
 
@@ -551,15 +528,15 @@ void DataHandler::loadLevels(){
 void DataHandler::debugLocations(){
     exPickupLocation* currentLocation = nullptr;
     for(int i = 0; i < exodusData.loadedLevels.size(); i++){
-        qDebug() << Q_FUNC_INFO << "Level file name:" << exodusData.loadedLevels[i].levelFile->fileName;
-        for(int j = 0; j < exodusData.loadedLevels[i].spawnLocations.size(); j++){
-            currentLocation = &exodusData.loadedLevels[i].spawnLocations[j];
+        qDebug() << Q_FUNC_INFO << "Level file name:" << exodusData.loadedLevels[i]->levelFile->fileName;
+        for(int j = 0; j < exodusData.loadedLevels[i]->spawnLocations.size(); j++){
+            currentLocation = &exodusData.loadedLevels[i]->spawnLocations[j];
             QVector3D debugPosition = currentLocation->position;
             qDebug() << Q_FUNC_INFO << i << j << " " << currentLocation->uniqueID << "  "
                      << currentLocation->linkedLocationIDs << "    " << currentLocation->world << "    "
                      << currentLocation->locationName << "    " << debugPosition.x() << "   " << debugPosition.y() << "  " << debugPosition.z()
                      << "  " << currentLocation->originalTeleportNode;
-            qDebug() << Q_FUNC_INFO << "is pickup nullptr? (it should be)" << (exodusData.loadedLevels[i].spawnLocations[j].pickup == nullptr);
+            qDebug() << Q_FUNC_INFO << "is pickup nullptr? (it should be)" << (exodusData.loadedLevels[i]->spawnLocations[j].pickup == nullptr);
         }
     }
 }
@@ -605,11 +582,12 @@ dictItem DataHandler::createGameEpisode(const taEpisode* episode){
 
     if(episode->hasAlternativeDirectory){
         convertedData.setAttribute("HasAlternativeDirectory", "True");
-        convertedData.setAttribute("AlternativeDirectoryName", episode->alternativeDirectoryName);
     }
+    convertedData.setAttribute("AlternativeDirectoryName", episode->alternativeDirectoryName);
 
     convertedData.setAttribute("MiniconCount", QString::number(episode->miniconCount));
     convertedData.setAttribute("Name", episode->name);
+    convertedData.setAttribute("Warpgates", QString::number(episode->warpgates));
 
     return convertedData;
 }
@@ -627,18 +605,18 @@ void DataHandler::loadAutobots(){
 }
 
 void DataHandler::loadDatacons(){
-    foreach(taPickup currentPickup, gameData.pickupList){
+    for(int i = 0; i < gameData.pickupList.size(); i++){
         bool dataconIsLoaded = false;
-        if(currentPickup.isMinicon()){
+        if(gameData.pickupList[i]->isMinicon()){
             continue;
         }
-        qDebug() << Q_FUNC_INFO << "pickup properties for:" << currentPickup.pickupToSpawn << "dataID" << currentPickup.productArt;
-        dataconIsLoaded = dataconLoaded(currentPickup.productArt);
+        qDebug() << Q_FUNC_INFO << "pickup properties for:" << gameData.pickupList[i]->pickupToSpawn << "dataID" << gameData.pickupList[i]->productArt;
+        dataconIsLoaded = dataconLoaded(gameData.pickupList[i]->productArt);
         qDebug() << Q_FUNC_INFO << "already loaded?" << dataconIsLoaded;
-        if (!dataconIsLoaded && currentPickup.pickupToSpawn == 3){
+        if (!dataconIsLoaded && gameData.pickupList[i]->pickupToSpawn == 3){
             //we now know it's a datacon (but still check to be sure). if it hasn't been loaded, add it to the datacon list
-            gameData.dataconList.push_back(currentPickup);
-        } else if (dataconIsLoaded && currentPickup.pickupToSpawn == 3){
+            gameData.dataconList.push_back(gameData.pickupList[i]);
+        } else if (dataconIsLoaded && gameData.pickupList[i]->pickupToSpawn == 3){
             //if it has been loaded, just skip it
             continue;
         } else {
@@ -650,7 +628,7 @@ void DataHandler::loadDatacons(){
 
     qDebug() << Q_FUNC_INFO << "Total loaded datacons:" << gameData.dataconList.size();
     for(int i = 0; i < gameData.dataconList.size(); i++){
-        qDebug() << Q_FUNC_INFO << i << " " << gameData.dataconList[i].pickupToSpawn << "  " << gameData.dataconList[i].productArt;
+        qDebug() << Q_FUNC_INFO << i << " " << gameData.dataconList[i]->pickupToSpawn << "  " << gameData.dataconList[i]->productArt;
     }
 }
 
@@ -717,8 +695,8 @@ void DataHandler::loadCustomLocations(){
                         case 5: //Level
                             for(int i = 0; i < gameData.levelList.size(); i++){
                                 customLocation.levelName = modProperty.readValue;
-                                qDebug() << Q_FUNC_INFO << "comparing level" << gameData.levelList[i].name << "to" << customLocation.levelName;
-                                if(gameData.levelList[i].name == customLocation.levelName){
+                                qDebug() << Q_FUNC_INFO << "comparing level" << gameData.levelList[i]->name << "to" << customLocation.levelName;
+                                if(gameData.levelList[i]->name == customLocation.levelName){
                                     qDebug() << Q_FUNC_INFO << "comparing level: match";
                                     customLocation.world = i;
                                 }
@@ -790,17 +768,21 @@ void DataHandler::loadCustomLocations(){
                 currentLocations.locationList.push_back(customLocation);
             }
             qDebug() << Q_FUNC_INFO << "Adding currentlocations" << currentLocations.locationList.size();
-            exodusData.customLocationList.push_back(currentLocations);
+            exodusData.customLocationList.push_back(std::make_shared<exCustomLocation>(currentLocations));
         }
         qDebug() << Q_FUNC_INFO << "file" << currentModFile.fileName();
     }
 
 }
 
+void DataHandler::sortEpisodes(){
+    std::sort(exodusData.loadedLevels.begin(), exodusData.loadedLevels.end(), EpisodeCompare());
+}
+
 bool DataHandler::duplicatePickup(taPickup testPickup){
     for(int i = 0; i < gameData.pickupList.size(); i++){
-        if(testPickup.pickupToSpawn == gameData.pickupList[i].pickupToSpawn
-            && testPickup.productArt == gameData.pickupList[i].productArt){
+        if(testPickup.pickupToSpawn == gameData.pickupList[i]->pickupToSpawn
+            && testPickup.productArt == gameData.pickupList[i]->productArt){
             return true;
         }
     }
@@ -812,12 +794,12 @@ bool DataHandler::duplicateLocation(exPickupLocation testLocation){
     QVector3D testPosition = testLocation.position;
     int locationCount = 0;
     for(int i = 0; i < exodusData.loadedLevels.size(); i++){
-        for(int j = 0; j < exodusData.loadedLevels[i].spawnLocations.size(); j++){
-            loadedPosition = exodusData.loadedLevels[i].spawnLocations[j].position;
+        for(int j = 0; j < exodusData.loadedLevels[i]->spawnLocations.size(); j++){
+            loadedPosition = exodusData.loadedLevels[i]->spawnLocations[j].position;
             if((testPosition.x() < loadedPosition.x()+5 && testPosition.x() > loadedPosition.x() - 5)
                     && (testPosition.y() < loadedPosition.y()+5 && testPosition.y() > loadedPosition.y() - 5)
                     && (testPosition.z() < loadedPosition.z()+5 && testPosition.z() > loadedPosition.z() - 5)
-                    && (testLocation.world == exodusData.loadedLevels[i].spawnLocations[j].world)){
+                    && (testLocation.world == exodusData.loadedLevels[i]->spawnLocations[j].world)){
                 locationCount++;
             }
             if(locationCount > 1){
@@ -830,7 +812,7 @@ bool DataHandler::duplicateLocation(exPickupLocation testLocation){
 
 bool DataHandler::miniconLoaded(int checkID){
     for(int i = 0; i < exodusData.miniconList.size(); i++){
-        if(checkID == exodusData.miniconList[i].creatureID){
+        if(checkID == exodusData.miniconList[i]->creatureID){
             return true;
         }
     }
@@ -840,7 +822,7 @@ bool DataHandler::miniconLoaded(int checkID){
 bool DataHandler::dataconLoaded(int checkID){
     int pickupCount = 0;
     for(int i = 0; i < gameData.dataconList.size(); i++){
-        if(checkID == gameData.dataconList[i].productArt){
+        if(checkID == gameData.dataconList[i]->productArt){
             pickupCount++;
         }
         if(pickupCount > 0){
@@ -864,15 +846,15 @@ int DataHandler::highestAvailableLevel(int checkRequirements){
     int checkWorld = 0;
     qDebug() << Q_FUNC_INFO << "Checking for highest level available without requirement" << checkRequirements;
     for(int i = 0; i < exodusData.loadedLevels.size(); i++){
-        qDebug() << Q_FUNC_INFO << "original episode" << exodusData.loadedLevels[i].world << "has current episode" << exodusData.loadedLevels[i].currentEpisode;
+        qDebug() << Q_FUNC_INFO << "original episode" << exodusData.loadedLevels[i]->world << "has current episode" << exodusData.loadedLevels[i]->currentEpisode;
         /*set up a case statement to handle alternate requirements based on available tricks*/
-        checkWorld = exodusData.loadedLevels[i].currentEpisode;
+        checkWorld = exodusData.loadedLevels[i]->currentEpisode;
         if(availableWorld > checkWorld){
             /*With the level list sorting, this should never happen*/
             continue;
         }
         availableWorld = checkWorld;
-        if(exodusData.loadedLevels[i].requirements & checkRequirements){
+        if(exodusData.loadedLevels[i]->requirements & checkRequirements){
             qDebug() << Q_FUNC_INFO << "Found a level with this requirement. Returning" << availableWorld;
             return availableWorld;
         }
@@ -882,15 +864,15 @@ int DataHandler::highestAvailableLevel(int checkRequirements){
 
 void DataHandler::updateMetagameEpisodes(){
     for(int i = 0; i < exodusData.loadedLevels.size(); i++){
-        int miniconCount = exodusData.loadedLevels[i].assignedMinicons;
-        int dataconCount = exodusData.loadedLevels[i].assignedDatacons;
-        getGameEpisode(exodusData.loadedLevels[i].world)->miniconCount = miniconCount;
-        getGameEpisode(exodusData.loadedLevels[i].world)->dataconCount = dataconCount;
+        int miniconCount = exodusData.loadedLevels[i]->assignedMinicons;
+        int dataconCount = exodusData.loadedLevels[i]->assignedDatacons;
+        getGameEpisode(exodusData.loadedLevels[i]->world)->miniconCount = miniconCount;
+        getGameEpisode(exodusData.loadedLevels[i]->world)->dataconCount = dataconCount;
     }
 
     gameData.metagameFile->removeAll("Episode");
     for(int i = 0; i < gameData.levelList.size(); i++){
-        dictItem itemToAdd = createGameEpisode(&gameData.levelList[i]);
+        dictItem itemToAdd = createGameEpisode(gameData.levelList[i].get());
         gameData.metagameFile->addInstance(itemToAdd);
     }
 }
@@ -903,7 +885,9 @@ void DataHandler::updateMetagameMinicons(){
         gameData.metagameFile->removeAll(miniconTypes[i]);
     }
     for(int i = 0; i < gameData.miniconList.size(); i++){
-        dictItem itemToAdd = createMetagameMinicon(&gameData.miniconList[i]);
+        taMinicon* tempMinicon = gameData.miniconList[i].get();
+        qDebug() << Q_FUNC_INFO << "Adding minicon" << tempMinicon->name;
+        dictItem itemToAdd = createMetagameMinicon(tempMinicon);
         gameData.metagameFile->addInstance(itemToAdd);
     }
 }

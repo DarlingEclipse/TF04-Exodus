@@ -334,10 +334,10 @@ class ExodusData{
  public:
     std::shared_ptr<DatabaseFile> dataFile;
 
-    std::vector<exMinicon> miniconList;
-    std::vector<exCustomLocation> customLocationList;
-    std::vector<exEpisode> loadedLevels;
-    std::vector<exTrick> trickList;
+    std::vector<std::shared_ptr<exMinicon>> miniconList;
+    std::vector<std::shared_ptr<exCustomLocation>> customLocationList;
+    std::vector<std::shared_ptr<exEpisode>> loadedLevels;
+    std::vector<std::shared_ptr<exTrick>> trickList;
 };
 
 class taMinicon;
@@ -352,17 +352,24 @@ class GameData{
 public:
     std::shared_ptr<DatabaseFile> metagameFile;
 
-    std::vector<taPickup> pickupList;
-    std::vector<taPickup> dataconList;
+    std::vector<std::shared_ptr<taPickup>> pickupList;
+    std::vector<std::shared_ptr<taPickup>> dataconList;
     std::vector<dictItem> autobotList;
-    std::vector<taEpisode> levelList;
-    std::vector<taMinicon> miniconList;
+    std::vector<std::shared_ptr<taEpisode>> levelList;
+    std::vector<std::shared_ptr<taMinicon>> miniconList;
+};
+
+struct EpisodeCompare {
+    bool operator()(const std::shared_ptr<exEpisode> episodeOne, const std::shared_ptr<exEpisode> episodeTwo) {
+        return *episodeOne < *episodeTwo;
+    }
 };
 
 class DataHandler{
 public:
     inline const static QList<int> weaponList {4, 5, 6, 7, 8, 9, 10, 11, 12, 14, 15, 18, 19, 20, 21, 22, 23, 24, 25, 27, 30, 36, 41, 46, 51};
     inline const static QList<int> bunkerList {137,140,141,142,143,144,145};
+    inline const static QStringList m_miniconTypes = {"Minicon", "MiniconDamageBonus", "MiniconArmor", "MiniconEmergencyWarpgate", "MiniconRangeBonus", "MiniconRegeneration"};
 
     exWindowBase* m_UI;
     zlManager* m_zlManager;
@@ -374,13 +381,12 @@ public:
     GameData gameData;
 
     template <class instanceType>
-    std::vector<instanceType> convertInstances(const std::vector<dictItem> itemList){
-        std::vector<instanceType> convertedList;
+    void convertInstances(const std::vector<dictItem> itemList, std::vector<std::shared_ptr<instanceType>>* pointerList){
         for(int i = 0; i < itemList.size(); i++){
             instanceType nextInstance = instanceType(itemList[i]);
-            convertedList.push_back(nextInstance);
+            pointerList->push_back(std::make_shared<instanceType>(nextInstance));
         }
-        return convertedList;
+        //return convertedList;
     };
 
     DataHandler(exWindowBase *passUI, zlManager *fileManager);
@@ -391,13 +397,7 @@ public:
 
     dictItem createGamePickupPlaced(const exPickupLocation* location);
     dictItem createGameEpisode(const taEpisode* episode);
-    dictItem createMetagameMinicon(const taMinicon* minicon);
-    dictItem createMetagameMinicon(const taMiniconArmor* minicon);
-    dictItem createMetagameMinicon(const taMiniconDamageBonus* minicon);
-    dictItem createMetagameMinicon(const taMiniconEmergencyWarpgate* minicon);
-    dictItem createMetagameMinicon(const taMiniconRangeBonus* minicon);
-    dictItem createMetagameMinicon(const taMiniconRegeneration* minicon);
-    void SetMiniconAttributes(const taMinicon* minicon, dictItem* itemToEdit);
+    dictItem createMetagameMinicon(taMinicon* minicon);
     void LoadAll();
     void loadMinicons();
     void LoadMiniconType(QString miniconType);
@@ -413,6 +413,7 @@ public:
     void updateMetagameMinicons();
     void updateMetagemaAutobots();
     void updateMetagameEpisodes();
+    void sortEpisodes();
     //void addCustomLocation(int locationID, int level, QVector3D location);
 
     //compare taMinicon MiniconList to exMinicon enumID

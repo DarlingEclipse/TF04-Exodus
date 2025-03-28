@@ -56,7 +56,7 @@ void Randomizer::Load(){
     exMinicon* exodusMinicon = nullptr;
     taMinicon* gameMinicon = nullptr;
     for(int i = 0; i < m_DataHandler->exodusData.miniconList.size(); i++){
-        exodusMinicon = &m_DataHandler->exodusData.miniconList[i];
+        exodusMinicon = m_DataHandler->exodusData.miniconList[i].get();
         gameMinicon = m_DataHandler->getGameMinicon(exodusMinicon->metagameID);
         if(gameMinicon == nullptr){
             continue;
@@ -203,10 +203,10 @@ void Randomizer::Load(){
 
     for(int i = 0; i < m_DataHandler->exodusData.trickList.size(); i++){
         //maybe split this into sections for the different difficulties? trick list is sorted, currently
-        exTrick* currentTrick = &m_DataHandler->exodusData.trickList[i];
+        exTrick* currentTrick = m_DataHandler->exodusData.trickList[i].get();
         QCheckBox *trickCheck = new QCheckBox(QString::number(currentTrick->difficulty) + ": " + currentTrick->name, groupTrickOptions);
         trickCheck->setGeometry(QRect(QPoint(20,20 + (40*i)), QSize(200,30)));
-        QAbstractButton::connect(trickCheck, &QCheckBox::checkStateChanged, m_UI, [i, trickCheck, this] {m_DataHandler->exodusData.trickList[i].enabled = trickCheck->isChecked();});
+        QAbstractButton::connect(trickCheck, &QCheckBox::checkStateChanged, m_UI, [i, trickCheck, this] {m_DataHandler->exodusData.trickList[i]->enabled = trickCheck->isChecked();});
         trickCheck->setToolTip(currentTrick->description);
         trickCheck->show();
     }
@@ -230,12 +230,12 @@ void Randomizer::Load(){
     m_UI->m_currentWidgets.push_back(groupLocations);
 
     for(int i = 0; i < m_DataHandler->exodusData.customLocationList.size(); i++){
-        qDebug() << Q_FUNC_INFO << "location name for" << i << ":" << m_DataHandler->exodusData.customLocationList[i].name;
-        QCheckBox *locationCheck = new QCheckBox(m_DataHandler->exodusData.customLocationList[i].name, groupLocations);
+        qDebug() << Q_FUNC_INFO << "location name for" << i << ":" << m_DataHandler->exodusData.customLocationList[i]->name;
+        QCheckBox *locationCheck = new QCheckBox(m_DataHandler->exodusData.customLocationList[i]->name, groupLocations);
         locationCheck->setGeometry(QRect(QPoint(20,20 + (40*i)), QSize(200,30)));
         QAbstractButton::connect(locationCheck, &QCheckBox::checkStateChanged, m_UI, [i, locationCheck, this]
-                                 {m_DataHandler->exodusData.customLocationList[i].enabled = locationCheck->isChecked();});
-        locationCheck->setToolTip(m_DataHandler->exodusData.customLocationList[i].description);
+                                 {m_DataHandler->exodusData.customLocationList[i]->enabled = locationCheck->isChecked();});
+        locationCheck->setToolTip(m_DataHandler->exodusData.customLocationList[i]->description);
         locationCheck->toggle();
         locationCheck->show();
         //parent->currentModeWidgets.push_back(locationCheck);
@@ -372,17 +372,17 @@ void Randomizer::randomize(){
     }
 
     for(int i = 0; i < m_DataHandler->exodusData.loadedLevels.size(); i++){
-        qDebug() << Q_FUNC_INFO << "levelsort pre-sort level" << i << "world" << m_DataHandler->exodusData.loadedLevels[i].world
-                 << "current episode" << m_DataHandler->exodusData.loadedLevels[i].currentEpisode << "is" << m_DataHandler->exodusData.loadedLevels[i].logName;
+        qDebug() << Q_FUNC_INFO << "levelsort pre-sort level" << i << "world" << m_DataHandler->exodusData.loadedLevels[i]->world
+                 << "current episode" << m_DataHandler->exodusData.loadedLevels[i]->currentEpisode << "is" << m_DataHandler->exodusData.loadedLevels[i]->logName;
     }
-    std::sort(m_DataHandler->exodusData.loadedLevels.begin(), m_DataHandler->exodusData.loadedLevels.end());
+    m_DataHandler->sortEpisodes();
     for(int i = 0; i < m_DataHandler->exodusData.loadedLevels.size(); i++){
-        qDebug() << Q_FUNC_INFO << "levelsort post-sort level" << i << "world" << m_DataHandler->exodusData.loadedLevels[i].world
-                 << "current episode" << m_DataHandler->exodusData.loadedLevels[i].currentEpisode << "is" << m_DataHandler->exodusData.loadedLevels[i].logName;
+        qDebug() << Q_FUNC_INFO << "levelsort post-sort level" << i << "world" << m_DataHandler->exodusData.loadedLevels[i]->world
+                 << "current episode" << m_DataHandler->exodusData.loadedLevels[i]->currentEpisode << "is" << m_DataHandler->exodusData.loadedLevels[i]->logName;
     }
 
     for(int i = 0; i < m_DataHandler->exodusData.loadedLevels.size(); i++){
-        exEpisode* currentEpisode = &m_DataHandler->exodusData.loadedLevels[i];
+        exEpisode* currentEpisode = m_DataHandler->exodusData.loadedLevels[i].get();
         for(int j = 0; j < currentEpisode->spawnLocations.size(); j++){
             availableLocations.push_back(&currentEpisode->spawnLocations[j]);
         }
@@ -464,7 +464,7 @@ void Randomizer::randomizeLevels(){
     taEpisode* gameEpisode = nullptr;
     exEpisode* exodusEpisode = nullptr;
     for(int i = 0; i < m_DataHandler->exodusData.loadedLevels.size(); i++){
-        exodusEpisode = &m_DataHandler->exodusData.loadedLevels[i];
+        exodusEpisode = m_DataHandler->exodusData.loadedLevels[i].get();
         if(exodusEpisode->world == EpisodeCybertron){
             continue;
         }
@@ -473,7 +473,7 @@ void Randomizer::randomizeLevels(){
         exodusEpisode->currentEpisode = changedEpisode;
     }
     for(int i = 0; i < m_DataHandler->exodusData.loadedLevels.size(); i++){
-        exodusEpisode = &m_DataHandler->exodusData.loadedLevels[i];
+        exodusEpisode = m_DataHandler->exodusData.loadedLevels[i].get();
         gameEpisode = m_DataHandler->getGameEpisode(exodusEpisode->world);
         qDebug() << Q_FUNC_INFO << "exepisode" << exodusEpisode->logName << exodusEpisode->world << exodusEpisode->currentEpisode;
         //qDebug() << Q_FUNC_INFO << "taepisode" << gameEpisode->name << gameEpisode->episodeID << gameEpisode->episodeOrder;
@@ -503,7 +503,7 @@ void Randomizer::placeSlipstream(){
     qDebug() << Q_FUNC_INFO << "Placing slipstream. Available locations" << availableLocations.size();
     exTrick* currentTrick; //for debugging
     for(int i = 0; i < m_DataHandler->exodusData.trickList.size(); i++){
-        currentTrick = &m_DataHandler->exodusData.trickList[i];
+        currentTrick = m_DataHandler->exodusData.trickList[i].get();
         qDebug() << Q_FUNC_INFO << "Trick" << currentTrick->name << "is enabled?" << currentTrick->enabled;
     }
     int highestLevel = m_DataHandler->highestAvailableLevel(1);
@@ -532,8 +532,8 @@ void Randomizer::placeSlipstream(){
     if(slipstreamLocations[locationNumber]->requiresExplosive){
         std::vector<int> explosives;
         for(int i = 0; i < m_DataHandler->exodusData.miniconList.size(); i++){
-            if(m_DataHandler->exodusData.miniconList[i].isExplosive){
-                explosives.push_back(m_DataHandler->exodusData.miniconList[i].creatureID);
+            if(m_DataHandler->exodusData.miniconList[i]->isExplosive){
+                explosives.push_back(m_DataHandler->exodusData.miniconList[i]->creatureID);
             }
         }
         int chosenExplosive = placemaster.bounded(explosives.size());
@@ -561,7 +561,7 @@ void Randomizer::placeHighjump(){
     qDebug() << Q_FUNC_INFO << "Placing highjump. Available locations" << availableLocations.size();
     exTrick* currentTrick; //for debugging
     for(int i = 0; i < m_DataHandler->exodusData.trickList.size(); i++){
-        currentTrick = &m_DataHandler->exodusData.trickList[i];
+        currentTrick = m_DataHandler->exodusData.trickList[i].get();
         qDebug() << Q_FUNC_INFO << "Trick" << currentTrick->name << "is enabled?" << currentTrick->enabled;
     }
     int highestLevel = m_DataHandler->highestAvailableLevel(2);
@@ -590,8 +590,8 @@ void Randomizer::placeRangefinder(){
     int searchLevel = 0;
     std::vector<exPickupLocation*> rangefinderLocations;
     for(int i = 0; i < m_DataHandler->exodusData.loadedLevels.size(); i++){
-        if(m_DataHandler->exodusData.loadedLevels[i].world == EpisodeAircraftCarrier){
-            searchLevel = m_DataHandler->exodusData.loadedLevels[i].currentEpisode;
+        if(m_DataHandler->exodusData.loadedLevels[i]->world == EpisodeAircraftCarrier){
+            searchLevel = m_DataHandler->exodusData.loadedLevels[i]->currentEpisode;
         }
     }
     searchLevel = std::max(searchLevel, 1); //if Mid Atlantic is the first level, we still need to be able to place rangefinder
@@ -610,10 +610,10 @@ void Randomizer::placeStarterWeapon(){
     std::vector<exMinicon> starterMinicons;
     qDebug() << Q_FUNC_INFO << "Placing starter weapon. total minicon options:" << m_DataHandler->exodusData.miniconList.size();
     for(int i = 0; i < m_DataHandler->exodusData.miniconList.size(); i++){
-        qDebug() << Q_FUNC_INFO << "checking if minicon" << i << m_DataHandler->exodusData.miniconList[i].name << "is a weapon";
-        if(m_DataHandler->exodusData.miniconList[i].isWeapon && m_DataHandler->exodusData.miniconList[i].hasVanillaPlacement){
+        qDebug() << Q_FUNC_INFO << "checking if minicon" << i << m_DataHandler->exodusData.miniconList[i]->name << "is a weapon";
+        if(m_DataHandler->exodusData.miniconList[i]->isWeapon && m_DataHandler->exodusData.miniconList[i]->hasVanillaPlacement){
             qDebug() << Q_FUNC_INFO << "it is, adding to list";
-            starterMinicons.push_back(m_DataHandler->exodusData.miniconList[i]);
+            starterMinicons.push_back(*m_DataHandler->exodusData.miniconList[i].get());
         }
     }
     qDebug() << Q_FUNC_INFO << "A total of" << starterMinicons.size() << "minicons are available";
@@ -671,9 +671,9 @@ void Randomizer::placeMinicon(int miniconToPlace, int placementID){
     qDebug() << Q_FUNC_INFO << "Placing minicon" << miniconToPlace << "at" << placementID;
     taPickup* chosenMinicon = nullptr;
     for(int i = 0; i < m_DataHandler->gameData.pickupList.size(); i++){
-        if(m_DataHandler->gameData.pickupList[i].pickupToSpawn == miniconToPlace){
+        if(m_DataHandler->gameData.pickupList[i]->pickupToSpawn == miniconToPlace){
             //miniconList[i].placed = true;
-            chosenMinicon = &m_DataHandler->gameData.pickupList[i];
+            chosenMinicon = m_DataHandler->gameData.pickupList[i].get();
         }
     }
     if(chosenMinicon == nullptr){
@@ -728,8 +728,8 @@ void Randomizer::placeDatacon(int dataconToPlace, int placementID){
     qDebug() << Q_FUNC_INFO << "Placing datacon" << dataconToPlace << "at" << placementID;
     taPickup* chosenDatacon = nullptr;
     for(int i = 0; i < m_DataHandler->gameData.dataconList.size(); i++){
-        if(m_DataHandler->gameData.dataconList[i].productArt == dataconToPlace){
-            chosenDatacon = &m_DataHandler->gameData.dataconList[i];
+        if(m_DataHandler->gameData.dataconList[i]->productArt == dataconToPlace){
+            chosenDatacon = m_DataHandler->gameData.dataconList[i].get();
         }
     }
     if(chosenDatacon == nullptr){
@@ -791,10 +791,10 @@ void Randomizer::placeAll(){
     exEpisode* exodusEpisode = nullptr;
     //int availableLevel = 0;
     for(int i = 0; i < m_DataHandler->exodusData.miniconList.size(); i++){
-        if(!m_DataHandler->exodusData.miniconList[i].hasVanillaPlacement){
+        if(!m_DataHandler->exodusData.miniconList[i]->hasVanillaPlacement){
             continue;
         }
-        taPickup* gamePickup = m_DataHandler->getPickup(m_DataHandler->exodusData.miniconList[i].creatureID);
+        taPickup* gamePickup = m_DataHandler->getPickup(m_DataHandler->exodusData.miniconList[i]->creatureID);
         if(!gamePickup->placed){
             qDebug() << Q_FUNC_INFO << "Placing minicon.";
             locationNumber = placemaster.bounded(availableLocations.size());
@@ -806,9 +806,9 @@ void Randomizer::placeAll(){
                 exodusEpisode = m_DataHandler->getExodusEpisode(availableLocations[locationNumber]->world);
                 //availableLevel = static_cast<int>(availableLocations[locationNumber].level);
             }
-            placeMinicon(m_DataHandler->exodusData.miniconList[i].creatureID, availableLocations[locationNumber]->uniqueID);
+            placeMinicon(m_DataHandler->exodusData.miniconList[i]->creatureID, availableLocations[locationNumber]->uniqueID);
         } else {
-            qDebug() << Q_FUNC_INFO << "Skipping placement for" << m_DataHandler->exodusData.miniconList[i].name;
+            qDebug() << Q_FUNC_INFO << "Skipping placement for" << m_DataHandler->exodusData.miniconList[i]->name;
         }
     }
 
@@ -826,7 +826,7 @@ void Randomizer::placeAll(){
 
     qDebug() << Q_FUNC_INFO << "Placing datacons.";
     for(int i = 0; i < m_DataHandler->gameData.dataconList.size(); i++){
-        if(!m_DataHandler->gameData.dataconList[i].placed){
+        if(!m_DataHandler->gameData.dataconList[i]->placed){
             qDebug() << Q_FUNC_INFO << "Placing datacon.";
             qDebug() << Q_FUNC_INFO << "current placed pickups" << placedLocations.size();
             qDebug() << Q_FUNC_INFO << "reaches point 0. available locations:" << availableLocations.size();
@@ -841,7 +841,7 @@ void Randomizer::placeAll(){
                 //availableLevel = static_cast<int>(availableLocations[locationNumber].level);
             }
             qDebug() << Q_FUNC_INFO << "reaches point 3";
-            placeDatacon(&m_DataHandler->gameData.dataconList[i], availableLocations[locationNumber]);
+            placeDatacon(m_DataHandler->gameData.dataconList[i].get(), availableLocations[locationNumber]);
         } else {
             qDebug() << Q_FUNC_INFO << "Skipping placement.";
         }
@@ -959,7 +959,7 @@ int Randomizer::writeSpoilers(){
         //write all others, in order of level
         //qDebug() << Q_FUNC_INFO << "Writing all locations. Total placements:" << placedLocations.size();
         for(int i = 0; i < m_DataHandler->exodusData.loadedLevels.size(); i++){
-            exEpisode* currentEpisode = &m_DataHandler->exodusData.loadedLevels[i];
+            exEpisode* currentEpisode = m_DataHandler->exodusData.loadedLevels[i].get();
             fileStream << Qt::endl;
             fileStream << Qt::endl;
             fileStream << "Level " << QString::number(currentEpisode->currentEpisode+1) << ": " << currentEpisode->logName << Qt::endl;
@@ -994,9 +994,9 @@ int Randomizer::editDatabases(){
     QString levelPath;
     QString slipstreamOutPath;
     for(int i = 0; i<m_DataHandler->exodusData.loadedLevels.size(); i++){
-        exEpisode* currentLevel = &m_DataHandler->exodusData.loadedLevels[i];
-        qDebug() << Q_FUNC_INFO << "removing all pickups from" << m_DataHandler->exodusData.loadedLevels[i].levelFile->fileName;
-        m_DataHandler->exodusData.loadedLevels[i].levelFile->removeAll("PickupPlaced");
+        exEpisode* currentLevel = m_DataHandler->exodusData.loadedLevels[i].get();
+        qDebug() << Q_FUNC_INFO << "removing all pickups from" << m_DataHandler->exodusData.loadedLevels[i]->levelFile->fileName;
+        m_DataHandler->exodusData.loadedLevels[i]->levelFile->removeAll("PickupPlaced");
         for(int j = 0; j < currentLevel->spawnLocations.size(); j++){
             qDebug() << Q_FUNC_INFO << "Current location" << currentLevel->spawnLocations[j].locationName << "has placement?" << (currentLevel->spawnLocations[j].pickup != nullptr);
             if(currentLevel->spawnLocations[j].pickup == nullptr){
@@ -1073,7 +1073,7 @@ void Randomizer::fixBunkerLinks(){
      repeated levels further down the road, this process would need to be done for each instance of Pacific Island*/
     exEpisode* pacificLevel;
     for(int i = 0; i < m_DataHandler->exodusData.loadedLevels.size(); i++){
-        pacificLevel = &m_DataHandler->exodusData.loadedLevels[i];
+        pacificLevel = m_DataHandler->exodusData.loadedLevels[i].get();
         qDebug() << Q_FUNC_INFO << "Checking level" << pacificLevel->logName;
         if(pacificLevel->world != EpisodeEasterIsland){
             continue;
@@ -1129,18 +1129,18 @@ void Randomizer::randomizeTeamColors(){
     std::vector<int> teamList;
     if(randSettings.balancedTeams){
         for(int i = 0; i <m_DataHandler->exodusData.miniconList.size(); i++){
-            if(!m_DataHandler->exodusData.miniconList[i].hasVanillaPlacement){
+            if(!m_DataHandler->exodusData.miniconList[i]->hasVanillaPlacement){
                 continue;
             }
-            taMinicon* gameMinicon = m_DataHandler->getGameMinicon(m_DataHandler->exodusData.miniconList[i].metagameID);
+            taMinicon* gameMinicon = m_DataHandler->getGameMinicon(m_DataHandler->exodusData.miniconList[i]->metagameID);
             teamList.push_back(static_cast<int>(gameMinicon->team));
         }
     }
     for(int i = 0; i <m_DataHandler->exodusData.miniconList.size(); i++){
-        if(!m_DataHandler->exodusData.miniconList[i].hasVanillaPlacement){
+        if(!m_DataHandler->exodusData.miniconList[i]->hasVanillaPlacement){
             continue;
         }
-        taMinicon* gameMinicon = m_DataHandler->getGameMinicon(m_DataHandler->exodusData.miniconList[i].metagameID);
+        taMinicon* gameMinicon = m_DataHandler->getGameMinicon(m_DataHandler->exodusData.miniconList[i]->metagameID);
         teamIndex = static_cast<int>(gameMinicon->team);
         if(randSettings.balancedTeams){
             /*Randomize the teams in a balanced way - there will be as many of each team in the final result as the base game*/
@@ -1163,9 +1163,9 @@ void Randomizer::randomizePowers(){
     uint shuffleValue = 0;
     for(int i = 0; i <m_DataHandler->exodusData.miniconList.size(); i++){
         shuffleValue = placemaster.generate();
-        taMinicon* gameMinicon = m_DataHandler->getGameMinicon(m_DataHandler->exodusData.miniconList[i].metagameID);
+        taMinicon* gameMinicon = m_DataHandler->getGameMinicon(m_DataHandler->exodusData.miniconList[i]->metagameID);
         if(gameMinicon == nullptr){
-            m_Debug->Log("Could not randomize stats for Minicon: " + m_DataHandler->exodusData.miniconList[i].name);
+            m_Debug->Log("Could not randomize stats for Minicon: " + m_DataHandler->exodusData.miniconList[i]->name);
             continue;
         }
         powerLevel = powerLevel = gameMinicon->powerCost;
