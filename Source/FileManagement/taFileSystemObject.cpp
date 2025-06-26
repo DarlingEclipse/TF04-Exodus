@@ -1,5 +1,6 @@
 
 #include "Headers/FileManagement/taFileSystemObject.h"
+#include "Headers/Main/exDebugger.h"
 
 /*only including this while the visitor system exists*/
 #include "Headers/FileManagement/Zebrafish.h"
@@ -26,6 +27,7 @@ taFile::taFile(){
     fileName = "";
     fileExtension = "";
     this->fileData = nullptr;
+    m_Debug = &exDebugger::GetInstance();
 }
 
 void taFile::acceptVisitor(zlManager& visitor){
