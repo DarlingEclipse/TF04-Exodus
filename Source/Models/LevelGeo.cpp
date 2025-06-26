@@ -4,6 +4,7 @@
 #include "Headers/Models/vbin.h" //only included for the version number in the export, this could be improved
 #include "Headers/Models/Mesh.h"
 #include "Headers/Main/exDebugger.h"
+#include "Headers/UI/exWindow.h"
 
 void MeshVBIN::save(QString toType){
     if(toType == "STL"){
@@ -324,7 +325,8 @@ int MeshVBIN::readData(){
         totalVerts += geoSets[geoSetCount].geoSetVerticies.size();
         geoSetCount++;
 
-        //qDebug() << Q_FUNC_INFO << "starting next geo set at" << parent->fileData.currentPosition;
+        //qDebug() << Q_FUNC_INFO << "starting next geo set at" << fileData->currentPosition;
+        m_UI->UpdateLoadingBar(fileData->currentPosition, fileData->dataBytes.size());
         fileData->signature(&signature);
     }
     m_Debug->Log("total geo sets: " + QString::number(geoSets.size()) + " | " + QString(Q_FUNC_INFO));
