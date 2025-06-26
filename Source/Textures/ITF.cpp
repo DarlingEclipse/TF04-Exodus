@@ -168,7 +168,7 @@ void ITF::updatePreview(){
 
 void ITF::changeColorTable(bool input){
     QList<QRgb> tempColorTable = mipMaps[0].colorTable();
-    if(bytesPerPixel() == 8 and input){
+    if(m_format == ITFProperties_8bpp && input){
         int k = 0;
         for(int i = 0; i < 8; i++){
             for(int j = 0; j < 8; j++){
@@ -188,7 +188,7 @@ void ITF::changeColorTable(bool input){
                 k++;
             }
         }
-    } else if (bytesPerPixel() == 8){
+    } else if (m_format == ITFProperties_8bpp){
         int k = 0;
         for(int i = 0; i < 8; i++){
             for(int j = 0; j < 8; j++){
@@ -362,7 +362,7 @@ void ITF::convertColorToIndex(bool cancelled){
         mipMaps[0] = mipMaps[0].convertToFormat(QImage::Format_Indexed8);
         hasPalette = true;
         paletteCount = 1;
-        propertyByte |= 11;
+        m_format = ITFProperties_8bpp;
     }
     updateCenter();
 }
@@ -485,28 +485,28 @@ int ITF::importPalette(){
 }
 
 int ITF::bytesPerPixel(){
-    int checkProperties = 0;
+    //int checkProperties = 0;
     /*if(swizzled){
         checkProperties = propertyByte - 128;
     } else {
         checkProperties = propertyByte;
     }*/
-    checkProperties = propertyByte ^ 0x10000000;
+    //checkProperties = m_format ^ 0x10000000;
     //qDebug() << Q_FUNC_INFO << "values:" << propertyByte << checkProperties << (checkProperties & 12) << (checkProperties & 11) << (checkProperties & 10) << (checkProperties & 7) << (checkProperties & 2);
 
-    if ((checkProperties & 12) == 12){
+    if (m_format == ITFProperties_24bpp){
         qDebug() << Q_FUNC_INFO << "24 bpp";
         return 24;
-    } else if ((checkProperties & 11) == 11){
+    } else if (m_format == ITFProperties_8bpp){
         qDebug() << Q_FUNC_INFO << "8 bpp";
         return 8;
-    } else if ((checkProperties & 10) == 10){
+    } else if (m_format == ITFProperties_4bpp){
         qDebug() << Q_FUNC_INFO << "4 bpp";
         return 4;
-    } else if ((checkProperties & 7) == 7){
+    } else if (m_format == ITFProperties_16bpp){
         qDebug() << Q_FUNC_INFO << "16 bpp";
         return 16;
-    } else if((checkProperties & 2) == 2){
+    } else if(m_format == ITFProperties_32bpp){
         qDebug() << Q_FUNC_INFO << "32 bpp";
         return 32;
     }
@@ -551,27 +551,28 @@ void ITF::createMipMaps(int mipmapLevels){
 }
 
 void ITF::readPalette(){
-    int colorsPerPalette = 0;
+    int colorsPerPalette = std::pow(2, bytesPerPixel());
     QList<QRgb> forceTable;
-    if (bytesPerPixel() < 16){
+    /*hasPalette should've been set before this was called
+     * if (m_format == ITFProperties_4bpp || m_format == ITFProperties_8bpp){
         hasPalette = true;
         colorsPerPalette = std::pow(2, bytesPerPixel());
     } else {
         hasPalette = false;
-    }
+    }*/
 
-    //qDebug() << Q_FUNC_INFO << "Color count: " << colorsPerPalette << "palette count:" << paletteCount;
-    //qDebug() << Q_FUNC_INFO << "color count before:" << mipMaps[0].colorCount() << ". should be set to" << colorsPerPalette*paletteCount;
+    qDebug() << Q_FUNC_INFO << "Color count: " << colorsPerPalette << "palette count:" << paletteCount;
+    qDebug() << Q_FUNC_INFO << "color count before:" << mipMaps[0].colorCount() << ". should be set to" << colorsPerPalette*paletteCount;
     mipMaps[0].setColorCount(colorsPerPalette*paletteCount);
     for(int i = 0; i < mipMaps[0].colorCount(); i++){
         int red = fileData->readUInt(1);
         int green = fileData->readUInt(1);
         int blue = fileData->readUInt(1);
         int alpha = fileData->readUInt(1);
-        if(alphaType == 1){
+        if(alphaType == Alpha_Opaque){
             //opaque texture, no alpha
             alpha = 255;
-        } else if (alphaType == 2){
+        } else if (alphaType == Alpha_Punchthrough){
             //punchthrough texture, either full alpha or no alpha
             if (alpha < 128){
                 alpha = 0;
@@ -595,7 +596,7 @@ void ITF::readIndexedData(){
     long location = fileData->currentPosition;
     std::tuple <int8_t, int8_t> nibTup;
     for(int m = 0; m < mipmapCount; m++){
-        if (bytesPerPixel() == 8){
+        if (m_format == ITFProperties_8bpp){
             //8bpp, 256 palette case. nice and easy since each pixel uses 1 byte to refer to the palette
             for (int i = 0; i < mipMaps[m].width() * mipMaps[m].height(); i++){
                 //qDebug() << Q_FUNC_INFO << "current pixel " << i << "x" << i%width << "y" << i/width;
@@ -628,8 +629,8 @@ void ITF::readImageData(){
     for(int m = 0; m < mipmapCount; m++){
         currentHeight = mipMaps[0].height()/pow(2,m);
         currentWidth = mipMaps[0].width()/pow(2,m);
-        switch(bytesPerPixel()){
-        case 16:
+        switch(m_format){
+        case ITFProperties_16bpp:
         qDebug() << Q_FUNC_INFO << "16bpp";
         //16bpp, each pixel has its r,g,b, and a values stored as 4 integers packed into 2 bytes
         //contentLength = dataLength / 2;
@@ -655,7 +656,7 @@ void ITF::readImageData(){
         }
         break;
 
-        case 24:
+        case ITFProperties_24bpp:
         qDebug() << Q_FUNC_INFO << "24bpp";
         //24bpp, each pixel has its r,g, and b values stored as single-byte integers
         //contentLength = dataLength / 3;
@@ -670,7 +671,7 @@ void ITF::readImageData(){
         }
         break;
 
-        case 32:
+        case ITFProperties_32bpp:
         qDebug() << Q_FUNC_INFO << "32bpp";
         //32bpp, each pixel has its r,g,b, and a values stored as single-byte integers
         //contentLength = dataLength / 4;
@@ -706,10 +707,10 @@ void ITF::readImageData(){
 void ITF::adaptProperties(){
     versionNum = 3; //most recent known version - we can experiment to see if the game recognizes a version 4 later
     headerLength = 32;
-    propertyByte = 0; //this will be the hard part
+    m_format = 0; //this will be the hard part
     alphaType = 0; //blended alpha by default
-    int width = mipMaps[0].width();
-    int height = mipMaps[0].height();
+    m_width = mipMaps[0].width();
+    m_height = mipMaps[0].height();
     mipmapCount = 1; //base image
     unknown4Byte3 = 0; //this value is 0 in all recorded files. Might be reseved values for later file versions?
     unknown4Byte4 = 0;
@@ -719,10 +720,10 @@ void ITF::adaptProperties(){
 
     if(mipMaps[0].format() == QImage::Format_Indexed8){
         if(mipMaps[0].colorCount() < 15){
-            propertyByte = 10; //4bpp
+            m_format = ITFProperties_4bpp;
             m_Debug->Log("Image bit depth: 4bpp");
         } else {
-            propertyByte = 11; //8bpp
+            m_format = ITFProperties_8bpp;
             m_Debug->Log("Image bit depth: 8bpp");
         }
         paletteCount = 1; //additional palettes can be imported
@@ -730,7 +731,7 @@ void ITF::adaptProperties(){
 
     } else if (mipMaps[0].format() == QImage::Format_ARGB32 || mipMaps[0].format() == QImage::Format_RGB32){
         //there are probably other formats that need to be included here.
-        propertyByte = 2; //32bpp
+        m_format = ITFProperties_32bpp;
         m_Debug->Log("Image bit depth: 32bpp");
         hasPalette = false;
         //need to find a way later to compress these down
@@ -752,11 +753,9 @@ void ITF::adaptProperties(){
 
 int ITF::readDataITF(){
 
-    QByteArray txtrString = "TXTR";
-    QByteArrayMatcher matcher(txtrString);
+    //QByteArray txtrString = "TXTR";
+    //QByteArrayMatcher matcher(txtrString);
     QTableWidgetItem currentItem;
-    long startLocation = 0;
-    long contentLength = 0;
     currentPalette = 0;
     fileLength = fileData->readInt(4, 4);
     qDebug() << Q_FUNC_INFO << "reading file" << fileName;
@@ -766,13 +765,17 @@ int ITF::readDataITF(){
     versionNum = fileData->readUInt(1);
     headerLength = fileData->readUInt();
     fileData->currentPosition += 3; //skip the "PS2" label
-    propertyByte = fileData->readUInt(1);
+    uint8_t propertyByte = fileData->readUInt(1);
+    m_format = propertyByte ^ ITFProperties_Swizzled;
+    swizzled = propertyByte & ITFProperties_Swizzled;
+    qDebug() << Q_FUNC_INFO << "format value:" << m_format << "swizzled?" << swizzled;
+    //m_format = fileData->readUInt(1);
     alphaType = fileData->readUInt();
     qDebug() << Q_FUNC_INFO << "Alpha type:" << alphaTypes[alphaType];
-    int width = fileData->readUInt();
-    int height = fileData->readUInt();
-    qDebug() << Q_FUNC_INFO << "image height:" << height << "width:" << width;
-    mipmapCount = std::max(1, fileData->readUInt()); //some textures say 0 mipmaps. while this is accurate, the design of this program requires at least 1.
+    m_width = fileData->readUInt();
+    m_height = fileData->readUInt();
+    qDebug() << Q_FUNC_INFO << "image height:" << m_height << "width:" << m_width;
+    mipmapCount = std::max(1, fileData->readUInt());
     qDebug() << Q_FUNC_INFO << "mipmap count:" << mipmapCount;
     paletteCount = std::max(1, fileData->readUInt()); //some textures say 0 palettes, this catches those. possibly older ITF file version?
     qDebug() << Q_FUNC_INFO << "palette count:" << paletteCount << " found at " << fileData->currentPosition;
@@ -780,19 +783,20 @@ int ITF::readDataITF(){
     unknown4Byte4 = fileData->readUInt();
     /*End header data.*/
 
+
     if(paletteCount > 16){
         //this catch is for the Sarge textures, which claim to have 23 palettes (they don't).
         paletteCount = 1;
     }
 
-    if(bytesPerPixel() < 16){
+    if(m_format == ITFProperties_4bpp || m_format == ITFProperties_8bpp){
         hasPalette = true;
     } else {
         hasPalette = false;
         paletteCount = 0;
     }
 
-    if(mipmapCount > 1){
+    if(mipmapCount > 0){
         hasMipmaps = true;
     } else {
         hasMipmaps = false;
@@ -800,40 +804,39 @@ int ITF::readDataITF(){
     mipMaps.resize(mipmapCount);
 
     //paletteList.resize(paletteCount);
-    swizzled = propertyByte & 128;
+    //swizzled = m_format & ITFProperties_Swizzled;
     qDebug() << Q_FUNC_INFO << "Swizzled texture?" << swizzled;
-    int checkProperties = 0;
-    if(swizzled){
-        checkProperties = propertyByte - 128;
+    //int checkProperties = 0;
+    /*if(swizzled){
+        checkProperties = m_format - 128;
     } else {
-        checkProperties = propertyByte;
-    }
+        checkProperties = m_format;
+    }*/
 
-    if ((checkProperties & 12) == 12 || (checkProperties & 7) == 7){
+    if (m_format == ITFProperties_24bpp || m_format == ITFProperties_16bpp){
         qDebug() << Q_FUNC_INFO << "16 or 24 bpp. Setting format to Format_RGBA8888";
         for(int i = 0; i < mipmapCount; i++){
-            mipMaps[i] = QImage(width/pow(2,i), height/pow(2,i), QImage::Format_RGBA8888);
+            mipMaps[i] = QImage(m_width/pow(2,i), m_height/pow(2,i), QImage::Format_RGBA8888);
         }
-        //imageData = QImage(width, height, QImage::Format_RGBA8888);
-    } else if ((checkProperties & 11) == 11 || (checkProperties & 10) == 10){
+    } else if (m_format == ITFProperties_8bpp || m_format == ITFProperties_4bpp){
         qDebug() << Q_FUNC_INFO << "4 or 8 bpp. Setting format to Format_Indexed8";
         for(int i = 0; i < mipmapCount; i++){
-            mipMaps[i] = QImage(width/pow(2,i), height/pow(2,i), QImage::Format_Indexed8);
+            mipMaps[i] = QImage(m_width/pow(2,i), m_height/pow(2,i), QImage::Format_Indexed8);
         }
-        //imageData = QImage(width, height, QImage::Format_Indexed8);
-    } else if((checkProperties & 2) == 2){
+    } else if(m_format == ITFProperties_32bpp){
         qDebug() << Q_FUNC_INFO << "32 bpp. Setting format to Format_ARGB32";
         for(int i = 0; i < mipmapCount; i++){
-            mipMaps[i] = QImage(width/pow(2,i), height/pow(2,i), QImage::Format_ARGB32);
+            mipMaps[i] = QImage(m_width/pow(2,i), m_height/pow(2,i), QImage::Format_ARGB32);
         }
-        //imageData = QImage(width, height, QImage::Format_ARGB32);
     }
+    qDebug() << Q_FUNC_INFO << "Possition after header data:" << fileData->currentPosition;
 
-    fileData->currentPosition = matcher.indexIn(fileData->dataBytes, 0)+4;
-    startLocation = fileData->currentPosition; //this will be used later to remove the palette from the content
-    int readDataLength = fileData->readInt();
-    contentLength = readDataLength + 4;
-    qDebug() << Q_FUNC_INFO << "content length: " << contentLength;
+    //Why were we searching for TXTR instead of just reading through the file? what?
+    //fileData->currentPosition = matcher.indexIn(fileData->dataBytes, 0)+4; //skip "TXTR"
+    fileData->currentPosition += 4; //skip "TXTR"
+
+
+    m_dataLength = fileData->readInt();
     //qDebug() << Q_FUNC_INFO << "bpp" << bytesPerPixel() << "has palette" << hasPalette;
 
     if(hasPalette){
@@ -962,6 +965,7 @@ void ITF::writeITF(){
     }
 
     changeColorTable(false);
+    uint8_t propertyByte = m_format + (swizzled<<7);
 
     if (itfOut.open(QIODevice::ReadWrite)){
         QDataStream fileStream(&itfOut);
@@ -1011,8 +1015,8 @@ void ITF::writeIndexedData(QFile& fileOut, QImage *writeData){
     QImage reverseImage = QImage(*writeData);
     std::tuple <int8_t, int8_t> nibTup;
 
-    switch(bytesPerPixel()){
-        case 8:
+    switch(m_format){
+        case ITFProperties_8bpp:
         m_Debug->Log("Exporting to ITF with bit depth: 8bpp");
         for(int i = 0; i < reverseImage.height(); i++){
             for(int j = 0; j < reverseImage.width(); j++){
@@ -1021,7 +1025,7 @@ void ITF::writeIndexedData(QFile& fileOut, QImage *writeData){
         }
         break;
 
-        case 4:
+        case ITFProperties_4bpp:
         m_Debug->Log("Exporting to ITF with bit depth: 4bpp");
         for(int i = 0; i < reverseImage.height()*reverseImage.width(); i+=2){
             std::get<0>(nibTup) = reverseImage.pixelIndex(i % reverseImage.width(), i / reverseImage.width());
@@ -1037,29 +1041,28 @@ void ITF::writeIndexedData(QFile& fileOut, QImage *writeData){
 
 void ITF::writeImageData(QFile& fileOut, QImage *writeData){
     QImage reverseImage = QImage(*writeData);
-    int bpp = bytesPerPixel();
     int alpha = 0;
     int combinedIntensities = 0;
     qDebug() << Q_FUNC_INFO << "width:" << reverseImage.width() << "height" << reverseImage.height() << "Total pixels:" << reverseImage.width() * reverseImage.height();
-    m_Debug->Log("Exporting to ITF with bit depth: " + QString::number(bpp) + "bpp");
+    m_Debug->Log("Exporting to ITF with bit depth: " + QString::number(bytesPerPixel()) + "bpp");
     for(int i = 0; i < reverseImage.height(); i++){
         for(int j = 0; j < reverseImage.width(); j++){
             QColor currentPixel = QColor(reverseImage.pixel(j,i));
-            switch(bpp){
-                case 16:
+            switch(m_format){
+                case ITFProperties_16bpp:
                 //QColor currentPixel = qRgba(((combinedIntensity >> 0) & 31)*8, ((combinedIntensity >> 5) & 31)*8, ((combinedIntensity >> 10) & 31)*8, alpha);
                 alpha = std::min(currentPixel.alpha(), 1);
                 combinedIntensities = (currentPixel.red()/8) + ((currentPixel.green()/8) << 5) + ((currentPixel.blue()/8) << 10) + (alpha<<15);
                 BinChanger::shortWrite(fileOut, combinedIntensities);
                 break;
 
-                case 24:
+                case ITFProperties_24bpp:
                 BinChanger::byteWrite(fileOut, currentPixel.blue());
                 BinChanger::byteWrite(fileOut, currentPixel.green());
                 BinChanger::byteWrite(fileOut, currentPixel.red());
                 break;
 
-                case 32:
+                case ITFProperties_32bpp:
                 BinChanger::byteWrite(fileOut, currentPixel.blue());
                 BinChanger::byteWrite(fileOut, currentPixel.green());
                 BinChanger::byteWrite(fileOut, currentPixel.red());
@@ -1074,8 +1077,6 @@ void ITF::writeImageData(QFile& fileOut, QImage *writeData){
 }
 
 void ITF::unswizzle(){
-
-    //https://gist.github.com/Fireboyd78/1546f5c86ebce52ce05e7837c697dc72
     QImage unswizzledImage;
     int InterlaceMatrix[] = {
         0x00, 0x10, 0x02, 0x12,
@@ -1085,10 +1086,13 @@ void ITF::unswizzle(){
     int Matrix[]        = { 0, 1, -1, 0 };
     int TileMatrix[]    = { 4, -4 };
 
+    for(int m = 0; m < mipMaps.size(); m++){
 
-    //to-do: this code seems to work, but the variables should be renamed to actually be useful.
 
-    for(int m = 0; m < mipmapCount; m++){
+        //https://gist.github.com/Fireboyd78/1546f5c86ebce52ce05e7837c697dc72
+
+        //to-do: this code seems to work, but the variables should be renamed to actually be useful.
+
         unswizzledImage = QImage(mipMaps[m]);
         for (int y = 0; y < mipMaps[m].height(); y++)
         {
@@ -1137,6 +1141,7 @@ void ITF::swizzle(){
     QImage swizzledImage;
     //https://gist.github.com/Fireboyd78/1546f5c86ebce52ce05e7837c697dc72
 
+    //to-do: this code seems to work, but the variables should be renamed to actually be useful.
     //qDebug() << Q_FUNC_INFO << "unswizzled image size" << pixelList.size();
     int InterlaceMatrix[] = {
         0x00, 0x10, 0x02, 0x12,
@@ -1146,9 +1151,8 @@ void ITF::swizzle(){
     int Matrix[]        = { 0, 1, -1, 0 };
     int TileMatrix[]    = { 4, -4 };
 
+    for(int m = 0; m < mipMaps.size(); m++){
 
-    //to-do: this code seems to work, but the variables should be renamed to actually be useful.
-    for(int m = 0; m < mipmapCount; m++){
         swizzledImage = QImage(mipMaps[m]);
         for (int y = 0; y < mipMaps[m].height(); y++)
         {

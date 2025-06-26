@@ -25,6 +25,23 @@ public:
     const void operator=(Color input);
 };
 
+enum ITFProperties
+{
+    //Not sure if the binary signifies anything, it doesn't seem to
+    ITFProperties_32bpp = 2 //0010
+    , ITFProperties_16bpp = 7 //0111
+    , ITFProperties_4bpp = 10 //1010
+    , ITFProperties_8bpp = 11 //1011
+    , ITFProperties_24bpp = 12 //1100
+    , ITFProperties_Swizzled = 128
+};
+
+enum Alpha{
+    Alpha_Gradient
+    ,Alpha_Opaque
+    ,Alpha_Punchthrough
+};
+
 class ITF : public taFile {
 public:
     const QStringList validOutputs(){
@@ -48,21 +65,25 @@ public:
     */
 
 
-    int fileLength;
-    int versionNum;
-    int headerLength;
-    int propertyByte;
-    int alphaType; //related to alpha transparency - possibly determines punch-through bit vs actual alpha? http://sv-journal.org/2014-1/06/en/index.php?lang=en
+    uint32_t fileLength;
+    uint8_t versionNum;
+    uint32_t headerLength;
+    uint8_t m_format;
+    uint32_t alphaType; //related to alpha transparency - possibly determines punch-through bit vs actual alpha? http://sv-journal.org/2014-1/06/en/index.php?lang=en
     //type 0: MOTION_BLADE. Normal blended alpha
     //type 1: most textures, but also SENTRYDRONE2. Opaque. Not sure why these textures still have an alpha value, worth looking into.
     //type 2: MAGA_WHEEL, DECEPTICON_DROPSHIP, UNICRON_SPINNERS. Punchthrough alpha.
 
-    //also known as mipmaps, for those who know what they're talking about (not us, apparently) https://docs.unity3d.com/Manual/texture-mipmaps-introduction.html
-    int mipmapCount; //texture LODs https://discord.com/channels/393973249685323777/769368848779706410/1129052999390593115
+    uint32_t m_width;
+    uint32_t m_height;
 
-    int paletteCount;
-    int unknown4Byte3;
-    int unknown4Byte4;
+    //https://docs.unity3d.com/Manual/texture-mipmaps-introduction.html
+    uint32_t mipmapCount; //texture LODs https://discord.com/channels/393973249685323777/769368848779706410/1129052999390593115
+
+    uint32_t paletteCount;
+    uint32_t unknown4Byte3;
+    uint32_t unknown4Byte4;
+    uint32_t m_dataLength;
     bool swizzled;
     bool hasPalette;
     bool hasMipmaps;
