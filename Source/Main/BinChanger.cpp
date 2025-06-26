@@ -5,6 +5,228 @@
 #include "Headers/Main/BinChanger.h"
 #include "Headers/Main/exDebugger.h"
 
+void FileData::process(uint8_t &data){
+    if(input){
+        data = BinChanger::reverse_input(BinChanger::hex_to_bin(dataBytes.mid(currentPosition, sizeof(data))), 8).toUInt(nullptr, 16);
+        currentPosition += sizeof(data);
+    } else {
+        qDebug() << Q_FUNC_INFO << "Running in output mode. At time of writing, this has not been tested.";
+        qDebug() << Q_FUNC_INFO << "Verify that twosCompConv works both ways. Current int value:" << data;
+    }
+}
+
+void FileData::process(uint16_t &data){
+    if(input){
+        data = BinChanger::reverse_input(BinChanger::hex_to_bin(dataBytes.mid(currentPosition, sizeof(data))), 8).toUInt(nullptr, 16);
+        currentPosition += sizeof(data);
+    } else {
+        qDebug() << Q_FUNC_INFO << "Running in output mode. At time of writing, this has not been tested.";
+        qDebug() << Q_FUNC_INFO << "Verify that twosCompConv works both ways. Current int value:" << data;
+    }
+}
+
+void FileData::process(uint32_t &data){
+    if(input){
+        data = BinChanger::reverse_input(BinChanger::hex_to_bin(dataBytes.mid(currentPosition, sizeof(data))), 8).toUInt(nullptr, 16);
+        currentPosition += sizeof(data);
+    } else {
+        qDebug() << Q_FUNC_INFO << "Running in output mode. At time of writing, this has not been tested.";
+        dataBytes.append(QByteArray().setNum(data));
+    }
+}
+
+void FileData::process(int8_t &data){
+    if(input){
+        QString readBin = BinChanger::reverse_input(BinChanger::hex_to_bin(dataBytes.mid(currentPosition, sizeof(data))), 8);
+        data = BinChanger::twosCompConv(readBin, 8);
+        //qDebug() << Q_FUNC_INFO << "hex read:" << dataBytes.mid(currentPosition + location, 2).toHex() << "read as" << readBin << "then" << twoscompread;
+        currentPosition += sizeof(data);
+    } else {
+        qDebug() << Q_FUNC_INFO << "Running in output mode. At time of writing, this has not been tested.";
+        qDebug() << Q_FUNC_INFO << "Verify that twosCompConv works both ways. Current int value:" << data;
+    }
+}
+
+void FileData::process(int16_t &data){
+    if(input){
+        QString readBin = BinChanger::reverse_input(BinChanger::hex_to_bin(dataBytes.mid(currentPosition, sizeof(data))), 8);
+        data = BinChanger::twosCompConv(readBin, 8);
+        //qDebug() << Q_FUNC_INFO << "hex read:" << dataBytes.mid(currentPosition + location, 2).toHex() << "read as" << readBin << "then" << twoscompread;
+        currentPosition += sizeof(data);
+    } else {
+        qDebug() << Q_FUNC_INFO << "Running in output mode. At time of writing, this has not been tested.";
+        qDebug() << Q_FUNC_INFO << "Verify that twosCompConv works both ways. Current int value:" << data;
+    }
+}
+
+void FileData::process(int32_t &data){
+    if(input){
+        QString readBin = BinChanger::reverse_input(BinChanger::hex_to_bin(dataBytes.mid(currentPosition, sizeof(data))), 8);
+        data = BinChanger::twosCompConv(readBin, 8);
+        currentPosition += sizeof(data);
+    } else {
+        qDebug() << Q_FUNC_INFO << "Running in output mode. At time of writing, this has not been tested.";
+        dataBytes.append(QByteArray().setNum(data));
+    }
+}
+
+void FileData::process(long &data){
+    if(input){
+        data = BinChanger::reverse_input(dataBytes.mid(currentPosition, sizeof(data)).toHex(),2).toLong(nullptr, 16);
+        currentPosition += sizeof(data);
+    } else {
+        qDebug() << Q_FUNC_INFO << "Running in output mode. At time of writing, this has not been tested.";
+        dataBytes.append(QByteArray().setNum(data));
+    }
+}
+
+void FileData::process(bool &data){
+    if(input){
+        data = dataBytes.mid(currentPosition, sizeof(data)).toHex().toInt(nullptr, 16);
+        currentPosition += sizeof(data);
+    } else {
+        qDebug() << Q_FUNC_INFO << "Running in output mode. At time of writing, this has not been tested.";
+        dataBytes.append(QByteArray().setNum(data));
+    }
+}
+
+void FileData::process(float &data, bool isMini){
+    if(input){
+        if(isMini){
+            QString readBin = BinChanger::reverse_input(BinChanger::hex_to_bin(dataBytes.mid(currentPosition, 2)), 8);
+            int twoscompread = BinChanger::twosCompConv(readBin, 8);
+            data = float(twoscompread) / 30000;
+            //qDebug() << Q_FUNC_INFO << "int read:" << float(twoscompread) << "then becomes" << data;
+            currentPosition += 2;
+        } else {
+            data = BinChanger::hex_to_float(BinChanger::reverse_input(dataBytes.mid(currentPosition, 4).toHex(), 2));
+            if(data < 0.00001 and data > -0.00001){ //also turbohack
+                data = 0;
+            }
+            currentPosition += 4;
+        }
+    } else {
+        qDebug() << Q_FUNC_INFO << "Running in output mode. At time of writing, this has not been tested.";
+        if(isMini){
+            int twosCompWrite = int(data * 30000);
+            qDebug() << Q_FUNC_INFO << "Verify that twosCompConv works both ways. Current int value:" << twosCompWrite;
+        } else {
+            QByteArray hexData = BinChanger::float_to_hex(data);
+            QByteArray dataHex = BinChanger::reverse_input(hexData, 2);
+            qDebug() << Q_FUNC_INFO << "value" << data << "becomes hex" << hexData << "and reverses to" << dataHex;
+            dataBytes.append(dataHex);
+        }
+    }
+}
+
+void FileData::process(QVector3D &data, bool isMini){
+    if(input){
+        float x_value = 0;
+        process(x_value, isMini);
+        float y_value = 0;
+        process(y_value, isMini);
+        float z_value = 0;
+        process(z_value, isMini);
+        data = QVector3D(x_value, y_value, z_value);
+    } else {
+        float x_value = data.x();
+        process(x_value, isMini);
+        float y_value = data.y();
+        process(y_value, isMini);
+        float z_value = data.z();
+        process(z_value, isMini);
+    }
+}
+
+void FileData::process(QVector4D &data){
+    if(input){
+        float x_value = 0;
+        process(x_value);
+        float y_value = 0;
+        process(y_value);
+        float z_value = 0;
+        process(z_value);
+        float w_value = 0;
+        process(w_value);
+        data = QVector4D(x_value, y_value, z_value, w_value);
+    } else {
+        float x_value = data.x();
+        process(x_value);
+        float y_value = data.y();
+        process(y_value);
+        float z_value = data.z();
+        process(z_value);
+        float w_value = data.w();
+        process(w_value);
+    }
+}
+
+void FileData::process(QQuaternion &data, bool isMini){
+    if(input){
+        float x_value = 0;
+        process(x_value, isMini);
+        float y_value = 0;
+        process(y_value, isMini);
+        float z_value = 0;
+        process(z_value, isMini);
+        float m_value = 0;
+        process(m_value, isMini);
+        data = QQuaternion(m_value, x_value, y_value, z_value);
+    } else {
+        float x_value = data.x();
+        process(x_value, isMini);
+        float y_value = data.y();
+        process(y_value, isMini);
+        float z_value = data.z();
+        process(z_value, isMini);
+        float m_value = data.scalar();
+        process(m_value, isMini);
+    }
+}
+void FileData::process(QColor &data, bool isFloat){
+    if(isFloat){
+        float r_value;
+        process(r_value);
+        float g_value;
+        process(g_value);
+        float b_value;
+        process(b_value);
+        float a_value;
+        process(a_value);
+        data = QColor(r_value, g_value, b_value, a_value);
+    } else {
+        uint32_t r_value;
+        process(r_value);
+        uint32_t g_value;
+        process(g_value);
+        uint32_t b_value;
+        process(b_value);
+        uint32_t a_value;
+        process(a_value);
+        data = QColor(r_value, g_value, b_value, a_value);
+    }
+}
+
+void FileData::process(QByteArray &data, int length){
+    if(input){
+        data = dataBytes.mid(currentPosition, length);
+        currentPosition += length;
+    } else {
+        qDebug() << Q_FUNC_INFO << "Running in output mode. At time of writing, this has not been tested.";
+        dataBytes.append(data);
+    }
+}
+
+void FileData::process(QString &data, int length){
+    if(input){
+        data = QString(dataBytes.mid(currentPosition, length));
+        currentPosition += length;
+    } else {
+        qDebug() << Q_FUNC_INFO << "Running in output mode. At time of writing, this has not been tested.";
+        dataBytes.append(data.toUtf8());
+    }
+}
+
 uint32_t FileData::readSpecial(int length, long location){
     uint32_t readValue = BinChanger::reverse_input(BinChanger::reverse_input(dataBytes.mid(currentPosition + location, length).toHex(),2), 1).toUInt(nullptr, 16);
     currentPosition += length;
@@ -373,6 +595,15 @@ void FileData::textSignature(SectionHeader *signature){
 
 void FileData::signature(SectionHeader *signature){
     if(input){
+        if(currentPosition == dataBytes.size()){
+            qDebug() << Q_FUNC_INFO << "Attempted to find signature at end of file.";
+            signature->sectionLocation = currentPosition;
+            signature->sectionLength = 0;
+            signature->type = "EndOfFile";
+            signature->hasName = false;
+            signature->name = "";
+            return;
+        }
         long signatureStart = 0;
         long signatureEnd = 0;
 
@@ -639,51 +870,51 @@ QByteArray BinChanger::float_to_hex(float input){
     return array;
 }
 
-qint64 BinChanger::hexWrite(QFile& file, QByteArray var) {
+qint64 BinChanger::hexWrite(QFile& file, const QByteArray var) {
     qint64 written = 0;
     for(int i = 0; i < var.size(); i++){
-      written = byteWrite(file, var.at(i));
+        written = byteWrite(file, var.at(i));
     }
     //qDebug () << "out: " << written;
     return written;
 }
 
-qint64 BinChanger::byteWrite(QFile& file, int8_t var) {
-  qint64 toWrite = sizeof(decltype (var));
-  qint64  written = file.write(reinterpret_cast<const char*>(&var), toWrite);
-  if (written != toWrite) {
-    qDebug() << "write error";
-  }
-  //qDebug () << "out: " << written;
-  return written;
+qint64 BinChanger::byteWrite(QFile& file, const int8_t var) {
+    qint64 toWrite = sizeof(decltype (var));
+    qint64  written = file.write(reinterpret_cast<const char*>(&var), toWrite);
+    if (written != toWrite) {
+        qDebug() << "write error";
+    }
+    //qDebug () << "out: " << written;
+    return written;
 }
 
-qint64 BinChanger::shortWrite( QFile& file, int16_t var ) {
-  qint64 toWrite = sizeof(decltype (var));
-  qint64 written = file.write(reinterpret_cast<const char*>(&var), toWrite);
-  if (written != toWrite) {
-    qDebug () << "write error";
-  }
-   //qDebug () << "out: " << written;
-  return written;
+qint64 BinChanger::shortWrite( QFile& file, const int16_t var ) {
+    qint64 toWrite = sizeof(decltype (var));
+    qint64 written = file.write(reinterpret_cast<const char*>(&var), toWrite);
+    if (written != toWrite) {
+        qDebug () << "write error";
+    }
+    //qDebug () << "out: " << written;
+    return written;
 }
 
-qint64 BinChanger::intWrite( QFile& file, int32_t var ) {
-  qint64 toWrite = sizeof(decltype (var));
-  qint64  written = file.write(reinterpret_cast<const char*>(&var), toWrite);
-  if (written != toWrite) {
-    qDebug () << "write error";
-  }
-   //qDebug () << "out: " << written;
-  return written;
+qint64 BinChanger::intWrite( QFile& file, const int32_t var ) {
+    qint64 toWrite = sizeof(decltype (var));
+    qint64  written = file.write(reinterpret_cast<const char*>(&var), toWrite);
+    if (written != toWrite) {
+        qDebug () << "write error";
+    }
+    //qDebug () << "out: " << written;
+    return written;
 }
 
-qint64 BinChanger::longWrite( QFile& file, int64_t var ) {
-  qint64 toWrite = sizeof(decltype (var));
-  qint64  written = file.write(reinterpret_cast<const char*>(&var), toWrite);
-  if (written != toWrite) {
-    qDebug () << "write error";
-  }
-   //qDebug () << "out: " << written;
-  return written;
+qint64 BinChanger::longWrite( QFile& file, const int64_t var ) {
+    qint64 toWrite = sizeof(decltype (var));
+    qint64  written = file.write(reinterpret_cast<const char*>(&var), toWrite);
+    if (written != toWrite) {
+        qDebug () << "write error";
+    }
+    //qDebug () << "out: " << written;
+    return written;
 }

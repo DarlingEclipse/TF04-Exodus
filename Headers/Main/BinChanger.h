@@ -33,7 +33,7 @@ public:
 };
 
 class BinChanger{
-  public:
+public:
     static QString reverse_input(QString input, int unitLength);
     static QByteArray reverse_input(QByteArray input, int unitLength);
     static QString hex_to_bin(QByteArray arrhex);
@@ -45,16 +45,16 @@ class BinChanger{
     static int nib_to_byte(std::tuple<int8_t, int8_t> input);
     static float hex_to_float(QByteArray array);
     static QByteArray float_to_hex(float input);
-    static qint64 hexWrite(QFile& file, QByteArray var);
-    static qint64 byteWrite(QFile& file, int8_t var);
-    static qint64 shortWrite(QFile& file, int16_t var);
-    static qint64 intWrite(QFile& file, int32_t var);
-    static qint64 longWrite(QFile& file, int64_t var);
+    static qint64 hexWrite(QFile& file, const QByteArray var);
+    static qint64 byteWrite(QFile& file, const int8_t var);
+    static qint64 shortWrite(QFile& file, const int16_t var);
+    static qint64 intWrite(QFile& file, const int32_t var);
+    static qint64 longWrite(QFile& file, const int64_t var);
     static QVector3D forcedRotate(QMatrix3x3 rotMatrix, QVector3D offset, QVector3D point);
 };
 
 class FileData{
-  public:
+public:
     QByteArray dataBytes;
     exDebugger *m_Debug;
     long currentPosition = 0;
@@ -63,6 +63,23 @@ class FileData{
 
 
     void readFile(QString filePath);
+    void process(uint8_t &data); //byte
+    void process(uint16_t &data); //short
+    void process(uint32_t &data); //int
+    void process(int8_t &data); //byte
+    void process(int16_t &data); //short
+    void process(int32_t &data); //int
+    void process(long &data);
+    void process(bool &data);
+    void process(float &data, bool isMini = false);
+    void process(QVector3D &data, bool isMini = false);
+    void process(QVector4D &data);
+    void process(QQuaternion &data, bool isMini = false);
+    void process(QColor &data, bool isFloat = false);
+    void process(QByteArray &data, int length);
+    void process(QString &data, int length);
+
+
     long readLong(int length = 4, long location = 0);
     int readInt(int length = 4, long location = 0);
     int readUInt(int length = 4, long location = 0);
@@ -77,10 +94,10 @@ class FileData{
     QQuaternion readQuaternion();
     QQuaternion readMiniQuaternion();
     QByteArray readHex(int length, long location = 0);
-//    void vector3DValue(QVector3D* value, long location = 0);
-//    void vector4DValue(QVector4D* value, long location = 0);
-//    void quaternionValue(QQuaternion* value, long location = 0);
-//    void miniQuaternionValue(QQuaternion* value, long location = 0); //referred to as "packed quaternion" in game ELF
+    //    void vector3DValue(QVector3D* value, long location = 0);
+    //    void vector4DValue(QVector4D* value, long location = 0);
+    //    void quaternionValue(QQuaternion* value, long location = 0);
+    //    void miniQuaternionValue(QQuaternion* value, long location = 0); //referred to as "packed quaternion" in game ELF
     void hexValue(QByteArray* value, int length, long location = 0);
     void hexValue(QString* value, int length, long location = 0);
     QByteArray mid(long location, int length);
