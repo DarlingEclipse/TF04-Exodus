@@ -7,10 +7,16 @@
 #include <QDebug>
 #include <QMatrix3x3>
 #include <QVector3D>
-class zlManager;
-class FileVisitor;
 class exDebugger;
-class exWindowBase;
+
+typedef signed char exInt8;
+typedef unsigned char exUInt8;
+typedef signed short exInt16;
+typedef unsigned short exUInt16;
+typedef signed int exInt32;
+typedef unsigned int exUInt32;
+typedef signed long exInt64;
+typedef unsigned long exUInt64;
 
 class SectionHeader{
 public:
@@ -53,6 +59,15 @@ public:
     static QVector3D forcedRotate(QMatrix3x3 rotMatrix, QVector3D offset, QVector3D point);
 };
 
+enum ColorType{
+    ColorType_RGBA_Int
+    , ColorType_RGB_Int
+    , ColorType_RGBA_Char
+    , ColorType_RGB_Char
+    , ColorType_RGBA_Float
+    , ColorType_RGB_Float
+};
+
 class FileData{
 public:
     QByteArray dataBytes;
@@ -63,21 +78,25 @@ public:
 
 
     void readFile(QString filePath);
-    void process(uint8_t &data); //byte
-    void process(uint16_t &data); //short
-    void process(uint32_t &data); //int
-    void process(int8_t &data); //byte
-    void process(int16_t &data); //short
-    void process(int32_t &data); //int
-    void process(long &data);
+    void process(char &data);
+    void process(exInt8 &data);
+    void process(exUInt8 &data);
+    void process(std::tuple<exUInt8, exUInt8> &data);
+    void process(exInt16 &data);
+    void process(exUInt16 &data);
+    void process(exInt32 &data);
+    void process(exUInt32 &data);
+    void process(exInt64 &data);
+    void process(exUInt64 &data);
     void process(bool &data);
     void process(float &data, bool isMini = false);
     void process(QVector3D &data, bool isMini = false);
     void process(QVector4D &data);
     void process(QQuaternion &data, bool isMini = false);
-    void process(QColor &data, bool isFloat = false);
     void process(QByteArray &data, int length);
     void process(QString &data, int length);
+
+    void process(QColor &data, int colorType);
 
 
     long readLong(int length = 4, long location = 0);

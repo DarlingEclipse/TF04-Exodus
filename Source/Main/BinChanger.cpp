@@ -5,9 +5,9 @@
 #include "Headers/Main/BinChanger.h"
 #include "Headers/Main/exDebugger.h"
 
-void FileData::process(uint8_t &data){
+void FileData::process(char &data){
     if(input){
-        data = BinChanger::reverse_input(BinChanger::hex_to_bin(dataBytes.mid(currentPosition, sizeof(data))), 8).toUInt(nullptr, 16);
+        data = BinChanger::hex_to_bin(dataBytes.mid(currentPosition, sizeof(data))).toInt(nullptr, 2);
         currentPosition += sizeof(data);
     } else {
         qDebug() << Q_FUNC_INFO << "Running in output mode. At time of writing, this has not been tested.";
@@ -15,9 +15,10 @@ void FileData::process(uint8_t &data){
     }
 }
 
-void FileData::process(uint16_t &data){
+void FileData::process(exUInt8 &data){
     if(input){
-        data = BinChanger::reverse_input(BinChanger::hex_to_bin(dataBytes.mid(currentPosition, sizeof(data))), 8).toUInt(nullptr, 16);
+        QString read = BinChanger::hex_to_bin(dataBytes.mid(currentPosition, sizeof(data)));
+        data = read.toUInt(nullptr, 2);
         currentPosition += sizeof(data);
     } else {
         qDebug() << Q_FUNC_INFO << "Running in output mode. At time of writing, this has not been tested.";
@@ -25,17 +26,39 @@ void FileData::process(uint16_t &data){
     }
 }
 
-void FileData::process(uint32_t &data){
+void FileData::process(std::tuple<exUInt8, exUInt8> &data){
     if(input){
-        data = BinChanger::reverse_input(BinChanger::hex_to_bin(dataBytes.mid(currentPosition, sizeof(data))), 8).toUInt(nullptr, 16);
-        currentPosition += sizeof(data);
+        data = BinChanger::byte_to_nib(dataBytes.mid(currentPosition, 1));
+        currentPosition += 1;
     } else {
         qDebug() << Q_FUNC_INFO << "Running in output mode. At time of writing, this has not been tested.";
-        dataBytes.append(QByteArray().setNum(data));
+        qDebug() << Q_FUNC_INFO << "Verify that twosCompConv works both ways. Current int value:";
     }
 }
 
-void FileData::process(int8_t &data){
+void FileData::process(exInt8 &data){
+    if(input){
+        QString readBin = BinChanger::hex_to_bin(dataBytes.mid(currentPosition, sizeof(data)));
+        data = BinChanger::twosCompConv(readBin, 8);
+        //qDebug() << Q_FUNC_INFO << "hex read:" << dataBytes.mid(currentPosition + location, 2).toHex() << "read as" << readBin << "then" << twoscompread;
+        currentPosition += sizeof(data);
+    } else {
+        qDebug() << Q_FUNC_INFO << "Running in output mode. At time of writing, this has not been tested.";
+        qDebug() << Q_FUNC_INFO << "Verify that twosCompConv works both ways. Current int value:" << data;
+    }
+}
+
+void FileData::process(exUInt16 &data){
+    if(input){
+        data = BinChanger::reverse_input(BinChanger::hex_to_bin(dataBytes.mid(currentPosition, sizeof(data))), 8).toUInt(nullptr, 2);
+        currentPosition += sizeof(data);
+    } else {
+        qDebug() << Q_FUNC_INFO << "Running in output mode. At time of writing, this has not been tested.";
+        qDebug() << Q_FUNC_INFO << "Verify that twosCompConv works both ways. Current int value:" << data;
+    }
+}
+
+void FileData::process(exInt16 &data){
     if(input){
         QString readBin = BinChanger::reverse_input(BinChanger::hex_to_bin(dataBytes.mid(currentPosition, sizeof(data))), 8);
         data = BinChanger::twosCompConv(readBin, 8);
@@ -47,19 +70,19 @@ void FileData::process(int8_t &data){
     }
 }
 
-void FileData::process(int16_t &data){
+void FileData::process(exUInt32 &data){
     if(input){
-        QString readBin = BinChanger::reverse_input(BinChanger::hex_to_bin(dataBytes.mid(currentPosition, sizeof(data))), 8);
-        data = BinChanger::twosCompConv(readBin, 8);
-        //qDebug() << Q_FUNC_INFO << "hex read:" << dataBytes.mid(currentPosition + location, 2).toHex() << "read as" << readBin << "then" << twoscompread;
+        QString reversed = BinChanger::reverse_input(BinChanger::hex_to_bin(dataBytes.mid(currentPosition, sizeof(data))), 8);
+        qDebug() << Q_FUNC_INFO << "reading unsigned char. data size:" << sizeof(data) << "read as" << reversed;
+        data = reversed.toUInt(nullptr, 2);
         currentPosition += sizeof(data);
     } else {
         qDebug() << Q_FUNC_INFO << "Running in output mode. At time of writing, this has not been tested.";
-        qDebug() << Q_FUNC_INFO << "Verify that twosCompConv works both ways. Current int value:" << data;
+        dataBytes.append(QByteArray().setNum(data));
     }
 }
 
-void FileData::process(int32_t &data){
+void FileData::process(exInt32 &data){
     if(input){
         QString readBin = BinChanger::reverse_input(BinChanger::hex_to_bin(dataBytes.mid(currentPosition, sizeof(data))), 8);
         data = BinChanger::twosCompConv(readBin, 8);
@@ -70,7 +93,17 @@ void FileData::process(int32_t &data){
     }
 }
 
-void FileData::process(long &data){
+void FileData::process(exUInt64 &data){
+    if(input){
+        data = BinChanger::reverse_input(dataBytes.mid(currentPosition, sizeof(data)).toHex(),2).toLong(nullptr, 16);
+        currentPosition += sizeof(data);
+    } else {
+        qDebug() << Q_FUNC_INFO << "Running in output mode. At time of writing, this has not been tested.";
+        dataBytes.append(QByteArray().setNum(data));
+    }
+}
+
+void FileData::process(exInt64 &data){
     if(input){
         data = BinChanger::reverse_input(dataBytes.mid(currentPosition, sizeof(data)).toHex(),2).toLong(nullptr, 16);
         currentPosition += sizeof(data);
@@ -183,8 +216,63 @@ void FileData::process(QQuaternion &data, bool isMini){
         process(m_value, isMini);
     }
 }
-void FileData::process(QColor &data, bool isFloat){
-    if(isFloat){
+void FileData::process(QColor &data, int colorType){
+    switch(colorType){
+    case ColorType_RGB_Char: {
+        exUInt8 r_value;
+        process(r_value);
+        exUInt8 g_value;
+        process(g_value);
+        exUInt8 b_value;
+        process(b_value);
+        data = QColor(r_value, g_value, b_value, 255);
+        break;
+    }
+    case ColorType_RGBA_Char: {
+        exUInt8 r_value;
+        process(r_value);
+        exUInt8 g_value;
+        process(g_value);
+        exUInt8 b_value;
+        process(b_value);
+        exUInt8 a_value;
+        process(a_value);
+        data = QColor(r_value, g_value, b_value, a_value);
+        break;
+    }
+    case ColorType_RGB_Int: {
+        exUInt32 r_value;
+        process(r_value);
+        exUInt32 g_value;
+        process(g_value);
+        exUInt32 b_value;
+        process(b_value);
+        data = QColor(r_value, g_value, b_value, 255);
+        break;
+    }
+    case ColorType_RGBA_Int: {
+        exUInt32 r_value;
+        process(r_value);
+        exUInt32 g_value;
+        process(g_value);
+        exUInt32 b_value;
+        process(b_value);
+        exUInt32 a_value;
+        process(a_value);
+        data = QColor(r_value, g_value, b_value, a_value);
+        break;
+    }
+    case ColorType_RGB_Float: {
+        float r_value;
+        process(r_value);
+        float g_value;
+        process(g_value);
+        float b_value;
+        process(b_value);
+        data = QColor(r_value, g_value, b_value, 255);
+        break;
+    }
+    case ColorType_RGBA_Float: {
         float r_value;
         process(r_value);
         float g_value;
@@ -194,17 +282,13 @@ void FileData::process(QColor &data, bool isFloat){
         float a_value;
         process(a_value);
         data = QColor(r_value, g_value, b_value, a_value);
-    } else {
-        uint32_t r_value;
-        process(r_value);
-        uint32_t g_value;
-        process(g_value);
-        uint32_t b_value;
-        process(b_value);
-        uint32_t a_value;
-        process(a_value);
-        data = QColor(r_value, g_value, b_value, a_value);
+        break;
     }
+    default:
+        qDebug() << Q_FUNC_INFO << "Undefined color type" << colorType;
+        data = QColor();
+    }
+
 }
 
 void FileData::process(QByteArray &data, int length){
