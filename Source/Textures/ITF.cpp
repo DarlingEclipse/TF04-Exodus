@@ -7,6 +7,7 @@
 
 /*This should be handled by exWidnow instead*/
 #include <QHeaderView>
+#include <typeindex>
 
 #include "Headers/Textures/itf.h"
 #include "Headers/Main/exDebugger.h"
@@ -553,22 +554,19 @@ void ITF::createMipMaps(int mipmapLevels){
 void ITF::readPalette(){
     int colorsPerPalette = std::pow(2, bytesPerPixel());
     QList<QRgb> forceTable;
-    /*hasPalette should've been set before this was called
-     * if (m_format == ITFProperties_4bpp || m_format == ITFProperties_8bpp){
-        hasPalette = true;
-        colorsPerPalette = std::pow(2, bytesPerPixel());
-    } else {
-        hasPalette = false;
-    }*/
 
     qDebug() << Q_FUNC_INFO << "Color count: " << colorsPerPalette << "palette count:" << paletteCount;
     qDebug() << Q_FUNC_INFO << "color count before:" << mipMaps[0].colorCount() << ". should be set to" << colorsPerPalette*paletteCount;
     mipMaps[0].setColorCount(colorsPerPalette*paletteCount);
     for(int i = 0; i < mipMaps[0].colorCount(); i++){
-        int red = fileData->readUInt(1);
-        int green = fileData->readUInt(1);
-        int blue = fileData->readUInt(1);
-        int alpha = fileData->readUInt(1);
+        uint8_t red = 0;
+        uint8_t green = 0;
+        uint8_t blue = 0;
+        uint8_t alpha = 0;
+        fileData->process(red);
+        fileData->process(green);
+        fileData->process(blue);
+        fileData->process(alpha);
         if(alphaType == Alpha_Opaque){
             //opaque texture, no alpha
             alpha = 255;
@@ -592,15 +590,15 @@ void ITF::readPalette(){
 
 void ITF::readIndexedData(){
     int pixelIndex = 0;
-    //int contentLength = 0;
-    long location = fileData->currentPosition;
-    std::tuple <int8_t, int8_t> nibTup;
+    std::tuple <exUInt8, exUInt8> nibTup;
     for(int m = 0; m < mipmapCount; m++){
         if (m_format == ITFProperties_8bpp){
             //8bpp, 256 palette case. nice and easy since each pixel uses 1 byte to refer to the palette
             for (int i = 0; i < mipMaps[m].width() * mipMaps[m].height(); i++){
                 //qDebug() << Q_FUNC_INFO << "current pixel " << i << "x" << i%width << "y" << i/width;
-                mipMaps[m].setPixel(i % mipMaps[m].width(), i / mipMaps[m].width(), fileData->readUInt(1));
+                exUInt8 pixelIndex;
+                fileData->process(pixelIndex);
+                mipMaps[m].setPixel(i % mipMaps[m].width(), i / mipMaps[m].width(), pixelIndex);
             }
 
         } else {
@@ -608,7 +606,7 @@ void ITF::readIndexedData(){
             //however every image should be an even number of pixels so we can just grab them in pairs.
             for (int i = 0; i < (mipMaps[m].width() * mipMaps[m].height())/2; i++){
                 //qDebug() << Q_FUNC_INFO << "current pixel pair" << i << "x" << pixelIndex%width << "y" << pixelIndex/width;
-                nibTup = BinChanger::byte_to_nib(fileData->mid(location+i, 1));
+                fileData->process(nibTup);
                 mipMaps[m].setPixel(pixelIndex % mipMaps[m].width(), pixelIndex / mipMaps[m].width(), std::get<0>(nibTup));
                 pixelIndex += 1;
                 mipMaps[m].setPixel(pixelIndex % mipMaps[m].width(), pixelIndex / mipMaps[m].width(), std::get<1>(nibTup));
@@ -622,7 +620,7 @@ void ITF::readIndexedData(){
 void ITF::readImageData(){
     //these all store their color values directly instead of referring to a palette
     //int contentLength = 0;
-    uint32_t combinedIntensity = 0;
+    exUInt16 combinedIntensity = 0;
     int currentWidth = 0;
     int currentHeight = 0;
 
@@ -635,9 +633,7 @@ void ITF::readImageData(){
         //16bpp, each pixel has its r,g,b, and a values stored as 4 integers packed into 2 bytes
         //contentLength = dataLength / 2;
         for (int i = 0; i < currentWidth * currentHeight; i++){
-            combinedIntensity = fileData->readUInt(2);
-            //combinedIntensity = fileData.readUInt(1) + fileData.readUInt(1); //this absolutely should not be necessary
-            //int alpha = (combinedIntensity >> 15);
+            fileData->process(combinedIntensity);
             int alpha = (combinedIntensity >> 15) & 1;
             if(alphaType == 1){
                 //opaque texture, no alpha
@@ -662,10 +658,7 @@ void ITF::readImageData(){
         //contentLength = dataLength / 3;
         for (int i = 0; i < currentWidth * currentHeight; i++){
             QColor currentPixel;
-            currentPixel.setRed(fileData->readUInt(1));
-            currentPixel.setGreen(fileData->readUInt(1));
-            currentPixel.setBlue(fileData->readUInt(1));
-            currentPixel.setAlpha(255); //don't have to worry about alpha type with this - alpha is always 0
+            fileData->process(currentPixel, ColorType_RGB_Char); //don't have to worry about alpha type with this - alpha is always 0*/
             //qDebug() << Q_FUNC_INFO << "setting color at x" << i % currentWidth << "y" << i / currentWidth << "to" << currentPixel;
             mipMaps[m].setPixelColor(i % currentWidth, i / currentWidth, currentPixel);
         }
@@ -677,22 +670,19 @@ void ITF::readImageData(){
         //contentLength = dataLength / 4;
         for (int i = 0; i < currentWidth * currentHeight; i++){
             QColor currentPixel;
-            currentPixel.setRed(fileData->readUInt(1));
-            currentPixel.setGreen(fileData->readUInt(1));
-            currentPixel.setBlue(fileData->readUInt(1));
-            int alpha = fileData->readUInt(1);
+            fileData->process(currentPixel, ColorType_RGBA_Char);
             if(alphaType == 1){
                 //opaque texture, no alpha
-                alpha = 255;
+                currentPixel.setAlpha(255);
             } else if (alphaType == 2){
                 //punchthrough texture, either full alpha or no alpha
-                if (alpha < 128){
-                    alpha = 0;
+                if (currentPixel.alpha() < 128){
+                    currentPixel.setAlpha(0);
                 } else {
-                    alpha = 255;
+                    currentPixel.setAlpha(255);
                 }
             }
-            currentPixel.setAlpha(alpha);
+            //currentPixel.setAlpha(alpha);
             //qDebug() << Q_FUNC_INFO << "setting color at x" << i % currentWidth << "y" << i / currentWidth << "to" << currentPixel;
             mipMaps[m].setPixelColor(i % currentWidth, i / currentWidth, currentPixel);
         }
@@ -753,35 +743,41 @@ void ITF::adaptProperties(){
 
 int ITF::readDataITF(){
 
-    //QByteArray txtrString = "TXTR";
-    //QByteArrayMatcher matcher(txtrString);
     QTableWidgetItem currentItem;
     currentPalette = 0;
-    fileLength = fileData->readInt(4, 4);
+    fileData->currentPosition += 4; //skip "FORM"
     qDebug() << Q_FUNC_INFO << "reading file" << fileName;
+    fileData->process(fileLength);
+    qDebug() << Q_FUNC_INFO << "file length:" << fileLength;
 
     /*Load header data*/
     fileData->currentPosition = 15;
-    versionNum = fileData->readUInt(1);
-    headerLength = fileData->readUInt();
+    fileData->process(versionNum);
+    fileData->process(headerLength);
     fileData->currentPosition += 3; //skip the "PS2" label
-    uint8_t propertyByte = fileData->readUInt(1);
-    m_format = propertyByte ^ ITFProperties_Swizzled;
+    exUInt8 propertyByte = 0;
+    fileData->process(propertyByte);
+    m_format = propertyByte & (ITFProperties_Swizzled ^ 0xFF); //this feels a bit hacky but it's just a bitmask? might be overthinking this one
     swizzled = propertyByte & ITFProperties_Swizzled;
-    qDebug() << Q_FUNC_INFO << "format value:" << m_format << "swizzled?" << swizzled;
-    //m_format = fileData->readUInt(1);
-    alphaType = fileData->readUInt();
-    qDebug() << Q_FUNC_INFO << "Alpha type:" << alphaTypes[alphaType];
-    m_width = fileData->readUInt();
-    m_height = fileData->readUInt();
-    qDebug() << Q_FUNC_INFO << "image height:" << m_height << "width:" << m_width;
-    mipmapCount = std::max(1, fileData->readUInt());
-    qDebug() << Q_FUNC_INFO << "mipmap count:" << mipmapCount;
-    paletteCount = std::max(1, fileData->readUInt()); //some textures say 0 palettes, this catches those. possibly older ITF file version?
-    qDebug() << Q_FUNC_INFO << "palette count:" << paletteCount << " found at " << fileData->currentPosition;
-    unknown4Byte3 = fileData->readUInt();
-    unknown4Byte4 = fileData->readUInt();
+    fileData->process(alphaType);
+    fileData->process(m_width);
+    fileData->process(m_height);
+    fileData->process(mipmapCount);
+    mipmapCount = std::max<uint32_t>(1, mipmapCount);
+    fileData->process(paletteCount);
+    paletteCount = std::max<uint32_t>(1, mipmapCount); //some textures say 0 palettes, this catches those. possibly older ITF file version?
+    fileData->process(unknown4Byte3);
+    fileData->process(unknown4Byte4);
     /*End header data.*/
+    qDebug() << Q_FUNC_INFO << "version:" << versionNum;
+    qDebug() << Q_FUNC_INFO << "header length:" << headerLength;
+    qDebug() << Q_FUNC_INFO << "property byte:" << propertyByte;
+    qDebug() << Q_FUNC_INFO << "property byte:" << propertyByte << "format value:" << m_format << "swizzled?" << swizzled;
+    qDebug() << Q_FUNC_INFO << "Alpha type:" << alphaTypes[alphaType];
+    qDebug() << Q_FUNC_INFO << "width:" << m_width << "image height:" << m_height;
+    qDebug() << Q_FUNC_INFO << "mipmap count:" << mipmapCount;
+    qDebug() << Q_FUNC_INFO << "palette count:" << paletteCount;
+    qDebug() << Q_FUNC_INFO << "position after header:" << fileData->currentPosition;
 
 
     if(paletteCount > 16){
@@ -802,16 +798,6 @@ int ITF::readDataITF(){
         hasMipmaps = false;
     }
     mipMaps.resize(mipmapCount);
-
-    //paletteList.resize(paletteCount);
-    //swizzled = m_format & ITFProperties_Swizzled;
-    qDebug() << Q_FUNC_INFO << "Swizzled texture?" << swizzled;
-    //int checkProperties = 0;
-    /*if(swizzled){
-        checkProperties = m_format - 128;
-    } else {
-        checkProperties = m_format;
-    }*/
 
     if (m_format == ITFProperties_24bpp || m_format == ITFProperties_16bpp){
         qDebug() << Q_FUNC_INFO << "16 or 24 bpp. Setting format to Format_RGBA8888";
@@ -836,7 +822,7 @@ int ITF::readDataITF(){
     fileData->currentPosition += 4; //skip "TXTR"
 
 
-    m_dataLength = fileData->readInt();
+    fileData->process(m_dataLength);
     //qDebug() << Q_FUNC_INFO << "bpp" << bytesPerPixel() << "has palette" << hasPalette;
 
     if(hasPalette){

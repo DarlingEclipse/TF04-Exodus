@@ -13,6 +13,7 @@
 #include <vector>
 
 #include "Headers/FileManagement/taFileSystemObject.h"
+#include "Headers/Main/BinChanger.h"
 
 class Color{
 public:
@@ -65,25 +66,25 @@ public:
     */
 
 
-    uint32_t fileLength;
-    uint8_t versionNum;
-    uint32_t headerLength;
-    uint8_t m_format;
-    uint32_t alphaType; //related to alpha transparency - possibly determines punch-through bit vs actual alpha? http://sv-journal.org/2014-1/06/en/index.php?lang=en
+    exUInt32 fileLength;
+    exUInt8 versionNum;
+    exUInt32 headerLength;
+    exUInt8 m_format;
+    exUInt32 alphaType; //related to alpha transparency - possibly determines punch-through bit vs actual alpha? http://sv-journal.org/2014-1/06/en/index.php?lang=en
     //type 0: MOTION_BLADE. Normal blended alpha
     //type 1: most textures, but also SENTRYDRONE2. Opaque. Not sure why these textures still have an alpha value, worth looking into.
     //type 2: MAGA_WHEEL, DECEPTICON_DROPSHIP, UNICRON_SPINNERS. Punchthrough alpha.
 
-    uint32_t m_width;
-    uint32_t m_height;
+    exUInt32 m_width;
+    exUInt32 m_height;
 
     //https://docs.unity3d.com/Manual/texture-mipmaps-introduction.html
-    uint32_t mipmapCount; //texture LODs https://discord.com/channels/393973249685323777/769368848779706410/1129052999390593115
+    exUInt32 mipmapCount; //texture LODs https://discord.com/channels/393973249685323777/769368848779706410/1129052999390593115
 
-    uint32_t paletteCount;
-    uint32_t unknown4Byte3;
-    uint32_t unknown4Byte4;
-    uint32_t m_dataLength;
+    exUInt32 paletteCount;
+    exUInt32 unknown4Byte3;
+    exUInt32 unknown4Byte4;
+    exUInt32 m_dataLength;
     bool swizzled;
     bool hasPalette;
     bool hasMipmaps;
