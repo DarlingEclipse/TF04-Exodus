@@ -7,7 +7,6 @@
 
 /*This should be handled by exWidnow instead*/
 #include <QHeaderView>
-#include <typeindex>
 
 #include "Headers/Textures/itf.h"
 #include "Headers/Main/exDebugger.h"
@@ -16,14 +15,37 @@
 
 //https://ps2linux.no-ip.info/playstation2-linux.com/docs/howto/display_docef7c.html?docid=75
 
+void exImageData::SetPixel(int index, QColor pixel){
+    if(index > m_pixels.size()){
+        qDebug() << Q_FUNC_INFO << "Pixel index" << index << "out of range";
+        return;
+    }
+    m_pixels[index] = pixel;
+}
+
+void exImageData::SetPixel(int pixelIndex, int colorIndex){
+    if(pixelIndex > m_indexedPixels.size()){
+        qDebug() << Q_FUNC_INFO << "Pixel index" << pixelIndex << "out of range";
+        return;
+    }
+    m_indexedPixels[pixelIndex] = colorIndex;
+}
+
+void exPaletteData::SetColor(int index, QColor color){
+    if(index > m_colors.size()){
+        qDebug() << Q_FUNC_INFO << "Pixel index" << index << "out of range";
+        return;
+    }
+    m_colors[index] = color;
+}
+
 void ITF::load(QString fromType){
     int failedRead = 0;
     if(fromType == "ITF"){
         failedRead = readDataITF();
     } else {
-        mipMaps.resize(1);
-        failedRead = !mipMaps[0].load(inputPath);
-        adaptProperties();
+        QImage input(inputPath);
+        AdaptImage(input);
     }
     if(failedRead){
         m_Debug->MessageError("There was an error reading " + fileName);
@@ -38,7 +60,8 @@ void ITF::save(QString toType){
         //writeBMP();
         //only saves base image, currently no support for lower mipmap exports
         //changeColorTable(false);
-        mipMaps[0].save(outputPath);
+        QImage output = CreateImage(0);
+        output.save(outputPath);
         //changeColorTable(true);
     }
 }
@@ -63,7 +86,7 @@ void ITF::updateCenter(){
         m_UI->m_currentWidgets.push_back(comboPalettes);
         m_UI->m_currentWidgets.push_back(CustomLabel::addLabel(comboPalettes->geometry(), "Choose palette:", m_UI->m_centralContainer));
 
-        paletteTable = new QTableWidget(mipMaps[0].colorCount()/paletteCount, 7, m_UI->m_centralContainer);
+        paletteTable = new QTableWidget(pow(2, bytesPerPixel()), 7, m_UI->m_centralContainer);
         paletteTable->setGeometry(QRect(QPoint(50,250), QSize(125*7,300)));
         QAbstractButton::connect(paletteTable, &QTableWidget::cellChanged, m_UI, [this](int row, int column) {editPalette(row, column);});
         paletteTable->show();
@@ -104,7 +127,7 @@ void ITF::updateCenter(){
     //display dropdown to select # of maps, button to generate maps
     QComboBox *userMipMaps = new QComboBox(m_UI->m_centralContainer);
     userMipMaps -> setGeometry(QRect(QPoint(650,50), QSize(150,30)));
-    int maxMips = int(fmin(log(mipMaps[0].width())/log(2), log(mipMaps[0].height())/log(2)));
+    int maxMips = int(fmin(log(m_width)/log(2), log(m_height)/log(2)));
     for(int i=0; i<maxMips; ++i){
         userMipMaps->insertItem(i, QString::number(i+1));
     }
@@ -131,7 +154,7 @@ void ITF::updateCenter(){
         comboAlphaType->insertItem(i, alphaTypes[i]);
     }
     comboAlphaType->setCurrentIndex(alphaType);
-    QAbstractButton::connect(comboAlphaType, &QComboBox::currentIndexChanged, m_UI, [this](int index) {convertAlphaType(index);});
+    QAbstractButton::connect(comboAlphaType, &QComboBox::currentIndexChanged, m_UI, [this](int index) {convertAlpha(index);});
     comboAlphaType->show();
     m_UI->m_currentWidgets.push_back(comboAlphaType);
     m_UI->m_currentWidgets.push_back(CustomLabel::addLabel(comboAlphaType->geometry(), "Current alpha type:", m_UI->m_centralContainer));
@@ -149,43 +172,40 @@ void ITF::updateCenter(){
 }
 
 void ITF::updatePreview(){
-    //this is far from ideal - if this is called too often, currentModeWidgets will be filled with junk pointers
-
-    //skipping 1 - mipmap of 1 is the base image
     int mapOffset = 0;
     labelMipMaps.clear();
     for(int i = 0; i < mipmapCount; i++){
-        QPixmap mipMapData = QPixmap::fromImage(mipMaps[i]);
-        QLabel *displayMipMap = new QLabel(m_UI->m_centralContainer);
-        displayMipMap->setPixmap(mipMapData);
-        qDebug() << Q_FUNC_INFO << "displaying mipmap at" << mipMaps[i].width()*mapOffset << "given factors width" << mipMaps[i].width() << "mapoffset" << mapOffset;
-        displayMipMap->setGeometry(QRect(QPoint(50 + (mipMaps[i].width()*mapOffset), 600), QSize(mipMaps[i].width(), mipMaps[i].height())));
+        QLabel *displayMipMap = m_UI->MakeImage(CreateImage(i));
+        //QPixmap mipMapData = QPixmap::fromImage(CreateImage(i));
+        //QLabel *displayMipMap = new QLabel(m_UI->m_centralContainer);
+        //displayMipMap->setPixmap(mipMapData);
+        qDebug() << Q_FUNC_INFO << "displaying mipmap at" << MapWidth(i)*mapOffset << "given factors width" << MapWidth(i) << "mapoffset" << mapOffset;
+        displayMipMap->setGeometry(QRect(QPoint(50 + (MapWidth(i)*mapOffset), 600), QSize(MapWidth(i), MapHeight(i))));
         displayMipMap->show();
-        m_UI->m_currentWidgets.push_back(displayMipMap);
         labelMipMaps.push_back(displayMipMap);
         mapOffset += pow(2, i+1);
     }
 }
 
 void ITF::changeColorTable(bool input){
-    QList<QRgb> tempColorTable = mipMaps[0].colorTable();
+    std::vector<QColor> tempColorTable = m_palettes[0].m_colors;
     if(m_format == ITFProperties_8bpp && input){
         int k = 0;
         for(int i = 0; i < 8; i++){
             for(int j = 0; j < 8; j++){
-                mipMaps[0].setColor(k, tempColorTable[k+0]);
+                m_palettes[0].SetColor(k, tempColorTable[k+0]);
                 k++;
             }
             for(int j = 0; j < 8; j++){
-                mipMaps[0].setColor(k, tempColorTable[k+8]);
+                m_palettes[0].SetColor(k, tempColorTable[k+8]);
                 k++;
             }
             for(int j = 0; j < 8; j++){
-                mipMaps[0].setColor(k, tempColorTable[k-8]);
+                m_palettes[0].SetColor(k, tempColorTable[k-8]);
                 k++;
             }
             for(int j = 0; j < 8; j++){
-                mipMaps[0].setColor(k, tempColorTable[k+0]);
+                m_palettes[0].SetColor(k, tempColorTable[k+0]);
                 k++;
             }
         }
@@ -193,19 +213,19 @@ void ITF::changeColorTable(bool input){
         int k = 0;
         for(int i = 0; i < 8; i++){
             for(int j = 0; j < 8; j++){
-                mipMaps[0].setColor(k, tempColorTable[k+0]);
+                m_palettes[0].SetColor(k, tempColorTable[k+0]);
                 k++;
             }
             for(int j = 0; j < 8; j++){
-                mipMaps[0].setColor(k+8, tempColorTable[k]);
+                m_palettes[0].SetColor(k+8, tempColorTable[k]);
                 k++;
             }
             for(int j = 0; j < 8; j++){
-                mipMaps[0].setColor(k-8, tempColorTable[k]);
+                m_palettes[0].SetColor(k-8, tempColorTable[k]);
                 k++;
             }
             for(int j = 0; j < 8; j++){
-                mipMaps[0].setColor(k, tempColorTable[k+0]);
+                m_palettes[0].SetColor(k, tempColorTable[k+0]);
                 k++;
             }
         }
@@ -216,129 +236,91 @@ void ITF::changeSwizzleType(int index){
     if(index & !swizzled){
         swizzle();
     } else if (swizzled){
-        unswizzle();
+        //unswizzle();
+        swizzle(true);
     }
     qDebug() << Q_FUNC_INFO << "attempting to update center";
     updatePreview();
 }
 
-void ITF::convertGradientAlpha(QImage *imageData){
+void ITF::convertAlpha(int index){
     //opaque to blended: all alpha values need to be set to 255
     //punchthrough to blended: all < 255 alpha values need to be set to 0
     if(hasPalette){
-        QList<QRgb> tempColorTable = imageData->colorTable();
-        for(int i = 0; i < imageData->colorCount(); i++){
-            if(alphaType == 2 and qAlpha(tempColorTable[i]) < 255){
-                imageData->setColor(i, qRgba(qRed(tempColorTable[i]), qGreen(tempColorTable[i]),qBlue(tempColorTable[i]),0));
-            } else {
-                imageData->setColor(i, qRgba(qRed(tempColorTable[i]), qGreen(tempColorTable[i]),qBlue(tempColorTable[i]),255));
-            }
-            imageData->setColor(i, tempColorTable[i]);
-        }
-    } else {
-        for(int i = 0; i < imageData->width(); i++){
-            for(int j = 0; j<imageData->height(); j++){
-                QColor tempColor = imageData->pixelColor(i,j);
-                if(alphaType == 2 and tempColor.alpha() < 255){
-                    tempColor.setAlpha(0);
-                } else {
-                    tempColor.setAlpha(255);
+        for(int i = 0; i < m_palettes.size(); i++){
+            for(int j = 0; j < m_palettes[i].m_colors.size(); j++){
+                QColor replacementColor = m_palettes[i].m_colors[j];
+                switch(index){
+                case Alpha_Gradient:
+                    if(m_palettes[i].m_colors[j].alpha() < 255){
+                        replacementColor.setAlpha(0);
+                    } else {
+                        replacementColor.setAlpha(255);
+                        m_palettes[i].SetColor(j, replacementColor);
+                    }
+                    break;
+                case Alpha_Opaque:
+                    replacementColor.setAlpha(255);
+                    break;
+                case Alpha_Punchthrough:
+                    if(m_palettes[i].m_colors[j].alpha() < 255){
+                        replacementColor.setAlpha(0);
+                    }
+                    break;
+                default:
+                    qDebug() << Q_FUNC_INFO << "Undefined alpha type.";
                 }
-                imageData->setPixelColor(i,j, tempColor);
+                m_palettes[i].SetColor(j, replacementColor);
+
             }
-        }
-    }
-}
-void ITF::convertOpaqueAlpha(QImage *imageData){
-    //alpha values just need to be removed (set to 255)
-    if(hasPalette){
-        QList<QRgb> tempColorTable = imageData->colorTable();
-        for(int i = 0; i < imageData->colorCount(); i++){
-            imageData->setColor(i, qRgba(qRed(tempColorTable[i]), qGreen(tempColorTable[i]),qBlue(tempColorTable[i]),255));
         }
     } else {
-        for(int i = 0; i < imageData->width(); i++){
-            for(int j = 0; j<imageData->height(); j++){
-                QColor tempColor = imageData->pixelColor(i,j);
-                tempColor.setAlpha(255);
-                imageData->setPixelColor(i,j, tempColor);
-            }
-        }
-    }
-}
-void ITF::convertPunchthroughAlpha(QImage *imageData){
-    //not sure what the best way to handle this is
-    //maybe an alpha threshold goes to 0? maybe a specific color?
-    //for now, all <255 alpha values become 0
-    if(hasPalette){
-        QList<QRgb> tempColorTable = imageData->colorTable();
-        for(int i = 0; i < imageData->colorCount(); i++){
-            if(qAlpha(tempColorTable[i]) < 255){
-                imageData->setColor(i, qRgba(qRed(tempColorTable[i]), qGreen(tempColorTable[i]),qBlue(tempColorTable[i]),0));
-            }
-            imageData->setColor(i, tempColorTable[i]);
-        }
-    } else {
-        for(int i = 0; i < imageData->width(); i++){
-            for(int j = 0; j<imageData->height(); j++){
-                QColor tempColor = imageData->pixelColor(i,j);
-                if(tempColor.alpha() < 255){
-                    tempColor.setAlpha(0);
+        for(int i = 0; i < m_mipMaps.size(); i++){
+            for(int j = 0; j < m_mipMaps[i].m_pixels.size(); j++){
+                QColor replacementColor = m_mipMaps[i].m_pixels[j];
+                switch(alphaType){
+                case Alpha_Gradient:
+                    if(replacementColor.alpha() < 255){
+                        replacementColor.setAlpha(0);
+                    } else {
+                        replacementColor.setAlpha(255);
+                    }
+                    break;
+                case Alpha_Opaque:
+                    replacementColor.setAlpha(255);
+                    break;
+                case Alpha_Punchthrough:
+                    if(replacementColor.alpha() < 255){
+                        replacementColor.setAlpha(0);
+                    }
+                    break;
                 }
-                imageData->setPixelColor(i,j, tempColor);
+                m_mipMaps[i].SetPixel(j, replacementColor);
+
             }
         }
-    }
-}
-
-void ITF::convertAlphaType(int index){
-    //so much nesting. See if there's a better way.
-    //a note: alpha value runs from 0 to 255, with 0 being more transparent and 255 being more opaque
-    switch(index){
-        case 0:
-        //changing to blended alpha
-        for(int m = 0; m < mipmapCount; m++){
-            convertGradientAlpha(&mipMaps[m]);
-        }
-        break;
-
-        case 1:
-        //changing to opaque
-        for(int m = 0; m < mipmapCount; m++){
-            convertOpaqueAlpha(&mipMaps[m]);
-        }
-        break;
-
-        case 2:
-        //change to punchthrough
-        for(int m = 0; m < mipmapCount; m++){
-            convertPunchthroughAlpha(&mipMaps[m]);
-        }
-        break;
     }
     alphaType = index;
     updatePreview();
-    //pixmapImageData = QPixmap::fromImage(mipMaps[0]);
-    //labelImageDisplay->setPixmap(pixmapImageData);
 }
 
 void ITF::promptColorToIndex(){
     m_UI->ClearWindow();
-    QImage indexedImage = mipMaps[0].convertToFormat(QImage::Format_Indexed8); //no way to do 4bpp, as far as I can find
+    QImage indexedImage = CreateImage(0).convertToFormat(QImage::Format_Indexed8); //no way to do 4bpp, as far as I can find
     //aside from writing a whole algorithm for it on my own, and, uh. I'll pass on that for now.
     QPixmap indexedData = QPixmap::fromImage(indexedImage);
-    QPixmap originalData = QPixmap::fromImage(mipMaps[0]);
+    QPixmap originalData = QPixmap::fromImage(CreateImage(0));
 
     QLabel *originalDisplay = new QLabel(m_UI->m_centralContainer);
     originalDisplay->setPixmap(originalData);
-    originalDisplay->setGeometry(QRect(QPoint(50, 300), QSize(mipMaps[0].width(), mipMaps[0].height())));
+    originalDisplay->setGeometry(QRect(QPoint(50, 300), QSize(m_width, m_height)));
     originalDisplay->show();
     m_UI->m_currentWidgets.push_back(originalDisplay);
     m_UI->m_currentWidgets.push_back(CustomLabel::addLabel(originalDisplay->geometry(), "Current Image:", m_UI->m_centralContainer));
 
     QLabel *indexedDisplay = new QLabel(m_UI->m_centralContainer);
     indexedDisplay->setPixmap(indexedData);
-    indexedDisplay->setGeometry(QRect(QPoint(100 + mipMaps[0].width(), 300), QSize(mipMaps[0].width(), mipMaps[0].height())));
+    indexedDisplay->setGeometry(QRect(QPoint(100 + m_width, 300), QSize(m_width, m_height)));
     indexedDisplay->show();
     m_UI->m_currentWidgets.push_back(indexedDisplay);
     m_UI->m_currentWidgets.push_back(CustomLabel::addLabel(indexedDisplay->geometry(), "8bpp Image:", m_UI->m_centralContainer));
@@ -359,31 +341,34 @@ void ITF::promptColorToIndex(){
 
 void ITF::convertColorToIndex(bool cancelled){
     m_UI->ClearWindow();
-    if(!cancelled){
-        mipMaps[0] = mipMaps[0].convertToFormat(QImage::Format_Indexed8);
+    m_Debug->MessageError("This is currently not supported.");
+    /*if(!cancelled){
         hasPalette = true;
         paletteCount = 1;
         m_format = ITFProperties_8bpp;
-    }
+        for(int i = 0; i < m_mipMaps.size(); i++){
+            mipMaps[i] = mipMaps[i].convertToFormat(QImage::Format_Indexed8);
+        }
+    }*/
     updateCenter();
 }
 
 void ITF::promptIndexToColor(){
     m_UI->ClearWindow();
-    QImage colorImage = mipMaps[0].convertToFormat(QImage::Format_ARGB32); //going straight to 32
+    QImage colorImage = CreateImage(0).convertToFormat(QImage::Format_ARGB32); //going straight to 32
     QPixmap colorData = QPixmap::fromImage(colorImage);
-    QPixmap originalData = QPixmap::fromImage(mipMaps[0]);
+    QPixmap originalData = QPixmap::fromImage(CreateImage(0));
 
     QLabel *originalDisplay = new QLabel(m_UI->m_centralContainer);
     originalDisplay->setPixmap(originalData);
-    originalDisplay->setGeometry(QRect(QPoint(50, 300), QSize(mipMaps[0].width(), mipMaps[0].height())));
+    originalDisplay->setGeometry(QRect(QPoint(50, 300), QSize(m_width, m_height)));
     originalDisplay->show();
     m_UI->m_currentWidgets.push_back(originalDisplay);
     m_UI->m_currentWidgets.push_back(CustomLabel::addLabel(originalDisplay->geometry(), "Current Image:", m_UI->m_centralContainer));
 
     QLabel *colorDisplay = new QLabel(m_UI->m_centralContainer);
     colorDisplay->setPixmap(colorData);
-    colorDisplay->setGeometry(QRect(QPoint(100 + mipMaps[0].width(), 300), QSize(mipMaps[0].width(), mipMaps[0].height())));
+    colorDisplay->setGeometry(QRect(QPoint(100 + m_width, 300), QSize(m_width, m_height)));
     colorDisplay->show();
     m_UI->m_currentWidgets.push_back(colorDisplay);
     m_UI->m_currentWidgets.push_back(CustomLabel::addLabel(colorDisplay->geometry(), "Color (non-indexed) Image:", m_UI->m_centralContainer));
@@ -402,11 +387,73 @@ void ITF::promptIndexToColor(){
 
 }
 
+QImage ITF::CreateImage(int mipMapLevel){
+    int imageWidth = MapWidth(mipMapLevel);
+    int imageHeight = MapHeight(mipMapLevel);
+    QImage createdImage;
+    qDebug() << Q_FUNC_INFO << "creating image that is" << imageWidth << "x" << imageHeight << "from level" << mipMapLevel;
+    switch(m_format){
+    case ITFProperties_4bpp:{
+        qDebug() << Q_FUNC_INFO << "image contains" << m_mipMaps[mipMapLevel].m_indexedPixels.size() << "pixels" ;
+        createdImage = QImage(imageWidth, imageHeight, QImage::Format_Indexed8);
+        createdImage.setColorCount(16);
+        for(int i = 0; i < m_palettes[currentPalette].m_colors.size(); i++){
+            createdImage.setColor(i, m_palettes[currentPalette].m_colors[i].rgba());
+        }
+        for(int i = 0; i < m_mipMaps[mipMapLevel].m_indexedPixels.size(); i++){
+            createdImage.setPixel(i % imageWidth, i / imageWidth, m_mipMaps[mipMapLevel].m_indexedPixels[i]);
+        }
+        break;
+    }
+    case ITFProperties_8bpp:{
+        createdImage = QImage(imageWidth, imageHeight, QImage::Format_Indexed8);
+        createdImage.setColorCount(256);
+        for(int i = 0; i < m_palettes[currentPalette].m_colors.size(); i++){
+            createdImage.setColor(i, m_palettes[currentPalette].m_colors[i].rgba());
+        }
+        for(int i = 0; i < m_mipMaps[mipMapLevel].m_indexedPixels.size(); i++){
+            createdImage.setPixel(i % imageWidth, i / imageWidth, m_mipMaps[mipMapLevel].m_indexedPixels[i]);
+        }
+        break;
+    }
+    case ITFProperties_16bpp:{
+        createdImage = QImage(imageWidth, imageHeight, QImage::Format_ARGB32);
+        for(int i = 0; i < m_mipMaps[mipMapLevel].m_pixels.size(); i++){
+            createdImage.setPixel(i % imageWidth, i / imageWidth, m_mipMaps[mipMapLevel].m_pixels[i].rgba());
+        }
+        break;
+    }
+    case ITFProperties_24bpp:{
+        createdImage = QImage(imageWidth, imageHeight, QImage::Format_ARGB32);
+        for(int i = 0; i < m_mipMaps[mipMapLevel].m_pixels.size(); i++){
+            createdImage.setPixel(i % imageWidth, i / imageWidth, m_mipMaps[mipMapLevel].m_pixels[i].rgba());
+        }
+        break;
+    }
+    case ITFProperties_32bpp:{
+        createdImage = QImage(imageWidth, imageHeight, QImage::Format_ARGB32);
+        for(int i = 0; i < m_mipMaps[mipMapLevel].m_pixels.size(); i++){
+            createdImage.setPixel(i % imageWidth, i / imageWidth, m_mipMaps[mipMapLevel].m_pixels[i].rgba());
+        }
+        break;
+    }
+    default:
+        qDebug() << Q_FUNC_INFO << "Undefined image format. How did this happen?";
+        break;
+    }
+    return createdImage;
+}
+
 void ITF::convertIndexToColor(bool cancelled){
     m_UI->ClearWindow();
     if(!cancelled){
-        mipMaps[0] = mipMaps[0].convertToFormat(QImage::Format_ARGB32);
         hasPalette = false;
+        for(int i = 0; i < m_mipMaps.size(); i++){
+            for(int j = 0; j < m_mipMaps[i].m_indexedPixels.size(); j++){
+                m_mipMaps[i].m_pixels.push_back(m_palettes[currentPalette].m_colors[m_mipMaps[i].m_indexedPixels[j]]);
+            }
+            m_mipMaps[i].m_indexedPixels.clear();
+        }
     }
     updateCenter();
 }
@@ -417,23 +464,10 @@ void ITF::selectMipMap(int mipmapCount){
 }
 
 void ITF::selectPalette(int palette){
-    int paletteChange = palette - currentPalette;
     currentPalette = palette;
     qDebug() << Q_FUNC_INFO << "new palette selected. Index:" << palette << "setting current palette to" << currentPalette;
-    int indexOffset = paletteChange * mipMaps[0].colorCount()/paletteCount;
-    //QImage changedPalette = QImage(mipMaps[0]);
-
-    for(int i = 0; i < mipMaps[0].height(); i++){
-        for(int j = 0; j < mipMaps[0].width(); j++){
-            mipMaps[0].setPixel(j, i, mipMaps[0].pixelIndex(j,i)+indexOffset);
-        }
-    }
-
-
 
     updatePreview();
-    //pixmapImageData = QPixmap::fromImage(changedPalette);
-    //labelImageDisplay->setPixmap(pixmapImageData);
 
     populatePalette();
 }
@@ -447,8 +481,8 @@ int ITF::importPalette(){
         importData = importData.convertToFormat(QImage::Format_Indexed8);
     }
 
-    int currentColors = mipMaps[0].colorCount();
-    int colorsPerPalette = mipMaps[0].colorCount()/paletteCount;
+    int colorsPerPalette = pow(2, bytesPerPixel());
+    int currentColors = colorsPerPalette * paletteCount;
     int addedColors = importData.colorCount();
 
     qDebug() << Q_FUNC_INFO << "current color count" << currentColors << "plus imported color count" << addedColors;
@@ -470,15 +504,16 @@ int ITF::importPalette(){
         m_Debug->MessageError("The imported image's color palette has too many colors (let Everett know, this shouldn't be possible).");
     }
 
-    mipMaps[0].setColorCount(currentColors + addedColors);
     QList<QRgb> tempColorTable = importData.colorTable();
+    exPaletteData addedPalette;
     for(int i = 0; i < addedColors; i++){
-        mipMaps[0].setColor(currentColors+i, tempColorTable[i]);
+        addedPalette.m_colors.push_back(tempColorTable[i]);
     }
     if(!hasPalette){
         hasPalette = true;
     }
     paletteCount += 1;
+    m_palettes.push_back(addedPalette);
     comboPalettes->addItem(QString::number(paletteCount));
     comboPalettes->setCurrentIndex(paletteCount-1);
 
@@ -519,17 +554,18 @@ void ITF::createMipMaps(int mipmapLevels){
 //    qDebug() << Q_FUNC_INFO << "width: " << mipMaps[0].width() << "is the" << log(mipMaps[0].width())/log(2) <<"th power of 2";
 //    qDebug() << Q_FUNC_INFO << "maximum number of mipmaps is" << int(fmin(log(mipMaps[0].width())/log(2), log(mipMaps[0].height())/log(2)));
     qDebug() << Q_FUNC_INFO << "requested maps:" << mipmapLevels;
-    int maxLevels = int(fmin(log(mipMaps[0].width())/log(2), log(mipMaps[0].height())/log(2)));
+    int maxLevels = int(fmin(log(m_width)/log(2), log(m_height)/log(2)));
     if(mipmapLevels > maxLevels){
         m_Debug->MessageError("Too many mipmaps. Maximum maps for this texture: " + QString::number(maxLevels) + ". Entered maps: " + QString::number(mipmapLevels));
     }
-    QImage storeImage = QImage(mipMaps[0]);
+    exImageData storeImage = m_mipMaps[0];
 
-    mipMaps.clear(); //if the image already has maps, they need to be cleaned out to make room for the new ones.
-    mipMaps.push_back(storeImage); //this feels gross though, find a better way to clear the extras.
+    m_mipMaps.clear(); //if the image already has maps, they need to be cleaned out to make room for the new ones.
+    m_mipMaps.push_back(storeImage); //this feels gross though, find a better way to clear the extras.
     if(swizzled){
         m_Debug->MessageError("Texture is currently swizzled. Unswizzling before generating new mipmaps.");
-        unswizzle();
+        //unswizzle();
+        swizzle(true);
     }
     if(mipmapLevels == 1){
         qDebug() << Q_FUNC_INFO << "Only one mipmap level selected - this is the base texture. Existing maps are being cleared, new maps will not be generated.";
@@ -538,50 +574,136 @@ void ITF::createMipMaps(int mipmapLevels){
         updateCenter();
         return;
     }
-
     for(int i = 1; i < mipmapLevels; i++){
-        qDebug() << Q_FUNC_INFO << "scaling image from" << mipMaps[0].width() << "x" << mipMaps[0].height() << "to" << mipMaps[0].width()/pow(2,i) << "x" << mipMaps[0].height()/pow(2,i);
-        mipMaps.push_back(QImage(mipMaps[0].scaled(mipMaps[0].width()/pow(2,i), mipMaps[0].height()/pow(2,i), Qt::KeepAspectRatio)));
+        m_mipMaps.push_back(ScaleBase(i));
     }
 
     hasMipmaps = true;
     mipmapCount = mipmapLevels;
 
     updateCenter();
+}
 
+exImageData ITF::ScaleBase(int mipMapLevel){
+    /*Scales the image to the given level. Mipmaps must be in powers of 2, so we can use that to our advantage
+     For any given level, we know we will have an image 2^x times smaller. So, we can treat each pixel as a square
+    that is 2^x times larger than it is, take the average, and use the result as the new pixel. Then we skip over
+    all other pixels in that square (because they've already been accounted for).
+    This might also just make the image grey, but we'll see.*/
+
+    exImageData baseImage = m_mipMaps[0];
+    if(mipMapLevel == 0){
+        return baseImage;
+    }
+    exImageData scaledImage;
+    int column = 0;
+    int row = 0;
+    int scaleFactor = int(pow(2, mipMapLevel));
+    int currentPixel = 0;
+    //qDebug() << Q_FUNC_INFO << "scaling image from" << m_width << "x" << m_height << "to" << m_width/scaleFactor << "x" << m_height/scaleFactor;
+    if(m_format == ITFProperties_4bpp || m_format == ITFProperties_8bpp){
+        /*not sure if we can really do this for indexed images? I'm sure there's a way
+        for now, just take the most common index among the available options
+        I think whatever function is made to convert non-indexed images into indexed ones may help here?
+        whenever that gets written, at least
+        */
+        for(int i = 0; i < baseImage.m_indexedPixels.size(); i++){
+            std::vector<int> indexList;
+            column = i / m_width;
+            row = i % m_width;
+            if(row % scaleFactor != 0 || column % scaleFactor != 0){
+                continue;
+            }
+            //qDebug() << Q_FUNC_INFO << "Checking scaling at pixel" << i;
+            for(int x = 0; x < scaleFactor; x++){
+                for(int y = 0; y < scaleFactor; y++){
+                    currentPixel = i + x + y*m_width;
+                    indexList.push_back(baseImage.m_indexedPixels[currentPixel]);
+                }
+            }
+            //qDebug() << Q_FUNC_INFO << "index list has" << indexList.size() << "items. should contain" << pow(2, mipMapLevel+1);
+            int mode = 0;
+            int modeCount = 0;
+            int currentCount = 0;
+            for(int j = 0; j < indexList.size(); j++){
+                for(int k = 0; k < indexList.size(); k++){
+                    if(indexList[j] == indexList[k]){
+                        currentCount++;
+                    }
+                }
+                if(currentCount > modeCount){
+                    mode = indexList[j];
+                    modeCount = currentCount;
+                }
+                currentCount = 0;
+            }
+            //qDebug() << Q_FUNC_INFO << "mode for pixel was" << mode;
+            scaledImage.m_indexedPixels.push_back(mode);
+        }
+        //qDebug() << Q_FUNC_INFO << "scaled image has" << scaledImage.m_indexedPixels.size() << "pixels. Should contain" << m_mipMaps[0].m_indexedPixels.size()/pow(2, mipMapLevel+1);
+    } else {
+        for(int i = 0; i < baseImage.m_pixels.size(); i++){
+            std::vector<int> redList;
+            std::vector<int> greenList;
+            std::vector<int> blueList;
+            std::vector<int> alphaList;
+            column = i / m_width;
+            row = i % m_width;
+            if(row % scaleFactor != 0 || column % scaleFactor != 0){
+                continue;
+            }
+            for(int x = 0; x < scaleFactor; x++){
+                for(int y = 0; y < scaleFactor; y++){
+                    currentPixel = i + x + y*m_width;
+                    redList.push_back(baseImage.m_pixels[currentPixel].red());
+                    greenList.push_back(baseImage.m_pixels[currentPixel].green());
+                    blueList.push_back(baseImage.m_pixels[currentPixel].blue());
+                    alphaList.push_back(baseImage.m_pixels[currentPixel].alpha());
+                }
+            }
+            int avgRed = int(std::accumulate(redList.begin(), redList.end(), 0.0) / redList.size());
+            int avgGreen = int(std::accumulate(greenList.begin(), greenList.end(), 0.0) / greenList.size());
+            int avgBlue = int(std::accumulate(blueList.begin(), blueList.end(), 0.0) / blueList.size());
+            int avgAlpha = int(std::accumulate(alphaList.begin(), alphaList.end(), 0.0) / alphaList.size());
+            QColor avgColor = QColor(avgRed, avgGreen, avgBlue, avgAlpha);
+            scaledImage.m_pixels.push_back(avgColor);
+        }
+    }
+    return scaledImage;
 }
 
 void ITF::readPalette(){
     int colorsPerPalette = std::pow(2, bytesPerPixel());
-    QList<QRgb> forceTable;
-
     qDebug() << Q_FUNC_INFO << "Color count: " << colorsPerPalette << "palette count:" << paletteCount;
-    qDebug() << Q_FUNC_INFO << "color count before:" << mipMaps[0].colorCount() << ". should be set to" << colorsPerPalette*paletteCount;
-    mipMaps[0].setColorCount(colorsPerPalette*paletteCount);
-    for(int i = 0; i < mipMaps[0].colorCount(); i++){
-        uint8_t red = 0;
-        uint8_t green = 0;
-        uint8_t blue = 0;
-        uint8_t alpha = 0;
-        fileData->process(red);
-        fileData->process(green);
-        fileData->process(blue);
-        fileData->process(alpha);
-        if(alphaType == Alpha_Opaque){
-            //opaque texture, no alpha
-            alpha = 255;
-        } else if (alphaType == Alpha_Punchthrough){
-            //punchthrough texture, either full alpha or no alpha
-            if (alpha < 128){
-                alpha = 0;
-            } else {
+    //mipMaps[0].setColorCount(colorsPerPalette*paletteCount);
+    for(int j = 0; j < paletteCount; j++){
+        exPaletteData addedPalette;
+        qDebug() << Q_FUNC_INFO << "color count before:" << addedPalette.m_colors.size() << ". should be set to" << colorsPerPalette*paletteCount;
+        for(int i = 0; i < colorsPerPalette; i++){
+            uint8_t red = 0;
+            uint8_t green = 0;
+            uint8_t blue = 0;
+            uint8_t alpha = 0;
+            fileData->process(red);
+            fileData->process(green);
+            fileData->process(blue);
+            fileData->process(alpha);
+            if(alphaType == Alpha_Opaque){
+                //opaque texture, no alpha
                 alpha = 255;
+            } else if (alphaType == Alpha_Punchthrough){
+                //punchthrough texture, either full alpha or no alpha
+                if (alpha < 128){
+                    alpha = 0;
+                } else {
+                    alpha = 255;
+                }
             }
-        }
 
-        QRgb nextColor = qRgba(red, green, blue, alpha);
-        mipMaps[0].setColor(i, nextColor);
-        //forceTable.push_back(nextColor);
+            addedPalette.m_colors.push_back(QColor(red, green, blue, alpha));
+            //forceTable.push_back(nextColor);
+        }
+        m_palettes.push_back(addedPalette);
     }
 
     changeColorTable(true);
@@ -589,30 +711,36 @@ void ITF::readPalette(){
 }
 
 void ITF::readIndexedData(){
-    int pixelIndex = 0;
     std::tuple <exUInt8, exUInt8> nibTup;
     for(int m = 0; m < mipmapCount; m++){
+        int imageWidth = MapWidth(m);
+        int imageHeight = MapHeight(m);
+        exImageData addedMap;
         if (m_format == ITFProperties_8bpp){
             //8bpp, 256 palette case. nice and easy since each pixel uses 1 byte to refer to the palette
-            for (int i = 0; i < mipMaps[m].width() * mipMaps[m].height(); i++){
+            for (int i = 0; i < imageWidth * imageHeight; i++){
                 //qDebug() << Q_FUNC_INFO << "current pixel " << i << "x" << i%width << "y" << i/width;
                 exUInt8 pixelIndex;
                 fileData->process(pixelIndex);
-                mipMaps[m].setPixel(i % mipMaps[m].width(), i / mipMaps[m].width(), pixelIndex);
+                addedMap.m_indexedPixels.resize(i+1);
+                addedMap.SetPixel(i, pixelIndex);
             }
 
         } else {
             //4bpp case, 16 color palette. this is tougher since each pixel is only half a byte (nibble?) and we can only refer to whole bytes.
             //however every image should be an even number of pixels so we can just grab them in pairs.
-            for (int i = 0; i < (mipMaps[m].width() * mipMaps[m].height())/2; i++){
+            int pixelIndex = 0;
+            addedMap.m_indexedPixels.resize(imageWidth * imageHeight);
+            for (int i = 0; i < (imageWidth * imageHeight)/2; i++){
                 //qDebug() << Q_FUNC_INFO << "current pixel pair" << i << "x" << pixelIndex%width << "y" << pixelIndex/width;
                 fileData->process(nibTup);
-                mipMaps[m].setPixel(pixelIndex % mipMaps[m].width(), pixelIndex / mipMaps[m].width(), std::get<0>(nibTup));
+                addedMap.SetPixel(pixelIndex, std::get<0>(nibTup));
                 pixelIndex += 1;
-                mipMaps[m].setPixel(pixelIndex % mipMaps[m].width(), pixelIndex / mipMaps[m].width(), std::get<1>(nibTup));
+                addedMap.SetPixel(pixelIndex, std::get<1>(nibTup));
                 pixelIndex += 1;
             }
         }
+        m_mipMaps.push_back(addedMap);
     }
 
 }
@@ -625,8 +753,9 @@ void ITF::readImageData(){
     int currentHeight = 0;
 
     for(int m = 0; m < mipmapCount; m++){
-        currentHeight = mipMaps[0].height()/pow(2,m);
-        currentWidth = mipMaps[0].width()/pow(2,m);
+        exImageData addedMap;
+        currentHeight = m_height/pow(2,m);
+        currentWidth = m_width/pow(2,m);
         switch(m_format){
         case ITFProperties_16bpp:
         qDebug() << Q_FUNC_INFO << "16bpp";
@@ -648,7 +777,7 @@ void ITF::readImageData(){
             }
             QColor currentPixel = qRgba(((combinedIntensity >> 0) & 31)*8, ((combinedIntensity >> 5) & 31)*8, ((combinedIntensity >> 10) & 31)*8, alpha);
             //qDebug() << Q_FUNC_INFO << "setting color at x" << i % currentWidth << "y" << i / currentWidth << "to" << currentPixel;
-            mipMaps[m].setPixelColor(i % currentWidth, i / currentWidth, currentPixel);
+            addedMap.m_pixels.push_back(currentPixel);
         }
         break;
 
@@ -660,7 +789,7 @@ void ITF::readImageData(){
             QColor currentPixel;
             fileData->process(currentPixel, ColorType_RGB_Char); //don't have to worry about alpha type with this - alpha is always 0*/
             //qDebug() << Q_FUNC_INFO << "setting color at x" << i % currentWidth << "y" << i / currentWidth << "to" << currentPixel;
-            mipMaps[m].setPixelColor(i % currentWidth, i / currentWidth, currentPixel);
+            addedMap.m_pixels.push_back(currentPixel);
         }
         break;
 
@@ -684,32 +813,33 @@ void ITF::readImageData(){
             }
             //currentPixel.setAlpha(alpha);
             //qDebug() << Q_FUNC_INFO << "setting color at x" << i % currentWidth << "y" << i / currentWidth << "to" << currentPixel;
-            mipMaps[m].setPixelColor(i % currentWidth, i / currentWidth, currentPixel);
+            addedMap.m_pixels.push_back(currentPixel);
         }
         break;
 
         default:
         m_Debug->MessageError("Unknown bit depth");
         }
+        m_mipMaps.push_back(addedMap);
     }
 }
 
-void ITF::adaptProperties(){
+void ITF::AdaptImage(QImage input){
     versionNum = 3; //most recent known version - we can experiment to see if the game recognizes a version 4 later
     headerLength = 32;
     m_format = 0; //this will be the hard part
     alphaType = 0; //blended alpha by default
-    m_width = mipMaps[0].width();
-    m_height = mipMaps[0].height();
+    m_width = input.width();
+    m_height = input.height();
     mipmapCount = 1; //base image
     unknown4Byte3 = 0; //this value is 0 in all recorded files. Might be reseved values for later file versions?
     unknown4Byte4 = 0;
     swizzled = false; //assuming imported images are not swizzled
 
-    qDebug() << Q_FUNC_INFO << "Image format:" << mipMaps[0].format();
+    qDebug() << Q_FUNC_INFO << "Image format:" << input.format();
 
-    if(mipMaps[0].format() == QImage::Format_Indexed8){
-        if(mipMaps[0].colorCount() < 15){
+    if(input.format() == QImage::Format_Indexed8){
+        if(input.colorCount() < 15){
             m_format = ITFProperties_4bpp;
             m_Debug->Log("Image bit depth: 4bpp");
         } else {
@@ -719,23 +849,23 @@ void ITF::adaptProperties(){
         paletteCount = 1; //additional palettes can be imported
         hasPalette = true;
 
-    } else if (mipMaps[0].format() == QImage::Format_ARGB32 || mipMaps[0].format() == QImage::Format_RGB32){
+    } else if (input.format() == QImage::Format_ARGB32 || input.format() == QImage::Format_RGB32){
         //there are probably other formats that need to be included here.
         m_format = ITFProperties_32bpp;
         m_Debug->Log("Image bit depth: 32bpp");
         hasPalette = false;
         //need to find a way later to compress these down
     } else {
-        qDebug() << Q_FUNC_INFO << "Image format:" << mipMaps[0].format();
-        m_Debug->Log(&"Image format read as: " [ mipMaps[0].format()]);
+        qDebug() << Q_FUNC_INFO << "Image format:" << input.format();
+        m_Debug->Log(&"Image format read as: " [ input.format()]);
         m_Debug->MessageError("Invalid image format.");
     }
 
-    if(int(log(mipMaps[0].width())/log(2)) != log(mipMaps[0].width())/log(2)){
+    if(int(log(m_width)/log(2)) != log(m_width)/log(2)){
         m_Debug->MessageError("Image width is not a factor of 2");
     }
 
-    if(int(log(mipMaps[0].height())/log(2)) != log(mipMaps[0].height())/log(2)){
+    if(int(log(m_height)/log(2)) != log(m_height)/log(2)){
         m_Debug->MessageError("Image height is not a factor of 2");
     }
 
@@ -763,9 +893,9 @@ int ITF::readDataITF(){
     fileData->process(m_width);
     fileData->process(m_height);
     fileData->process(mipmapCount);
-    mipmapCount = std::max<uint32_t>(1, mipmapCount);
+    mipmapCount = std::max<exUInt32>(1, mipmapCount);
     fileData->process(paletteCount);
-    paletteCount = std::max<uint32_t>(1, mipmapCount); //some textures say 0 palettes, this catches those. possibly older ITF file version?
+    paletteCount = std::max<exUInt32>(1, paletteCount); //some textures say 0 palettes, this catches those. possibly older ITF file version?
     fileData->process(unknown4Byte3);
     fileData->process(unknown4Byte4);
     /*End header data.*/
@@ -797,24 +927,7 @@ int ITF::readDataITF(){
     } else {
         hasMipmaps = false;
     }
-    mipMaps.resize(mipmapCount);
 
-    if (m_format == ITFProperties_24bpp || m_format == ITFProperties_16bpp){
-        qDebug() << Q_FUNC_INFO << "16 or 24 bpp. Setting format to Format_RGBA8888";
-        for(int i = 0; i < mipmapCount; i++){
-            mipMaps[i] = QImage(m_width/pow(2,i), m_height/pow(2,i), QImage::Format_RGBA8888);
-        }
-    } else if (m_format == ITFProperties_8bpp || m_format == ITFProperties_4bpp){
-        qDebug() << Q_FUNC_INFO << "4 or 8 bpp. Setting format to Format_Indexed8";
-        for(int i = 0; i < mipmapCount; i++){
-            mipMaps[i] = QImage(m_width/pow(2,i), m_height/pow(2,i), QImage::Format_Indexed8);
-        }
-    } else if(m_format == ITFProperties_32bpp){
-        qDebug() << Q_FUNC_INFO << "32 bpp. Setting format to Format_ARGB32";
-        for(int i = 0; i < mipmapCount; i++){
-            mipMaps[i] = QImage(m_width/pow(2,i), m_height/pow(2,i), QImage::Format_ARGB32);
-        }
-    }
     qDebug() << Q_FUNC_INFO << "Possition after header data:" << fileData->currentPosition;
 
     //Why were we searching for TXTR instead of just reading through the file? what?
@@ -833,7 +946,7 @@ int ITF::readDataITF(){
     }
 
     if(swizzled){
-        unswizzle();
+        swizzle(true);
     }
 
     //createMipMaps(mipmapCount);
@@ -841,16 +954,21 @@ int ITF::readDataITF(){
     return 0;
 }
 
+int ITF::MapHeight(int level){
+    return m_height / pow(2, level);
+}
+
+int ITF::MapWidth(int level){
+    return m_width / pow(2, level);
+}
+
 void ITF::populatePalette(){
-    int paletteIndex = currentPalette;
-    int paletteOffset = mipMaps[0].colorCount()/paletteCount * paletteIndex;
-    qDebug() << Q_FUNC_INFO << "Function called. Palette index: " << paletteIndex+1 << "out of" << paletteCount;
-    qDebug() << Q_FUNC_INFO << "Palette colors: " << paletteOffset << "out of total colors" << mipMaps[0].colorCount();
+    qDebug() << Q_FUNC_INFO << "Function called. Palette index: " << currentPalette+1 << "out of" << paletteCount;
     QStringList columnNames = {"Palette Index", "Red", "Green", "Blue", "Alpha", "Original", "Current"};
     paletteTable->setHorizontalHeaderLabels(columnNames);
     paletteTable->horizontalHeader()->setSectionResizeMode(2, QHeaderView::ResizeToContents);
-    QList<QRgb> tempColorTable = mipMaps[0].colorTable();
-    for(int i = 0; i < mipMaps[0].colorCount()/paletteCount; i++){
+    //QList<QRgb> tempColorTable = mipMaps[0].colorTable();
+    for(int i = 0; i < m_palettes[currentPalette].m_colors.size(); i++){
         paletteTable->blockSignals(1);
         QTableWidgetItem *cellText0 = paletteTable->item(i,0);
         if (!cellText0){
@@ -863,58 +981,66 @@ void ITF::populatePalette(){
             cellText = new QTableWidgetItem;
             paletteTable->setItem(i,1,cellText);
         }
-        cellText->setText(QString::number(qRed(tempColorTable[i+paletteOffset])));
+        cellText->setText(QString::number(m_palettes[currentPalette].m_colors[i].red()));
         QTableWidgetItem *cellText2 = paletteTable->item(i,2);
         if (!cellText2){
             cellText2 = new QTableWidgetItem;
             paletteTable->setItem(i,2,cellText2);
         }
-        cellText2->setText(QString::number(qGreen(tempColorTable[i+paletteOffset])));
+        cellText2->setText(QString::number(m_palettes[currentPalette].m_colors[i].green()));
         QTableWidgetItem *cellText3 = paletteTable->item(i,3);
         if (!cellText3){
             cellText3 = new QTableWidgetItem;
             paletteTable->setItem(i,3,cellText3);
         }
-        cellText3->setText(QString::number(qBlue(tempColorTable[i+paletteOffset])));
+        cellText3->setText(QString::number(m_palettes[currentPalette].m_colors[i].blue()));
         QTableWidgetItem *cellText4 = paletteTable->item(i,4);
         if (!cellText4){
             cellText4 = new QTableWidgetItem;
             paletteTable->setItem(i,4,cellText4);
         }
-        cellText4->setText(QString::number(qAlpha(tempColorTable[i+paletteOffset])));
+        cellText4->setText(QString::number(m_palettes[currentPalette].m_colors[i].alpha()));
         QTableWidgetItem *cellText5 = paletteTable->item(i,5);
         if (!cellText5){
             cellText5 = new QTableWidgetItem;
             paletteTable->setItem(i,5,cellText5);
         }
-        cellText5->setBackground(QColor::fromRgb(tempColorTable[i+paletteOffset]));
+        cellText5->setBackground(m_palettes[currentPalette].m_colors[i]);
         QTableWidgetItem *cellText6 = paletteTable->item(i,6);
         if (!cellText6){
             cellText6 = new QTableWidgetItem;
             paletteTable->setItem(i,6,cellText6);
         }
-        cellText6->setBackground(QColor::fromRgb(tempColorTable[i+paletteOffset]));
+        cellText6->setBackground(m_palettes[currentPalette].m_colors[i]);
         paletteTable->blockSignals(0);
     }
 }
 
 void ITF::editPalette(int row, int column){
     int changedValue = paletteTable->item(row, column)->text().toInt(nullptr, 10);
-    int paletteOffset = mipMaps[0].colorCount()/paletteCount * currentPalette;
+    int colorCount = 0;
+    int paletteOffset = 0;
+    if(m_format == ITFProperties_4bpp){
+        colorCount = 16;
+    } else if(m_format == ITFProperties_4bpp){
+        colorCount = 256;
+    }
+    paletteOffset = colorCount/paletteCount * currentPalette;
     int colorIndex = paletteOffset + row;
     qDebug() << Q_FUNC_INFO << "Changed value: " << paletteTable->item(row, column)->text();
     qDebug() << Q_FUNC_INFO << "Row: " << row << " Column " << column;
-    QList<QRgb> tempColorTable = mipMaps[0].colorTable();
+    //QList<QRgb> tempColorTable = mipMaps[0].colorTable();
+    QColor currentColor = m_palettes[currentPalette].m_colors[colorIndex];
     if (changedValue < 256 and changedValue >= 0 ){
         qDebug() << Q_FUNC_INFO << "Valid color value";
         switch (column){
-        case 1: mipMaps[0].setColor(colorIndex, qRgba(changedValue, qGreen(tempColorTable[colorIndex]), qBlue(tempColorTable[colorIndex]), qAlpha(tempColorTable[colorIndex]))) ; break;
-        case 2: mipMaps[0].setColor(colorIndex, qRgba(qRed(tempColorTable[colorIndex]), changedValue, qBlue(tempColorTable[colorIndex]), qAlpha(tempColorTable[colorIndex]))) ; break;
-        case 3: mipMaps[0].setColor(colorIndex, qRgba(qRed(tempColorTable[colorIndex]), qGreen(tempColorTable[colorIndex]), changedValue, qAlpha(tempColorTable[colorIndex]))) ; break;
-        case 4: mipMaps[0].setColor(colorIndex, qRgba(qRed(tempColorTable[colorIndex]), qGreen(tempColorTable[colorIndex]), qBlue(tempColorTable[colorIndex]), changedValue)) ; break;
+        case 1: m_mipMaps[0].SetPixel(colorIndex, qRgba(changedValue, currentColor.green(), currentColor.blue(), currentColor.alpha())) ; break;
+        case 2: m_mipMaps[0].SetPixel(colorIndex, qRgba(currentColor.red(), changedValue, currentColor.blue(), currentColor.alpha())) ; break;
+        case 3: m_mipMaps[0].SetPixel(colorIndex, qRgba(currentColor.red(), currentColor.green(), changedValue, currentColor.alpha())) ; break;
+        case 4: m_mipMaps[0].SetPixel(colorIndex, qRgba(currentColor.red(), currentColor.green(), currentColor.blue(), changedValue)) ; break;
         }
         QTableWidgetItem *cellText5 = paletteTable->item(row, 6);
-        cellText5->setBackground(QColor::fromRgb(mipMaps[0].colorTable()[colorIndex]));
+        cellText5->setBackground(m_palettes[currentPalette].m_colors[colorIndex]);
         qDebug() << Q_FUNC_INFO << "cell text" << cellText5->text();
 
         selectPalette(currentPalette);
@@ -922,10 +1048,10 @@ void ITF::editPalette(int row, int column){
     } else {
         qDebug() << Q_FUNC_INFO << "Not a valid color value.";
         switch (column){
-        case 1: paletteTable->item(row,column)->text() = QString::number(qRed(tempColorTable[colorIndex])); break;
-        case 2: paletteTable->item(row,column)->text() = QString::number(qGreen(tempColorTable[colorIndex])); break;
-        case 3: paletteTable->item(row,column)->text() = QString::number(qBlue(tempColorTable[colorIndex])); break;
-        case 4: paletteTable->item(row,column)->text() = QString::number(qAlpha(tempColorTable[colorIndex])); break;
+        case 1: paletteTable->item(row,column)->text() = QString::number(m_palettes[currentPalette].m_colors[colorIndex].red()); break;
+        case 2: paletteTable->item(row,column)->text() = QString::number(m_palettes[currentPalette].m_colors[colorIndex].green()); break;
+        case 3: paletteTable->item(row,column)->text() = QString::number(m_palettes[currentPalette].m_colors[colorIndex].blue()); break;
+        case 4: paletteTable->item(row,column)->text() = QString::number(m_palettes[currentPalette].m_colors[colorIndex].alpha()); break;
         }
     }
 
@@ -933,7 +1059,7 @@ void ITF::editPalette(int row, int column){
 
 int ITF::dataLength(){
     int dataLength = 0;
-    dataLength = mipMaps[0].height() * mipMaps[0].width() * (bytesPerPixel()/8);
+    dataLength = m_height * m_width * (bytesPerPixel()/8);
     qDebug() << Q_FUNC_INFO << "Data length calculated as:" << dataLength;
 
     return dataLength;
@@ -965,28 +1091,28 @@ void ITF::writeITF(){
         itfOut.write("PS2");
         BinChanger::byteWrite(itfOut, propertyByte);
         BinChanger::intWrite(itfOut, alphaType);
-        BinChanger::intWrite(itfOut, mipMaps[0].width());
-        BinChanger::intWrite(itfOut, mipMaps[0].height());
+        BinChanger::intWrite(itfOut, m_width);
+        BinChanger::intWrite(itfOut, m_height);
         BinChanger::intWrite(itfOut, mipmapCount);
         BinChanger::intWrite(itfOut, paletteCount);
         BinChanger::intWrite(itfOut, unknown4Byte3);
         BinChanger::intWrite(itfOut, unknown4Byte4);
         itfOut.write("TXTR");
         BinChanger::intWrite(itfOut, dataLength());
-        QList<QRgb> tempColorTable = mipMaps[0].colorTable();
+        //QList<QRgb> tempColorTable = mipMaps[0].colorTable();
         if(hasPalette){
-            for(int i = 0; i < mipMaps[0].colorCount(); i++){
-                BinChanger::byteWrite(itfOut, qRed(tempColorTable[i]));
-                BinChanger::byteWrite(itfOut, qGreen(tempColorTable[i]));
-                BinChanger::byteWrite(itfOut, qBlue(tempColorTable[i]));
-                BinChanger::byteWrite(itfOut, qAlpha(tempColorTable[i]));
+            for(int i = 0; i < m_mipMaps[0].m_pixels.size(); i++){
+                BinChanger::byteWrite(itfOut, m_mipMaps[0].m_pixels[i].red());
+                BinChanger::byteWrite(itfOut, m_mipMaps[0].m_pixels[i].green());
+                BinChanger::byteWrite(itfOut, m_mipMaps[0].m_pixels[i].blue());
+                BinChanger::byteWrite(itfOut, m_mipMaps[0].m_pixels[i].alpha());
             }
-            for(int i = 0; i < mipMaps.size(); i++){
-                writeIndexedData(itfOut, &mipMaps[i]);
+            for(int i = 0; i < m_mipMaps.size(); i++){
+                writeIndexedData(itfOut, &m_mipMaps[i]);
             }
         } else {
-            for(int i = 0; i < mipMaps.size(); i++){
-                writeImageData(itfOut, &mipMaps[i]);
+            for(int i = 0; i < m_mipMaps.size(); i++){
+                writeImageData(itfOut, &m_mipMaps[i]);
             }
         }
 
@@ -997,25 +1123,22 @@ void ITF::writeITF(){
 
 }
 
-void ITF::writeIndexedData(QFile& fileOut, QImage *writeData){
-    QImage reverseImage = QImage(*writeData);
+void ITF::writeIndexedData(QFile& fileOut, exImageData *writeData){
     std::tuple <int8_t, int8_t> nibTup;
 
     switch(m_format){
         case ITFProperties_8bpp:
-        m_Debug->Log("Exporting to ITF with bit depth: 8bpp");
-        for(int i = 0; i < reverseImage.height(); i++){
-            for(int j = 0; j < reverseImage.width(); j++){
-                BinChanger::byteWrite(fileOut, reverseImage.pixelIndex(j,i));
+            m_Debug->Log("Exporting to ITF with bit depth: 8bpp");
+            for(int i = 0; i < writeData->m_indexedPixels.size(); i++){
+                BinChanger::byteWrite(fileOut, writeData->m_indexedPixels[i]);
             }
-        }
-        break;
+            break;
 
         case ITFProperties_4bpp:
         m_Debug->Log("Exporting to ITF with bit depth: 4bpp");
-        for(int i = 0; i < reverseImage.height()*reverseImage.width(); i+=2){
-            std::get<0>(nibTup) = reverseImage.pixelIndex(i % reverseImage.width(), i / reverseImage.width());
-            std::get<1>(nibTup) = reverseImage.pixelIndex((i+1) % reverseImage.width(), (i+1) / reverseImage.width());
+        for(int i = 0; i < m_height*m_width; i+=2){
+            std::get<0>(nibTup) = writeData->m_indexedPixels[i];
+            std::get<1>(nibTup) = writeData->m_indexedPixels[i+1];
             BinChanger::byteWrite(fileOut, BinChanger::nib_to_byte(nibTup));
         }
         break;
@@ -1025,109 +1148,45 @@ void ITF::writeIndexedData(QFile& fileOut, QImage *writeData){
     }
 }
 
-void ITF::writeImageData(QFile& fileOut, QImage *writeData){
-    QImage reverseImage = QImage(*writeData);
+void ITF::writeImageData(QFile& fileOut, exImageData *writeData){
     int alpha = 0;
     int combinedIntensities = 0;
-    qDebug() << Q_FUNC_INFO << "width:" << reverseImage.width() << "height" << reverseImage.height() << "Total pixels:" << reverseImage.width() * reverseImage.height();
+    qDebug() << Q_FUNC_INFO << "width:" << m_width << "height" << m_height << "Total pixels:" << m_width * m_height;
     m_Debug->Log("Exporting to ITF with bit depth: " + QString::number(bytesPerPixel()) + "bpp");
-    for(int i = 0; i < reverseImage.height(); i++){
-        for(int j = 0; j < reverseImage.width(); j++){
-            QColor currentPixel = QColor(reverseImage.pixel(j,i));
-            switch(m_format){
-                case ITFProperties_16bpp:
-                //QColor currentPixel = qRgba(((combinedIntensity >> 0) & 31)*8, ((combinedIntensity >> 5) & 31)*8, ((combinedIntensity >> 10) & 31)*8, alpha);
-                alpha = std::min(currentPixel.alpha(), 1);
-                combinedIntensities = (currentPixel.red()/8) + ((currentPixel.green()/8) << 5) + ((currentPixel.blue()/8) << 10) + (alpha<<15);
-                BinChanger::shortWrite(fileOut, combinedIntensities);
-                break;
+    for(int i = 0; i < writeData->m_pixels.size(); i++){
+        QColor currentPixel = writeData->m_pixels[i];
+        switch(m_format){
+        case ITFProperties_16bpp:
+            //QColor currentPixel = qRgba(((combinedIntensity >> 0) & 31)*8, ((combinedIntensity >> 5) & 31)*8, ((combinedIntensity >> 10) & 31)*8, alpha);
+            alpha = std::min(currentPixel.alpha(), 1);
+            combinedIntensities = (currentPixel.red()/8) + ((currentPixel.green()/8) << 5) + ((currentPixel.blue()/8) << 10) + (alpha<<15);
+            BinChanger::shortWrite(fileOut, combinedIntensities);
+            break;
 
-                case ITFProperties_24bpp:
-                BinChanger::byteWrite(fileOut, currentPixel.blue());
-                BinChanger::byteWrite(fileOut, currentPixel.green());
-                BinChanger::byteWrite(fileOut, currentPixel.red());
-                break;
+        case ITFProperties_24bpp:
+            BinChanger::byteWrite(fileOut, currentPixel.blue());
+            BinChanger::byteWrite(fileOut, currentPixel.green());
+            BinChanger::byteWrite(fileOut, currentPixel.red());
+            break;
 
-                case ITFProperties_32bpp:
-                BinChanger::byteWrite(fileOut, currentPixel.blue());
-                BinChanger::byteWrite(fileOut, currentPixel.green());
-                BinChanger::byteWrite(fileOut, currentPixel.red());
-                BinChanger::byteWrite(fileOut, currentPixel.alpha());
-                break;
+        case ITFProperties_32bpp:
+            BinChanger::byteWrite(fileOut, currentPixel.blue());
+            BinChanger::byteWrite(fileOut, currentPixel.green());
+            BinChanger::byteWrite(fileOut, currentPixel.red());
+            BinChanger::byteWrite(fileOut, currentPixel.alpha());
+            break;
 
-                default:
-                m_Debug->MessageError("Unknown byte depth.");
-            }
+        default:
+            m_Debug->MessageError("Unknown byte depth.");
         }
     }
 }
 
-void ITF::unswizzle(){
-    QImage unswizzledImage;
-    int InterlaceMatrix[] = {
-        0x00, 0x10, 0x02, 0x12,
-        0x11, 0x01, 0x13, 0x03,
-    };
-
-    int Matrix[]        = { 0, 1, -1, 0 };
-    int TileMatrix[]    = { 4, -4 };
-
-    for(int m = 0; m < mipMaps.size(); m++){
-
-
-        //https://gist.github.com/Fireboyd78/1546f5c86ebce52ce05e7837c697dc72
-
-        //to-do: this code seems to work, but the variables should be renamed to actually be useful.
-
-        unswizzledImage = QImage(mipMaps[m]);
-        for (int y = 0; y < mipMaps[m].height(); y++)
-        {
-            for (int x = 0; x < mipMaps[m].width(); x++)
-            {
-                int oddRow = ((y & 1) != 0);
-
-                int num1 = ((y / 4) & 1);
-                int num2 = ((x / 4) & 1);
-                int num3 = (y % 4);
-
-                int num4 = ((x / 4) % 4);
-
-                if (oddRow){
-                    num4 += 4;
-                }
-
-                int num5 = ((x * 4) % 16);
-                int num6 = ((x / 16) * 32);
-
-                int num7 = (oddRow) ? ((y - 1) * mipMaps[m].width()) : (y * mipMaps[m].width());
-
-                int xx = x + num1 * TileMatrix[num2];
-                int yy = y + Matrix[num3];
-
-                int i = InterlaceMatrix[num4] + num5 + num6 + num7;
-                int j = yy * mipMaps[m].width() + xx;
-
-                //unswizzledImage[j] = pixelList[i];
-
-
-                if(hasPalette){
-                    unswizzledImage.setPixel(j % unswizzledImage.width(), j/unswizzledImage.width(), mipMaps[m].pixelIndex(i % mipMaps[m].width(), i/mipMaps[m].width()));
-                } else {
-                    unswizzledImage.setPixel(j % unswizzledImage.width(), j/unswizzledImage.width(), mipMaps[m].pixel(i % mipMaps[m].width(), i/mipMaps[m].width()));
-                }
-            }
-        }
-        mipMaps[m] = unswizzledImage;
-    }
-    swizzled = false;
-
-}
-
-void ITF::swizzle(){
-    QImage swizzledImage;
+void ITF::swizzle(bool unswizzle){
+    std::vector<QColor> swizzledImage;
+    std::vector<int> swizzledIndex;
     //https://gist.github.com/Fireboyd78/1546f5c86ebce52ce05e7837c697dc72
 
-    //to-do: this code seems to work, but the variables should be renamed to actually be useful.
     //qDebug() << Q_FUNC_INFO << "unswizzled image size" << pixelList.size();
     int InterlaceMatrix[] = {
         0x00, 0x10, 0x02, 0x12,
@@ -1137,12 +1196,17 @@ void ITF::swizzle(){
     int Matrix[]        = { 0, 1, -1, 0 };
     int TileMatrix[]    = { 4, -4 };
 
-    for(int m = 0; m < mipMaps.size(); m++){
 
-        swizzledImage = QImage(mipMaps[m]);
-        for (int y = 0; y < mipMaps[m].height(); y++)
+    int mapWidth = 0;
+    //to-do: this code seems to work, but the variables should be renamed to actually be useful.
+    for(int m = 0; m < mipmapCount; m++){
+        //swizzledImage = QImage(mipMaps[m]);
+        mapWidth = MapWidth(m);
+        swizzledImage = m_mipMaps[m].m_pixels;
+        swizzledIndex = m_mipMaps[m].m_indexedPixels;
+        for (int y = 0; y < MapHeight(m); y++)
         {
-            for (int x = 0; x < mipMaps[m].width(); x++)
+            for (int x = 0; x < mapWidth; x++)
             {
                 int oddRow = ((y & 1) != 0);
 
@@ -1159,28 +1223,45 @@ void ITF::swizzle(){
                 int num5 = ((x * 4) % 16);
                 int num6 = ((x / 16) * 32);
 
-                int num7 = (oddRow) ? ((y - 1) * mipMaps[m].width()) : (y * mipMaps[m].width());
+                int num7 = (oddRow) ? ((y - 1) * mapWidth) : (y * mapWidth);
 
                 int xx = x + num1 * TileMatrix[num2];
                 int yy = y + Matrix[num3];
 
-                int i = InterlaceMatrix[num4] + num5 + num6 + num7;
-                int j = yy * mipMaps[m].width() + xx;
+                int i = 0;
+                int j = 0;
+
+                if(unswizzle){
+                    j = InterlaceMatrix[num4] + num5 + num6 + num7;
+                    i = yy * mapWidth + xx;
+                } else {
+                    i = InterlaceMatrix[num4] + num5 + num6 + num7;
+                    j = yy * mapWidth + xx;
+                }
 
                 //qDebug() << Q_FUNC_INFO << "x" << x << "y" << y << "i" << i << "j" << j;
 
-                //swizzledImage[i] = pixelList[j];
                 if(hasPalette){
+                    swizzledIndex[i] = m_mipMaps[m].m_indexedPixels[j];
+                } else {
+                    swizzledImage[i] = m_mipMaps[m].m_pixels[j];
+                }
+                /*if(hasPalette){
                     swizzledImage.setPixel(i % swizzledImage.width(), i/swizzledImage.width(), mipMaps[m].pixelIndex(j % mipMaps[m].width(), j/mipMaps[m].width()));
                 } else {
                     swizzledImage.setPixel(i % swizzledImage.width(), i/swizzledImage.width(), mipMaps[m].pixel(j % mipMaps[m].width(), j/mipMaps[m].width()));
-                }
+                }*/
 
             }
         }
-        mipMaps[m] = swizzledImage;
+        //mipMaps[m] = swizzledImage;
+        if(hasPalette){
+            m_mipMaps[m].m_indexedPixels = swizzledIndex;
+        } else {
+            m_mipMaps[m].m_pixels = swizzledImage;
+        }
     }
 
-    swizzled = true;
+    swizzled = !unswizzle;
 
 }

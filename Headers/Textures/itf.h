@@ -15,15 +15,20 @@
 #include "Headers/FileManagement/taFileSystemObject.h"
 #include "Headers/Main/BinChanger.h"
 
-class Color{
+class exImageData{
 public:
-    uint32_t redInt;
-    uint32_t greenInt;
-    uint32_t blueInt;
-    uint32_t alphaInt;
-    uint32_t paletteIndex;
+    std::vector<QColor> m_pixels;
+    std::vector<int> m_indexedPixels;
 
-    const void operator=(Color input);
+    void SetPixel(int index, QColor pixel);
+    void SetPixel(int pixelIndex, int colorIndex);
+};
+
+class exPaletteData{
+public:
+    std::vector<QColor> m_colors;
+
+    void SetColor(int index, QColor color);
 };
 
 enum ITFProperties
@@ -94,16 +99,21 @@ public:
     QTableWidget *paletteTable;
     QLabel *labelImageDisplay;
     //QImage imageData; //replaced by mipmaps[0]
-    std::vector<QImage> mipMaps;
+    std::vector<exImageData> m_mipMaps;
+    std::vector<exPaletteData> m_palettes;
+    //std::vector<QImage> mipMaps;
     std::vector<QLabel*> labelMipMaps;
 
 
+    QImage CreateImage(int mipMapLevel = 0);
+    void AdaptImage(QImage input);
+    exImageData ScaleBase(int mipMapLevel);
     void writeITF();
     void readPalette();
     void readIndexedData();
     void readImageData();
-    void writeIndexedData(QFile& fileOut, QImage *writeData);
-    void writeImageData(QFile& fileOut, QImage *writeData);
+    void writeIndexedData(QFile& fileOut, exImageData *writeData);
+    void writeImageData(QFile& fileOut, exImageData *writeData);
     void populatePalette();
     void editPalette(int row, int column);
     void save(QString toType);
@@ -114,25 +124,22 @@ public:
     void selectMipMap(int mipmapCount);
     int bytesPerPixel();
     int dataLength();
-    void adaptProperties();
     void createMipMaps(int mipmapLevels);
     int importPalette();
     void promptColorToIndex();
     void promptIndexToColor();
     void convertColorToIndex(bool cancelled);
     void convertIndexToColor(bool cancelled);
-    void convertAlphaType(int index);
-    void convertGradientAlpha(QImage *imageData);
-    void convertOpaqueAlpha(QImage *imageData);
-    void convertPunchthroughAlpha(QImage *imageData);
+    void convertAlpha(int index);
     void changeSwizzleType(int index);
     void changeColorTable(bool input);
+    int MapWidth(int level);
+    int MapHeight(int level);
 
     private:
     void saveITFPalette();
     int readDataITF();
-    void unswizzle();
-    void swizzle();
+    void swizzle(bool unswizzle = false);
 };
 
 #endif // ITF_H
