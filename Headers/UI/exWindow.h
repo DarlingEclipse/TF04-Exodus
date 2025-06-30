@@ -47,6 +47,7 @@ public:
     static QMessageBox* MakeOkayPopup();
     static QDialog* MakeYesNoPopup(bool &finished);
     static CustomPopup* MakeSpecificPopup(bool &finished, QStringList addons, QStringList labels);
+    QLabel* MakeImage(QImage inputImage);
     static QPoint ScreenCenter();
     static void ForceProcessEvents();
 

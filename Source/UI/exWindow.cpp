@@ -316,6 +316,15 @@ CustomPopup* exWindowBase::MakeSpecificPopup(bool &finished, QStringList addons,
     return dialogWindow;
 }
 
+QLabel* exWindowBase::MakeImage(QImage inputImage){
+    QPixmap pixmapImage = QPixmap::fromImage(inputImage);
+    QLabel *labelPixmap = new QLabel(m_centralContainer);
+    m_currentWidgets.push_back(labelPixmap);
+    labelPixmap->setPixmap(pixmapImage);
+
+    return labelPixmap;
+}
+
 void exWindowMain::SetLeftWindow(QWidget* widgetToSet){
     if(m_leftSidebar == nullptr){
         m_leftSidebar = new QDockWidget(this);
