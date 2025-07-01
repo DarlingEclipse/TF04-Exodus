@@ -48,7 +48,7 @@ public:
     static QString signExtend(QString input, int length);
     static QByteArray remakeImm(QString tempRead, long immediate);
     static std::tuple<int8_t,int8_t> byte_to_nib(QByteArray input);
-    static int nib_to_byte(std::tuple<int8_t, int8_t> input);
+    static exUInt8 nib_to_byte(std::tuple<int8_t, int8_t> input);
     static float hex_to_float(QByteArray array);
     static QByteArray float_to_hex(float input);
     static qint64 hexWrite(QFile& file, const QByteArray var);
@@ -66,6 +66,7 @@ enum ColorType{
     , ColorType_RGB_Char
     , ColorType_RGBA_Float
     , ColorType_RGB_Float
+    , ColorType_RGBA_Compressed
 };
 
 class FileData{
@@ -76,8 +77,11 @@ public:
     bool input;
     int line = 0;
 
+    template<typename T>
+    QByteArray makeInt(T value);
 
     void readFile(QString filePath);
+    void writeFile(QString filePath);
     void process(char &data);
     void process(exInt8 &data);
     void process(exUInt8 &data);
