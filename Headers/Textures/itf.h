@@ -18,7 +18,7 @@
 class exImageData{
 public:
     std::vector<QColor> m_pixels;
-    std::vector<int> m_indexedPixels;
+    std::vector<exUInt8> m_indexedPixels;
 
     void SetPixel(int index, QColor pixel);
     void SetPixel(int pixelIndex, int colorIndex);
@@ -46,6 +46,12 @@ enum Alpha{
     Alpha_Gradient
     ,Alpha_Opaque
     ,Alpha_Punchthrough
+};
+
+enum SwizzleMode{
+    //find better names for these
+    Swizzle_mix = false
+    , Swizzle_order = true
 };
 
 class ITF : public taFile {
@@ -109,9 +115,12 @@ public:
     void AdaptImage(QImage input);
     exImageData ScaleBase(int mipMapLevel);
     void writeITF();
-    void readPalette();
-    void readIndexedData();
-    void readImageData();
+    void ProcessPalette();
+    void ProcessIndexedData();
+    void ProcessImageData();
+
+    QColor AlphaTypeColor(QColor input);
+
     void writeIndexedData(QFile& fileOut, exImageData *writeData);
     void writeImageData(QFile& fileOut, exImageData *writeData);
     void populatePalette();
@@ -138,8 +147,8 @@ public:
 
     private:
     void saveITFPalette();
-    int readDataITF();
-    void swizzle(bool unswizzle = false);
+    int ProcessDataITF();
+    void swizzle(bool type = Swizzle_mix);
 };
 
 #endif // ITF_H
