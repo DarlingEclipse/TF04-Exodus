@@ -1026,17 +1026,20 @@ void taDataEnum::read(){
             defaultValue = value.toInt();
             return;
         }
+        if (tempList.contains("Range(")){
+            //qDebug() << Q_FUNC_INFO << "Range value found:" << tempList;
+            comment = tempList.remove(quoteRemover);
+            tempList = "\"" + file->fileData->textWord();
+        }
         while(tempList[0] == "\"" && tempList[tempList.size()-1] != "\""){
-            qDebug() << Q_FUNC_INFO << "default value with space found";
+            //qDebug() << Q_FUNC_INFO << "Option with space found";
             tempList += " " + file->fileData->textWord();
         }
-        qDebug() << Q_FUNC_INFO << "value:" << value << "templist" << tempList;
+       // qDebug() << Q_FUNC_INFO << "value:" << value << "templist" << tempList;
         value = value.remove(quoteRemover);
-        if (tempList.contains("Range")){
-            tempList = file->fileData->textWord();
-        }
         tempList = tempList.remove(quoteRemover);
         valueOptions = tempList.split(",");
+        //qDebug() << Q_FUNC_INFO << "Searching for value in" << valueOptions;
         //qDebug() << Q_FUNC_INFO << "Setting default value of enum to" << value << "found at index" << valueOptions.indexOf(value);
         defaultValue = valueOptions.indexOf(value);
     }
