@@ -2,11 +2,11 @@
 #include <QDirIterator>
 #include <QCoreApplication>
 
-#include "Headers/Databases/DataHandler.h"
-#include "Headers/Databases/taMinicon.h"
-#include "Headers/UI/exWindow.h"
-#include "Headers/Main/exDebugger.h"
-#include "Headers/FileManagement/Zebrafish.h"
+#include "Databases/DataHandler.h"
+#include "Databases/taMinicon.h"
+#include "UI/exWindow.h"
+#include "Utility/exDebugger.h"
+#include "FileManagement/Zebrafish.h"
 
 DataHandler::DataHandler(exWindowBase *passUI, zlManager *fileManager){
     m_UI = passUI;

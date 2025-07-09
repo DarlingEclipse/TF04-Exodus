@@ -2,11 +2,11 @@
 #include <QLineEdit>
 #include <QPushButton>
 
-#include "Headers/Databases/Database.h"
-#include "Headers/UI/exWindow.h"
-#include "Headers/Main/exDebugger.h"
-#include "Headers/Main/CustomQT.h"
-#include "Headers/Main/BinChanger.h"
+#include "Databases/Database.h"
+#include "UI/exWindow.h"
+#include "Utility/exDebugger.h"
+#include "UI/CustomQT.h"
+#include "Utility/BinChanger.h"
 
 /*template <typename ValueType>
 ValueType dictItem::searchAttributes(QString itemName){
@@ -17,6 +17,10 @@ ValueType dictItem::searchAttributes(QString itemName){
     }
     return;
 }*/
+
+void taData::SetModelItem(QStandardItem* itemToSet){
+    itemToSet->setData("default test");
+}
 
 std::shared_ptr<taData> dictItem::getAttribute(QString attributeName){
     for(int i = 0; i < attributes.size(); i++){
@@ -259,6 +263,12 @@ QString taDataSingle<valueType>::display(){
     return displayValue;
 }
 
+
+template <class valueType>
+void taDataSingle<valueType>::SetModelItem(QStandardItem* itemToSet){
+    itemToSet->setData(value);
+}
+
 /*---------- Bool ----------*/
 
 template <>
@@ -339,6 +349,8 @@ QString taDataFloat<valueType>::display(){
     //qDebug() << Q_FUNC_INFO << "Generating float display value";
     return QString::number(this->value, 'g', 5);
 }
+
+
 
 /*---------- String ----------*/
 
@@ -986,6 +998,11 @@ QString taDataEnum::databaseOutput(){
     return QString::number(this->defaultValue) + " ";
 }
 
+void taDataEnum::SetModelItem(QStandardItem* itemToSet){
+    //itemToSet.set
+    itemToSet->setData("default test");
+}
+
 void taDataEnum::read(){
     static QRegularExpression quoteRemover = QRegularExpression("[\[\"\\]]");
     QString tempList;
@@ -997,21 +1014,31 @@ void taDataEnum::read(){
         defaultValue = file->fileData->readInt();
         //qDebug() << Q_FUNC_INFO << "binary default value read as" << defaultValue << "at" << file->fileData->currentPosition;
     } else {
-        value = file->fileData->textWord().remove(quoteRemover);
+        value = file->fileData->textWord();//.remove(quoteRemover);
+        //qDebug() << Q_FUNC_INFO << "last character" << value[value.size()-1];
+        while(value[0] == "\"" && value[value.size()-1] != "\""){
+            //qDebug() << Q_FUNC_INFO << "default value with space found";
+            value += " " + file->fileData->textWord();
+        }
         tempList = file->fileData->textWord();
         if(tempList == ""){
             //textWord will return "" if it attempts to get a word at the end of a line.
             defaultValue = value.toInt();
+            return;
         }
-        else {
-            if (tempList.contains("Range")){
-                tempList = file->fileData->textWord();
-            }
-            tempList = tempList.remove(quoteRemover);
-            valueOptions = tempList.split(",");
-            //qDebug() << Q_FUNC_INFO << "Setting default value of enum to" << value << "found at index" << valueOptions.indexOf(value);
-            defaultValue = valueOptions.indexOf(value);
+        while(tempList[0] == "\"" && tempList[tempList.size()-1] != "\""){
+            qDebug() << Q_FUNC_INFO << "default value with space found";
+            tempList += " " + file->fileData->textWord();
         }
+        qDebug() << Q_FUNC_INFO << "value:" << value << "templist" << tempList;
+        value = value.remove(quoteRemover);
+        if (tempList.contains("Range")){
+            tempList = file->fileData->textWord();
+        }
+        tempList = tempList.remove(quoteRemover);
+        valueOptions = tempList.split(",");
+        //qDebug() << Q_FUNC_INFO << "Setting default value of enum to" << value << "found at index" << valueOptions.indexOf(value);
+        defaultValue = valueOptions.indexOf(value);
     }
 }
 

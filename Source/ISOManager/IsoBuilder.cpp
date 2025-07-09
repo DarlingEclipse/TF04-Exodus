@@ -1,11 +1,11 @@
 #include <QCoreApplication>
 #include <QFileDialog>
 
-#include "Headers/ISOManager/IsoBuilder.h"
-#include "Headers/FileManagement/Zebrafish.h"
-#include "Headers/UI/exWindow.h"
-#include "Headers/Main/exDebugger.h"
-#include "Headers/UI/exSettings.h"
+#include "ISOManager/IsoBuilder.h"
+#include "FileManagement/Zebrafish.h"
+#include "UI/exWindow.h"
+#include "Utility/exDebugger.h"
+#include "Utility/exSettings.h"
 
 //https://doc.qt.io/qt-6/qprocess.html
 

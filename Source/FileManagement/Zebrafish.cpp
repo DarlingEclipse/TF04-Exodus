@@ -1,17 +1,17 @@
 #include <QFileDialog>
 #include <QInputDialog>
-#include "Headers/FileManagement/Zebrafish.h"
-#include "Headers/ISOManager/IsoBuilder.h"
-#include "Headers/ISOManager/ModHandler.h"
-#include "Headers/UI/exWindow.h"
-#include "Headers/Main/exDebugger.h"
-#include "Headers/UI/exSettings.h"
+#include "FileManagement/Zebrafish.h"
+#include "ISOManager/IsoBuilder.h"
+#include "ISOManager/ModHandler.h"
+#include "UI/exWindow.h"
+#include "Utility/exDebugger.h"
+#include "Utility/exSettings.h"
 
-#include "Headers/Models/vbin.h"
-#include "Headers/Models/LevelGeo.h"
-#include "Headers/Textures/itf.h"
-#include "Headers/Audio/ToneLibraries.h"
-#include "Headers/Databases/Database.h"
+#include "Models/vbin.h"
+#include "Models/LevelGeo.h"
+#include "Textures/itf.h"
+#include "Audio/ToneLibraries.h"
+#include "Databases/Database.h"
 
 zlManager::zlManager(exWindowBase *passUI, exSettings *passSettings)
 {
@@ -161,6 +161,9 @@ void zlManager::LoadFile(theFile fileToOpen, QString givenPath){
         }
 
     }
+    //Uncomment the below once all files follow the same convention as ITF (Only access filedata when reading and writing, otherwise handle it themselves)
+    //in theory, we could just pass filedata in at that point and not have it be part of the tffile class
+    //fileToOpen->fileData->dataBytes.clear();
 }
 
 template <typename theFile>

@@ -1,10 +1,10 @@
 #include <QRadioButton>
 #include <QFileDialog>
 
-#include "Headers/Models/vbin.h"
-#include "Headers/UI/exWindow.h"
-#include "Headers/Main/exDebugger.h"
-#include "Headers/FileManagement/Zebrafish.h"
+#include "Models/vbin.h"
+#include "UI/exWindow.h"
+#include "Utility/exDebugger.h"
+#include "FileManagement/Zebrafish.h"
 
 /*
 The overall plan with VBIN files is to read through them section by section. The previous code looked for specific sections (positionarrays and indexarrays)

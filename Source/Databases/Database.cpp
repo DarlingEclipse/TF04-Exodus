@@ -4,10 +4,10 @@
 #include <QHeaderView>
 #include <QDir>
 
-#include "Headers/Databases/Database.h"
-#include "Headers/FileManagement/Zebrafish.h"
-#include "Headers/UI/exWindow.h"
-#include "Headers/Main/exDebugger.h"
+#include "Databases/Database.h"
+#include "FileManagement/Zebrafish.h"
+#include "UI/exWindow.h"
+#include "Utility/exDebugger.h"
 
 /*Reads through a dictionary file to populate data. This data can be edited
 and re-exported or simply obeserved.
@@ -95,9 +95,13 @@ void DictionaryFile::load(QString fromType){
 void DefinitionFile::updateCenter(){
     qDebug() << Q_FUNC_INFO << "updating center view for file" << fileName << "." << fileExtension;
     m_UI->setUpdatesEnabled(false);
+    qDebug() << Q_FUNC_INFO << "Updates disabled";
     m_UI->ClearWindow();
+    qDebug() << Q_FUNC_INFO << "Window cleared";
     createDBTree();
+    qDebug() << Q_FUNC_INFO << "DB tree created";
     m_UI->setUpdatesEnabled(true);
+    qDebug() << Q_FUNC_INFO << "Updates re-enabled";
 }
 
 void DatabaseFile::updateCenter(){
@@ -160,33 +164,50 @@ void DefinitionFile::createDBTree(){
     //add columns "name", "type", "value", "allowed values"
 
     for (int i = 0; i < dictionary.size();i++) {
-        //qDebug() << Q_FUNC_INFO << "creating class row from" << dictionary[i].name;
+        qDebug() << Q_FUNC_INFO << "creating class row from" << dictionary[i].name;
         classRow = new QStandardItem(dictionary[i].name);
         classRow->setEditable(false);
-        dictRow.first()->appendRow(classRow);
-        if(dictionary[i].expanded){
+        //dictRow.first()->appendRow(classRow);
+        item->appendRow(classRow);
+        /*if(dictionary[i].expanded){
             dataTree->expand(classRow->index());
-        }
+        }*/
         for(int j = 0; j<dictionary[i].attributes.size();j++){
-            //qDebug() << Q_FUNC_INFO << "creating detail row from" << dictionary[i].attributes[j]->name;
+            qDebug() << Q_FUNC_INFO << "creating detail row from" << dictionary[i].attributes[j]->name;
             /*These need to be split up if we want them to be uneditable*/
-            details = {new QStandardItem(dictionary[i].attributes[j]->name),new QStandardItem(dictionary[i].attributes[j]->type),
-                       new QStandardItem(dictionary[i].attributes[j]->display()), new QStandardItem(dictionary[i].attributes[j]->options().join(", ")), new QStandardItem(dictionary[i].attributes[j]->comment)};
-            for(int k = 0; k < details.size(); k++){
+            QStandardItem* itemName = new QStandardItem(dictionary[i].attributes[j]->name);
+            itemName->setData(dictionary[i].attributes[j]->name);
+            itemName->setEditable(false);
+            QStandardItem* itemType = new QStandardItem(dictionary[i].attributes[j]->type);
+            itemType->setData(dictionary[i].attributes[j]->type);
+            itemType->setEditable(false);
+            QStandardItem* itemValue = new QStandardItem(dictionary[i].attributes[j]->display());
+            dictionary[i].attributes[j]->SetModelItem(itemValue);
+            QStandardItem* itemOptions = new QStandardItem(dictionary[i].attributes[j]->options().join(", "));
+            itemOptions->setData(dictionary[i].attributes[j]->options());
+            itemOptions->setEditable(false);
+            QStandardItem* itemComment = new QStandardItem(dictionary[i].attributes[j]->comment);
+            itemComment->setData(dictionary[i].attributes[j]->comment);
+            itemComment->setEditable(false);
+            details = {itemName, itemType, itemValue, itemOptions, itemComment};
+            /*details = {new QStandardItem(dictionary[i].attributes[j]->name),new QStandardItem(dictionary[i].attributes[j]->type),
+                       new QStandardItem(dictionary[i].attributes[j]->display()), new QStandardItem(dictionary[i].attributes[j]->options().join(", ")), new QStandardItem(dictionary[i].attributes[j]->comment)};*/
+            /*for(int k = 0; k < details.size(); k++){
                 details[k]->setEditable(false);
-            }
+            }*/
             classRow->appendRow(details);
+            qDebug() << Q_FUNC_INFO << "current data row:" << classRow->rowCount();
         }
     }
 
-
     //dataTree->expandAll();
     dataTree->expand(dataTree->model()->index(0, 0));
-    QTreeView::connect(dataTree, &QTreeView::expanded, m_UI, [this](QModelIndex index){setItemExpansion(index, true);});
-    QTreeView::connect(dataTree, &QTreeView::collapsed, m_UI, [this](QModelIndex index){setItemExpansion(index, false);});
+    //QTreeView::connect(dataTree, &QTreeView::expanded, m_UI, [this](QModelIndex index){setItemExpansion(index, true);});
+    //QTreeView::connect(dataTree, &QTreeView::collapsed, m_UI, [this](QModelIndex index){setItemExpansion(index, false);});
+    QAbstractItemModel::connect(dataModel, &QAbstractItemModel::dataChanged, m_UI, [](QModelIndex index){qDebug() << Q_FUNC_INFO << "item changed:" << index.data();});
     dataTree->show();
     dataTree->resizeColumnToContents(0);
-    QAbstractButton::connect(dataTree, &QAbstractItemView::doubleClicked, m_UI, [this](QModelIndex selected){editRow(selected);});
+    //QAbstractButton::connect(dataTree, &QAbstractItemView::doubleClicked, m_UI, [this](QModelIndex selected){editRow(selected);});
     m_UI->m_currentWidgets.push_back(dataTree);
 }
 
@@ -879,7 +900,7 @@ int DefinitionFile::readDictionary(){
                 itemDetails->comment = "";
             }
             fileData->nextLine();
-            //qDebug() << Q_FUNC_INFO << "Data read as:" << itemDetails->type << itemDetails->name << itemDetails->active << itemDetails->display() << itemDetails->comment;
+            qDebug() << Q_FUNC_INFO << "Data read as:" << itemDetails->type << itemDetails->name << itemDetails->active << itemDetails->display() << itemDetails->comment;
 
             if(isOverwrittenInheritence){
                 dictionary[sectionIndex].attributes[overwrittenAttribute] = itemDetails;

@@ -1,8 +1,8 @@
 #include <QPushButton>
-#include "Headers/Databases/DistanceCalculator.h"
-#include "Headers/UI/exWindow.h"
-#include "Headers/Main/exDebugger.h"
-#include "Headers/FileManagement/Zebrafish.h"
+#include "Databases/DistanceCalculator.h"
+#include "UI/exWindow.h"
+#include "Utility/exDebugger.h"
+#include "FileManagement/Zebrafish.h"
 
 void DistanceCalculator::userSelectLevel(int selectedLevel){
     //called when user makes a selection on the level list dropdown

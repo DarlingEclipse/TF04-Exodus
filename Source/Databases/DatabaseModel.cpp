@@ -1,9 +1,9 @@
 #include <QDateTime>
 
-#include "Headers/Main/exDebugger.h"
-#include "Headers/Models/vbin.h"
-#include "Headers/Databases/Database.h"
-#include "Headers/FileManagement/Zebrafish.h"
+#include "Utility/exDebugger.h"
+#include "Models/vbin.h"
+#include "Databases/Database.h"
+#include "FileManagement/Zebrafish.h"
 
 /*This file handles the exporting of Database files to DAE format*/
 

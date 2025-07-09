@@ -3,8 +3,8 @@ taking this as a sign that datahandler is doing too much and that taminicon shou
 or just that datahandler should be split up a bit in some way. but the lines are getting fuzzier
 and my patience shorter.*/
 
-#include "Headers/Databases/DataHandler.h"
-#include "Headers/Databases/taMinicon.h"
+#include "Databases/DataHandler.h"
+#include "Databases/taMinicon.h"
 
 taMinicon::taMinicon(){
     this->name = "UNLOADED";

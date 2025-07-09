@@ -1,10 +1,10 @@
 #include <QDateTime>
 
-#include "Headers/Models/LevelGeo.h"
-#include "Headers/Models/vbin.h" //only included for the version number in the export, this could be improved
-#include "Headers/Models/Mesh.h"
-#include "Headers/Main/exDebugger.h"
-#include "Headers/UI/exWindow.h"
+#include "Models/LevelGeo.h"
+#include "Models/vbin.h" //only included for the version number in the export, this could be improved
+#include "Models/Mesh.h"
+#include "Utility/exDebugger.h"
+#include "UI/exWindow.h"
 
 void MeshVBIN::save(QString toType){
     if(toType == "STL"){

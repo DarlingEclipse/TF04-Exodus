@@ -1,10 +1,10 @@
-#include "Headers/Models/Mesh.h"
+#include "Models/Mesh.h"
 
 /*including vbin and levelgeo for now*/
-#include "Headers/Models/vbin.h"
-#include "Headers/Models/LevelGeo.h"
-#include "Headers/Main/exDebugger.h"
-#include "Headers/FileManagement/Zebrafish.h"
+#include "Models/vbin.h"
+#include "Models/LevelGeo.h"
+#include "Utility/exDebugger.h"
+#include "FileManagement/Zebrafish.h"
 
 void LODInfo::clear(){
     levels= 0;

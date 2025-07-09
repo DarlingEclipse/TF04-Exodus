@@ -1,14 +1,14 @@
 #include <QPushButton>
 #include <QLineEdit>
 
-#include "Headers/UI/exWindow.h"
-#include "Headers/Main/exDebugger.h"
-#include "Headers/Randomizer/Randomizer.h"
-#include "Headers/FileManagement/Zebrafish.h"
-#include "Headers/ISOManager/IsoBuilder.h"
-#include "Headers/Databases/DataHandler.h"
-#include "Headers/Databases/taMinicon.h"
-#include "Headers/ISOManager/ModHandler.h"
+#include <UI/exWindow.h>
+#include <Utility/exDebugger.h>
+#include "Randomizer/Randomizer.h"
+#include "FileManagement/Zebrafish.h"
+#include "ISOManager/IsoBuilder.h"
+#include "Databases/DataHandler.h"
+#include "Databases/taMinicon.h"
+#include "ISOManager/ModHandler.h"
 
 /*
 Randomizer class needs to have 3 lists of locations:

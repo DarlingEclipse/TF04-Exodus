@@ -1,12 +1,12 @@
 #include <QPushButton>
 #include <QCoreApplication>
 
-#include "Headers/FileManagement/Zebrafish.h"
-#include "Headers/ISOManager/ModHandler.h"
-#include "Headers/ISOManager/IsoBuilder.h"
-#include "Headers/UI/exWindow.h"
-#include "Headers/Main/exDebugger.h"
-#include "Headers/UI/exSettings.h"
+#include "FileManagement/Zebrafish.h"
+#include "ISOManager/ModHandler.h"
+#include "ISOManager/IsoBuilder.h"
+#include "UI/exWindow.h"
+#include "Utility/exDebugger.h"
+#include "Utility/exSettings.h"
 
 ModHandler::ModHandler(exWindowBase *passUI, zlManager *fileManager){
 

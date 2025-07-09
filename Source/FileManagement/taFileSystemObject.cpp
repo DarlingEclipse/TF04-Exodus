@@ -1,9 +1,9 @@
 
-#include "Headers/FileManagement/taFileSystemObject.h"
-#include "Headers/Main/exDebugger.h"
+#include "FileManagement/taFileSystemObject.h"
+#include "Utility/exDebugger.h"
 
 /*only including this while the visitor system exists*/
-#include "Headers/FileManagement/Zebrafish.h"
+#include "FileManagement/Zebrafish.h"
 
 void taFile::save(QString toType){
     qDebug() << Q_FUNC_INFO << "The class you tried to save doesn't have a valid save function.";

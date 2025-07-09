@@ -8,10 +8,10 @@
 /*This should be handled by exWidnow instead*/
 #include <QHeaderView>
 
-#include "Headers/Textures/itf.h"
-#include "Headers/Main/exDebugger.h"
-#include "Headers/UI/exWindow.h"
-#include "Headers/Main/BinChanger.h"
+#include "Textures/itf.h"
+#include "Utility/exDebugger.h"
+#include "UI/exWindow.h"
+#include "Utility/BinChanger.h"
 
 //https://ps2linux.no-ip.info/playstation2-linux.com/docs/howto/display_docef7c.html?docid=75
 

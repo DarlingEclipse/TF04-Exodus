@@ -1,7 +1,7 @@
-#include "Headers/Models/Antioch2.h"
-#include "Headers/Main/BinChanger.h"
-#include "Headers/Models/vbin.h"
-#include "Headers/Main/exDebugger.h"
+#include "Models/Antioch2.h"
+#include "Utility/BinChanger.h"
+#include "Models/vbin.h"
+#include "Utility/exDebugger.h"
 
 AnimationBase *makeAnimation(QString animationSignature){
     if (animationSignature == "anAnimationTranslation") {

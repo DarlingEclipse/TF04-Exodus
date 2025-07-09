@@ -1,6 +1,6 @@
-#include "Headers/Audio/ToneLibraries.h"
-#include "Headers/Main/exDebugger.h"
-#include "Headers/Main/BinChanger.h"
+#include "Audio/ToneLibraries.h"
+#include "Utility/exDebugger.h"
+#include "Utility/BinChanger.h"
 
 //http://soundfile.sapp.org/doc/WaveFormat/
 
